@@ -140,7 +140,7 @@ function aplicarMapeo(rows, mapeo) {
     const anio   = parsearNumero(get("anio")) || new Date().getFullYear();
 
     return {
-      id: "V" + (2001 + base + i),
+      id: "V" + Date.now() + "_" + i,
       vin: get("vin") || ("IMP" + String(base + i + 1).padStart(5,"0")),
       estatus: get("estatus") || "NUEVOS",
       inv: parsearNumero(get("inv")) || (9000 + base + i),
