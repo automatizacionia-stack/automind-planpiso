@@ -18,7 +18,6 @@ const CAMPOS_DESTINO = [
   { key: "diasGraciaBase",   label: "Días Gracia Base",   tipo: "num",    req: false, aliases: ["dias_gracia_base","gracia_base","diasgraciabase","gracia"] },
   { key: "diasGraciaExtra",  label: "Días Gracia Extra",  tipo: "num",    req: false, aliases: ["dias_gracia_extra","gracia_extra","diasgraciaextra","gracia_adicional"] },
   { key: "pctInteres",    label: "% Interés Anual",        tipo: "pct",    req: true,  aliases: ["pct_interes","porcentaje_interes","tasa","tasa_anual","interes","pctinteres","tasa_interes"] },
-  { key: "financiera",    label: "Financiera",             tipo: "text",   req: true,  aliases: ["financiera","banco","acreedor","financial","institucion"] },
   { key: "plazoDias",     label: "Plazo (días)",           tipo: "num",    req: true,  aliases: ["plazo_dias","plazo","plazodias","dias_plazo","vigencia"] },
   { key: "observaciones", label: "Observaciones",          tipo: "text",   req: false, aliases: ["observaciones","notas","comentarios","obs","nota"] },
 ];
@@ -158,7 +157,6 @@ function aplicarMapeo(rows, mapeo) {
       diasGraciaBase: graciaBase,
       diasGraciaExtra: graciaExtra,
       pctInteres: tasa,
-      financiera: get("financiera") || "",
       plazoDias: plazo,
       observaciones: get("observaciones") || "",
       // computed

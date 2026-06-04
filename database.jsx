@@ -3,7 +3,7 @@
 function cellDisplay(col, row) {
   const v = row[col.key];
   if (v == null || v === "") return "";
-  if (col.key === "semaforo") return SEM[v].label;
+  if (col.key === "semaforo") return SEM[v]?.label ?? v;
   if (col.fmt === "money") return fmtMoney(v);
   if (col.fmt === "money2") return fmtMoney(v, 2);
   if (col.fmt === "pct") return fmtPct(v, 1);
