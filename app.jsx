@@ -300,6 +300,10 @@ function App() {
       setAuthLoading(false);
       return;
     }
+    // Persistir workspace seleccionado para sobrevivir recargas
+    if (cfg.id) sessionStorage.setItem("automind_workspace_id", cfg.id);
+    // Crear entrada en historial para que el botón atrás no salga de la app
+    history.pushState({ automind: true }, "", window.location.pathname);
     document.documentElement.style.setProperty("--accent",  cfg.accent  || TWEAK_DEFAULTS.accent);
     document.documentElement.style.setProperty("--sidebar", cfg.sidebar || TWEAK_DEFAULTS.sidebar);
     setAgencyCtx(null);
@@ -337,18 +341,47 @@ function App() {
 
         const session = await window.DB.getSession();
         if (session) {
-          // Hay sesión activa — cargar datos y entrar directamente
-          const { agency, me, usuarios, rows, financieras } = await window.DB.loadAgencyData();
-          const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
-          const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
-          const fins = (financieras||[]).map(f => window.DB.financieraFromDbRow(f));
-          window.AUTOMIND   = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, fins);
-          const usuarioActual = usuariosEnriquecidos.find(u=>u.auth_user_id===me.auth_user_id)||me;
-          handleLogin({
-            id:agency.id, nombre:agency.nombre, ciudad:agency.ciudad,
-            iniciales:agency.iniciales||agency.nombre.slice(0,2).toUpperCase(),
-            accent:agency.accent||"#2f6fed", sidebar:agency.sidebar||"#1b2a57", usuarioActual,
-          });
+          // Detectar rol del usuario para saber si necesita workspace selector
+          const ctx = await window.DB.getUserContext();
+          if (ctx.type === "agency") {
+            // Agency owner: intentar restaurar el workspace que tenía seleccionado
+            const savedWsId = sessionStorage.getItem("automind_workspace_id");
+            if (savedWsId) {
+              try {
+                const data = await window.DB.loadAgencyData(savedWsId);
+                const { agency, me, usuarios, rows, financieras } = data;
+                const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
+                const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
+                const fins = (financieras||[]).map(f => window.DB.financieraFromDbRow(f));
+                window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, fins);
+                const usuarioActual = { nombre: ctx.agency?.name || "Admin", rol: "director", email: "", id: "agency-owner" };
+                handleLogin({
+                  id:agency.id, nombre:agency.nombre, ciudad:agency.ciudad,
+                  iniciales:agency.iniciales||agency.nombre.slice(0,2).toUpperCase(),
+                  accent:agency.accent||"#2f6fed", sidebar:agency.sidebar||"#1b2a57",
+                  usuarioActual, isAgencyOwner: true, agencyCtx: ctx,
+                });
+                return;
+              } catch(e) {
+                sessionStorage.removeItem("automind_workspace_id");
+              }
+            }
+            // Sin workspace guardado → mostrar selector
+            handleLogin({ __agencyCtx: ctx });
+          } else {
+            // Usuario de workspace normal — cargar directamente
+            const { agency, me, usuarios, rows, financieras } = await window.DB.loadAgencyData();
+            const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
+            const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
+            const fins = (financieras||[]).map(f => window.DB.financieraFromDbRow(f));
+            window.AUTOMIND   = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, fins);
+            const usuarioActual = usuariosEnriquecidos.find(u=>u.auth_user_id===me.auth_user_id)||me;
+            handleLogin({
+              id:agency.id, nombre:agency.nombre, ciudad:agency.ciudad,
+              iniciales:agency.iniciales||agency.nombre.slice(0,2).toUpperCase(),
+              accent:agency.accent||"#2f6fed", sidebar:agency.sidebar||"#1b2a57", usuarioActual,
+            });
+          }
         }
       } catch(e) {
         console.warn("Sin sesión activa:", e.message);
@@ -359,7 +392,20 @@ function App() {
     checkSession();
   }, []);
 
+  // Interceptar botón atrás del navegador para no salir de la app
+  React.useEffect(() => {
+    const onPopState = (e) => {
+      if (e.state && e.state.automind) {
+        // Volver a empujar el estado para que el back no salga
+        history.pushState({ automind: true }, "", window.location.pathname);
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   const handleLogout = React.useCallback(() => {
+    sessionStorage.removeItem("automind_workspace_id");
     if (window.DB) window.DB.signOut();
     window.AUTOMIND = null;
     setAgencyCtx(null);
