@@ -632,9 +632,11 @@ select.ef-input{cursor:pointer;}
 .jq-arrow{text-align:center;color:var(--muted);font-size:14px;padding:3px 0;background:var(--line-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
 
 /* Estado vacío */
-.inv-empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted);text-align:center;padding:40px;}
-.inv-empty-state h3{font-size:18px;font-weight:700;color:var(--ink);margin:0;}
-.inv-empty-state p{font-size:14px;margin:0;max-width:280px;}
+.inv-empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--muted);text-align:center;padding:40px;background:var(--bg);}
+.inv-empty-icon{width:72px;height:72px;border-radius:20px;background:color-mix(in srgb,var(--accent) 10%,#fff);display:grid;place-items:center;color:var(--accent);margin-bottom:4px;}
+.inv-empty-state h3{font-size:17px;font-weight:700;color:var(--ink);margin:0;}
+.inv-empty-state p{font-size:13.5px;margin:0;max-width:260px;line-height:1.55;}
+.inv-empty-btn{flex:none!important;width:auto;padding:0 24px;height:38px;}
 
 /* Modal de borrado */
 .del-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--card);border-radius:16px;padding:32px;width:380px;z-index:1000;box-shadow:0 20px 60px -12px rgba(18,24,44,.28);text-align:center;}

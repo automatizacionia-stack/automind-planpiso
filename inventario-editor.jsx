@@ -504,10 +504,12 @@ function InventarioEditor({ rows: rowsInit, usuarios, financieras, usuarioActual
         </div>
       ) : (
         <div className="inv-empty-state">
-          {I.truck({ width:40, height:40 })}
+          <div className="inv-empty-icon">
+            {I.truck({ width:32, height:32 })}
+          </div>
           <h3>Sin unidad seleccionada</h3>
-          <p>Selecciona una unidad de la lista o crea una nueva.</p>
-          <button className="btn primary" onClick={handleAdd}>+ Nueva unidad</button>
+          <p>Selecciona una unidad de la lista o agrega una nueva para comenzar.</p>
+          <button className="btn primary btn-sm inv-empty-btn" onClick={handleAdd}>+ Nueva unidad</button>
         </div>
       )}
 
