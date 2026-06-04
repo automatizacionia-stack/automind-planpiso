@@ -557,8 +557,10 @@ select.cf-input{cursor:pointer;}
 
 /* Panel izquierdo */
 .inv-list-panel{width:300px;flex:0 0 300px;display:flex;flex-direction:column;background:var(--card);border-right:1.5px solid var(--line);height:100%;}
-.inv-list-head{display:flex;align-items:center;gap:8px;padding:14px 12px;border-bottom:1px solid var(--line);}
+.inv-list-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);}
 .inv-list-head .search{flex:1;}
+.inv-add-btn{flex:0 0 32px;width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;border:none;display:grid;place-items:center;cursor:pointer;transition:background .15s;}
+.inv-add-btn:hover{background:color-mix(in srgb,var(--accent) 85%,#000);}
 .inv-list-body{flex:1;overflow-y:auto;}
 .inv-list-foot{padding:8px 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--line-2);text-align:center;}
 

@@ -298,7 +298,9 @@ function InventarioEditor({ rows: rowsInit, usuarios, financieras, usuarioActual
             {I.search({ width:15, height:15 })}
             <input placeholder="Buscar unidad…" value={q} onChange={e => setQ(e.target.value)} />
           </label>
-          <button className="btn primary btn-sm" onClick={handleAdd}>+ Nueva</button>
+          <button className="inv-add-btn" onClick={handleAdd} title="Nueva unidad">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
         </div>
         <div className="inv-list-body">
           {filteredRows.map(r => (
