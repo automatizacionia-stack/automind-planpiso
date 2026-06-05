@@ -582,7 +582,7 @@ function App() {
           {view === "database" && <Database tablas={A.TABLAS} tablaId={tablaId} setTablaId={setTablaId} openVehicle={setVehicle}
             onAddColab={() => { setView("colaboradores"); setColabAutoOpen(true); }} />}
           {view === "alertas" && <ConfigAlertas usuarioActual={tenant.usuarioActual} />}
-          {view === "importar" && <ImportarInventario onIrInventario={() => { setView("database"); setTablaId("inventario"); }} />}
+          {view === "importar" && <ImportarInventario onIrInventario={() => { setView("database"); setTablaId("inventario"); }} onImportDone={() => setRowsVersion(v => v + 1)} />}
           {view === "colaboradores" && <Colaboradores usuarios={A.USUARIOS || []} rows={A.ROWS} usuarioActual={tenant.usuarioActual}
             autoOpenForm={colabAutoOpen} onAutoOpenConsumed={() => setColabAutoOpen(false)} />}
           {view === "inventario" && <InventarioEditor

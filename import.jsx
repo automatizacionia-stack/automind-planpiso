@@ -129,10 +129,14 @@ function aplicarMapeo(rows, mapeo) {
     const interesPctMonto = monto ? interesAcum / monto : 0;
     const diasRestantes   = plazo - diasEnPiso;
     const proximoVencer   = diasRestantes <= 25;
+    const pctPlanConsumido = (graciaBase + graciaExtra) > 0
+      ? Math.round((diasEnPiso / (graciaBase + graciaExtra)) * 100) : 0;
     let semaforo;
-    if (interesPctMonto >= 0.035 || diasRestantes <= 0) semaforo = "rojo";
-    else if (interesPctMonto >= 0.012 || diasRestantes <= 25 || diasEnPiso > 70) semaforo = "amarillo";
-    else semaforo = "verde";
+    if      (pctPlanConsumido > 100) semaforo = "intereses";
+    else if (pctPlanConsumido > 86)  semaforo = "vencer";
+    else if (pctPlanConsumido > 76)  semaforo = "comprometido";
+    else if (pctPlanConsumido > 61)  semaforo = "rotacion";
+    else                              semaforo = "saludable";
 
     const fmtFecha = (d) => { if (!d) return ""; const dt = d instanceof Date ? d : new Date(d); return isNaN(dt) ? "" : `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`; };
     const marca  = get("marca") || "";
@@ -381,7 +385,7 @@ function PasoExito({ count, onNuevo, onIrInventario }) {
 }
 
 // ── Componente principal ─────────────────────────────────────────────────────
-function ImportarInventario({ onIrInventario }) {
+function ImportarInventario({ onIrInventario, onImportDone }) {
   const [paso, setPaso]       = React.useState(1);  // 1=upload 2=mapeo 3=preview 4=exito
   const [archivo, setArchivo] = React.useState(null);
   const [headers, setHeaders] = React.useState([]);
@@ -422,6 +426,7 @@ function ImportarInventario({ onIrInventario }) {
           const saves = nuevas.map(v => window.DB.saveVehicle(A.agencyId, v).catch(e => console.warn("Error guardando", v.id, e)));
           await Promise.all(saves);
         }
+        onImportDone && onImportDone();
         setCount(nuevas.length);
         setPaso(4);
       } catch(e) {
