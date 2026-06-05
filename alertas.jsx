@@ -132,15 +132,21 @@ function ConfigAlertas({ usuarioActual }) {
         .from("alert_rules").select("*")
         .eq("workspace_id", workspaceId)
         .order("semaforo");
-      // Si no hay reglas aún, crear defaults en memoria
+      // Si no hay reglas aún, crear defaults y guardarlos en Supabase
       if (!rulesData || rulesData.length === 0) {
-        setRules(SEM_CONFIG.map(s => ({
-          workspace_id: workspaceId, semaforo: s.key,
+        const defaults = SEM_CONFIG.map(s => ({
+          workspace_id:    workspaceId,
+          semaforo:        s.key,
           notify_vendedor: ["comprometido","vencer","intereses"].includes(s.key),
           notify_gerente:  ["comprometido","vencer","intereses"].includes(s.key),
           notify_director: ["comprometido","vencer","intereses"].includes(s.key),
           activa:          ["comprometido","vencer","intereses"].includes(s.key),
-        })));
+        }));
+        // Guardar en Supabase para que la Edge Function las encuentre
+        await window.DB.client
+          .from("alert_rules")
+          .upsert(defaults, { onConflict: "workspace_id,semaforo" });
+        setRules(defaults);
       } else {
         // Ordenar igual que SEM_CONFIG
         const ordered = SEM_CONFIG.map(s => rulesData.find(r => r.semaforo === s.key) || {
