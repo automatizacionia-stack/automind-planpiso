@@ -247,7 +247,7 @@ function enriquecerRows(rows, usuariosEnriquecidos) {
   });
 }
 
-function buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, financieras) {
+function buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, financieras, parentAgencyId) {
   // Funciones definidas en login.jsx — acceder via window
   const _kpis   = window.computarKpis   || ((r) => ({ total:r.length, vencidos:0, proximos:0, interesTotal:0, montoTotal:0 }));
   const _pivote = window.computarPivote || ((r) => []);
@@ -259,7 +259,7 @@ function buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, financier
     PIVOTE: _pivote(rowsEnriquecidas),
     TABLAS: _tablas(rowsEnriquecidas, usuariosEnriquecidos),
     agencyId:       agency.id,           // workspace ID (para inventario, usuarios)
-    agencyParentId: agency.agency_id || agency.id, // agencia raíz (para financieras)
+    agencyParentId: parentAgencyId || agency.agency_id || agency.id, // agencia raíz (Coperva)
     enrichRowVendedor: (row, uList) => {
       const vd=uList.find(u=>u.id===row.vendedorId)||null;
       const gr=vd?(uList.find(u=>u.id===vd.reportaA)||null):null;
@@ -353,7 +353,7 @@ function App() {
                 const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
                 const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
                 const fins = (financieras||[]).map(f => window.DB.financieraFromDbRow(f));
-                window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, fins);
+                window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, fins, ctx.agencyId);
                 const usuarioActual = { nombre: ctx.agency?.name || "Admin", rol: "director", email: "", id: "agency-owner" };
                 handleLogin({
                   id:agency.id, nombre:agency.nombre, ciudad:agency.ciudad,
@@ -510,7 +510,7 @@ function App() {
           const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
           const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
           const fins = (financieras||[]).map(f => window.DB.financieraFromDbRow(f));
-          window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, fins);
+          window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, fins, agencyCtx.agencyId);
           // Para agency owner, el usuarioActual es un objeto sintético
           const usuarioActual = usuariosEnriquecidos.find(u => u.auth_user_id === agencyCtx.authUserId)
             || { nombre: agencyCtx.agency?.name || "Admin", rol: "director",
