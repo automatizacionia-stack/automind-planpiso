@@ -369,9 +369,11 @@
   /* ── Colaboradores — CRUD ─────────────────────────────────── */
 
   async function saveColaborador(agencyId, userData) {
+    const parentId = (window.AUTOMIND && window.AUTOMIND.agencyParentId) || agencyId;
     const row = {
       id:           userData.id,
-      agency_id:    agencyId,
+      workspace_id: agencyId,
+      agency_id:    parentId,
       nombre:       userData.nombre,
       email:        userData.email,
       tel:          userData.tel || null,
@@ -411,7 +413,8 @@
     };
     return {
       id:               v.id,
-      workspace_id:     agencyId, agency_id: agencyId,
+      workspace_id:     agencyId,
+      agency_id:        (window.AUTOMIND && window.AUTOMIND.agencyParentId) || agencyId,
       vin:              v.vin              || null,
       marca:            v.marca            || null,
       modelo:           v.modelo           || null,
