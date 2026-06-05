@@ -221,6 +221,7 @@ function InventarioEditor({ rows: rowsInit, usuarios, financieras, usuarioActual
     if (window.DB && window.AUTOMIND && window.AUTOMIND.agencyId) {
       window.DB.saveVehicle(window.AUTOMIND.agencyId, computed).catch(err => {
         console.error("Error guardando vehículo:", err);
+        alert("⚠️ No se pudo guardar en Supabase.\n\nError: " + (err?.message || JSON.stringify(err)) + "\n\nWorkspace ID: " + window.AUTOMIND.agencyId);
       });
     }
   }

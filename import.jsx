@@ -423,8 +423,14 @@ function ImportarInventario({ onIrInventario, onImportDone }) {
         A.KPIS.montoTotal   = sum(A.ROWS, r => r.montoFinanciado || 0);
         // Guardar en Supabase
         if (window.DB && A.agencyId) {
-          const saves = nuevas.map(v => window.DB.saveVehicle(A.agencyId, v).catch(e => console.warn("Error guardando", v.id, e)));
-          await Promise.all(saves);
+          const resultados = await Promise.allSettled(
+            nuevas.map(v => window.DB.saveVehicle(A.agencyId, v))
+          );
+          const errores = resultados.filter(r => r.status === "rejected");
+          if (errores.length > 0) {
+            const msg = errores[0].reason?.message || JSON.stringify(errores[0].reason);
+            alert(`⚠️ ${errores.length} registro(s) no se pudieron guardar en Supabase.\n\nError: ${msg}\n\nWorkspace ID: ${A.agencyId}`);
+          }
         }
         onImportDone && onImportDone();
         setCount(nuevas.length);
