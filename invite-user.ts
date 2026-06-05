@@ -45,8 +45,9 @@ Deno.serve(async (req) => {
 
     const siteUrl = Deno.env.get("SITE_URL") || "https://automatizacionia-stack.github.io/automind-planpiso";
 
-    // ── 1. Crear usuario en Supabase Auth (genera magic link) ───────
+    // ── 1. Crear usuario en Supabase Auth o reenviar link ──────────
     let authUserId: string | null = null;
+    let emailSentBySupabase = false;
 
     const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(
       email,
@@ -54,16 +55,62 @@ Deno.serve(async (req) => {
     );
 
     if (inviteErr) {
-      // Si ya existe, buscar su ID
+      // Usuario ya existe en Auth — generar link de recuperación para reenviar acceso
       if (inviteErr.message?.includes("already") || inviteErr.status === 422) {
         const { data: { users } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
         const existing = users?.find((u: any) => u.email === email);
         authUserId = existing?.id || null;
+
+        // Generar magic link de recuperación y enviarlo via Brevo
+        const { data: linkData } = await adminClient.auth.admin.generateLink({
+          type: "recovery",
+          email,
+          options: { redirectTo: siteUrl },
+        });
+        if (linkData?.properties?.action_link) {
+          // Enviar via Brevo con el link generado
+          const brevoKey = Deno.env.get("BREVO_API_KEY");
+          if (brevoKey) {
+            await fetch("https://api.brevo.com/v3/smtp/email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "api-key": brevoKey },
+              body: JSON.stringify({
+                sender: { name: "Automind", email: "no-reply@coperva.com" },
+                to: [{ email, name: nombre }],
+                subject: "Tu acceso a Automind Plan Piso",
+                htmlContent: `
+                  <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
+                    <div style="background:#2f6fed;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px">
+                      <h1 style="color:#fff;margin:0;font-size:22px">🚗 Automind</h1>
+                    </div>
+                    <h2 style="color:#1a1a2e">Hola, ${nombre}</h2>
+                    <p style="color:#555;line-height:1.6">
+                      Has sido invitado como <strong>${rol}</strong> a Automind Plan Piso.
+                      Haz clic en el botón para activar o restablecer tu acceso:
+                    </p>
+                    <div style="text-align:center;margin:28px 0">
+                      <a href="${linkData.properties.action_link}"
+                        style="background:#2f6fed;color:#fff;text-decoration:none;padding:14px 32px;
+                        border-radius:10px;font-weight:700;font-size:15px;display:inline-block">
+                        Activar mi cuenta →
+                      </a>
+                    </div>
+                    <p style="color:#aaa;font-size:12px;text-align:center">
+                      Si no esperabas este correo, ignóralo.
+                    </p>
+                  </div>
+                `,
+              }),
+            });
+            emailSentBySupabase = true;
+          }
+        }
       } else {
         throw new Error("Error Auth: " + inviteErr.message);
       }
     } else {
       authUserId = inviteData?.user?.id || null;
+      emailSentBySupabase = true; // Supabase envió el email automáticamente
     }
 
     // ── 2. Guardar en tabla users ───────────────────────────────────
