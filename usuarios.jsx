@@ -65,14 +65,15 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
             "apikey": window.SUPABASE_ANON,
           },
           body: JSON.stringify({
-            email:        form.email,
-            nombre:       form.nombre,
-            tel:          form.tel,
-            rol:          form.rol,
-            reportaA:     form.reportaA || null,
-            fechaIngreso: form.fechaIngreso || null,
-            agencyId,
-            userId:       editTarget?.id || null,
+            email:          form.email,
+            nombre:         form.nombre,
+            tel:            form.tel,
+            rol:            form.rol,
+            reportaA:       form.reportaA || null,
+            fechaIngreso:   form.fechaIngreso || null,
+            workspaceId:    agencyId,
+            agencyId:       window.AUTOMIND?.agencyParentId || agencyId,
+            userId:         editTarget?.id || null,
           }),
         }
       );
@@ -304,7 +305,10 @@ function RegistroUsuarios({ usuarioActual }) {
                               "Authorization":`Bearer ${session.access_token}`,
                               "apikey":window.SUPABASE_ANON },
                             body: JSON.stringify({ email:u.email, nombre:u.nombre, tel:u.tel,
-                              rol:u.rol, reportaA:u.reportaA, agencyId, userId:u.id }),
+                              rol:u.rol, reportaA:u.reportaA,
+                              workspaceId: agencyId,
+                              agencyId: window.AUTOMIND?.agencyParentId || agencyId,
+                              userId:u.id }),
                           });
                           alert("Invitación reenviada a " + u.email);
                         } catch(err) { alert("Error: " + err.message); }
