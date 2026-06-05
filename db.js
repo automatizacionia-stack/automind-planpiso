@@ -224,12 +224,13 @@
 
     // Normalizar: workspace sirve como "agency" para el resto de la app
     const agency = {
-      id:       workspace.id,
-      nombre:   workspace.nombre || workspace.name,
-      ciudad:   workspace.ciudad,
-      iniciales:workspace.iniciales || (workspace.nombre||workspace.name||"WS").slice(0,2).toUpperCase(),
-      accent:   workspace.accent   || "#2f6fed",
-      sidebar:  workspace.sidebar  || "#1b2a57",
+      id:        workspace.id,
+      agency_id: workspace.agency_id || workspace.id, // ← ID de la agencia raíz (Coperva)
+      nombre:    workspace.nombre || workspace.name,
+      ciudad:    workspace.ciudad,
+      iniciales: workspace.iniciales || (workspace.nombre||workspace.name||"WS").slice(0,2).toUpperCase(),
+      accent:    workspace.accent   || "#2f6fed",
+      sidebar:   workspace.sidebar  || "#1b2a57",
     };
 
     return { agency, me, usuarios: usuarios||[], rows: rows||[], financieras };
