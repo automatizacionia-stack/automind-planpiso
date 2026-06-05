@@ -211,9 +211,11 @@ function RegistroUsuarios({ usuarioActual }) {
   );
 
   const agencyId = window.AUTOMIND ? window.AUTOMIND.agencyId : null;
+  const [confirmDel, setConfirmDel] = React.useState(null); // usuario a eliminar
+  const [deleting,   setDeleting]   = React.useState(false);
 
   // Permisos: director ve a todos, gerente solo a su equipo
-  const visibles = usuarioActual.rol === "director"
+  const visibles = usuarioActual.rol === "director" || usuarioActual.isAgencyOwner
     ? usuarios
     : usuarios.filter(u =>
         u.id === usuarioActual.id ||
@@ -221,7 +223,23 @@ function RegistroUsuarios({ usuarioActual }) {
         u.id === usuarioActual.reportaA
       );
 
-  const puedeInvitar = ["director", "gerente"].includes(usuarioActual.rol);
+  const puedeInvitar  = ["director", "gerente"].includes(usuarioActual.rol) || usuarioActual.isAgencyOwner;
+  const puedeEliminar = ["director", "gerente"].includes(usuarioActual.rol) || usuarioActual.isAgencyOwner;
+
+  async function handleDelete(u) {
+    setDeleting(true);
+    try {
+      await window.DB.client.from("users").delete().eq("id", u.id);
+      const next = usuarios.filter(x => x.id !== u.id);
+      setUsuarios(next);
+      if (window.AUTOMIND) window.AUTOMIND.USUARIOS = next;
+    } catch(err) {
+      alert("Error al eliminar: " + err.message);
+    } finally {
+      setDeleting(false);
+      setConfirmDel(null);
+    }
+  }
 
   function handleSave(savedUser) {
     if (!savedUser) return;
@@ -288,13 +306,15 @@ function RegistroUsuarios({ usuarioActual }) {
               </span>
             </div>
             <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
-              {puedeInvitar && u.id !== usuarioActual.id && (
+              {u.id !== usuarioActual.id && (
                 <>
-                  <button className="btn btn-sm" title="Editar"
-                    onClick={() => { setEditTarget(u); setDrawerOpen(true); }}>
-                    Editar
-                  </button>
-                  {!u.auth_user_id && (
+                  {puedeInvitar && (
+                    <button className="btn btn-sm" title="Editar"
+                      onClick={() => { setEditTarget(u); setDrawerOpen(true); }}>
+                      Editar
+                    </button>
+                  )}
+                  {puedeInvitar && !u.auth_user_id && (
                     <button className="btn btn-sm" title="Reenviar invitación"
                       onClick={async () => {
                         try {
@@ -316,12 +336,43 @@ function RegistroUsuarios({ usuarioActual }) {
                       Reenviar
                     </button>
                   )}
+                  {puedeEliminar && (
+                    <button className="btn btn-sm" title="Eliminar usuario"
+                      style={{ color:"#e0492f", borderColor:"#fdd", background:"#fff8f7" }}
+                      onClick={() => setConfirmDel(u)}>
+                      Eliminar
+                    </button>
+                  )}
                 </>
               )}
             </div>
           </div>
         ))}
       </div>
+
+      {/* Modal confirmación eliminar */}
+      {confirmDel && (
+        <>
+          <div className="scrim" onClick={() => !deleting && setConfirmDel(null)} />
+          <div className="del-modal">
+            <div className="del-modal-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#e0492f" strokeWidth="1.75"
+                strokeLinecap="round" strokeLinejoin="round" width="30" height="30">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <h3>¿Eliminar a {confirmDel.nombre}?</h3>
+            <p>Se eliminará <b>{confirmDel.email}</b> del equipo. Esta acción no se puede deshacer.</p>
+            <div className="del-modal-btns">
+              <button className="btn danger" disabled={deleting} onClick={() => handleDelete(confirmDel)}>
+                {deleting ? "Eliminando…" : "Sí, eliminar"}
+              </button>
+              <button className="btn" disabled={deleting} onClick={() => setConfirmDel(null)}>Cancelar</button>
+            </div>
+          </div>
+        </>
+      )}
 
       {drawerOpen && (
         <InviteDrawer

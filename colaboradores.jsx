@@ -112,7 +112,7 @@ function ColabDrawer({ u, usuarios, onSave, onClose }) {
     if (!form.nombre.trim() || !form.email.trim()) return;
     const saved = { ...form };
     if (isNew) saved.id = form.rol[0].toUpperCase() + Date.now().toString().slice(-4);
-    onSave(saved);
+    onSave(saved, isNew);
     onClose();
   }
 
@@ -268,7 +268,7 @@ function Colaboradores({ usuarios: usuariosInit, rows, usuarioActual, autoOpenFo
     };
   }
 
-  function handleSave(saved) {
+  function handleSave(saved, isNew) {
     setUsuarios(prev => {
       const idx = prev.findIndex(u => u.id === saved.id);
       const enriquecido = enriquecer(saved, prev);
@@ -288,9 +288,38 @@ function Colaboradores({ usuarios: usuariosInit, rows, usuarioActual, autoOpenFo
     });
     // Persistir en Supabase
     if (window.DB && window.AUTOMIND && window.AUTOMIND.agencyId) {
-      window.DB.saveColaborador(window.AUTOMIND.agencyId, saved).catch(err => {
+      const A = window.AUTOMIND;
+      window.DB.saveColaborador(A.agencyId, saved).catch(err => {
         console.error("Error guardando colaborador:", err);
+        alert("⚠️ No se pudo guardar el colaborador.\n\nError: " + (err?.message || JSON.stringify(err)));
       });
+      // Enviar invitación por email si es usuario nuevo
+      if (isNew && saved.email) {
+        window.DB.client.auth.getSession().then(({ data: { session } }) => {
+          if (!session) return;
+          fetch(`${window.SUPABASE_URL}/functions/v1/invite-user`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${session.access_token}`,
+              "apikey": window.SUPABASE_ANON,
+            },
+            body: JSON.stringify({
+              email:        saved.email,
+              nombre:       saved.nombre,
+              tel:          saved.tel || null,
+              rol:          saved.rol,
+              reportaA:     saved.reportaA || null,
+              fechaIngreso: saved.fechaIngreso || null,
+              workspaceId:  A.agencyId,
+              agencyId:     A.agencyParentId || A.agencyId,
+              userId:       saved.id,
+            }),
+          }).then(r => r.json()).then(json => {
+            if (json.error) console.warn("Invitación:", json.error);
+          }).catch(e => console.warn("Error enviando invitación:", e.message));
+        });
+      }
     }
   }
 
