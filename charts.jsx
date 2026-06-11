@@ -48,35 +48,6 @@ function Donut({ segs, activeKey, onPick, size = 188, thick = 30 }) {
   );
 }
 
-/* Barras horizontales apiladas por financiera (verde/amarillo/rojo). */
-function StackedFinancieras({ pivote, onPick, activeFin }) {
-  const max = Math.max(...pivote.fins.map((f) => pivote.matriz[f].total), 1);
-  return (
-    <div className="stack-list">
-      {pivote.fins.map((fn) => {
-        const m = pivote.matriz[fn];
-        const wpct = (m.total / max) * 100;
-        const dim = activeFin && activeFin !== fn;
-        return (
-          <button key={fn} className={"stack-row" + (dim ? " dim" : "")}
-            onClick={() => onPick && onPick(activeFin === fn ? null : fn)}>
-            <span className="stack-name">{fn}</span>
-            <span className="stack-bar" style={{ width: wpct + "%" }}>
-              {["saludable","rotacion","comprometido","vencer","intereses"].map((k) =>
-                m[k] ? (
-                  <span key={k} className="stack-seg" title={`${SEM[k].label}: ${m[k]}`}
-                    style={{ flex: m[k], background: SEM[k].sol }}>{m[k]}</span>
-                ) : null
-              )}
-            </span>
-            <span className="stack-total">{m.total}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 /* Histograma de antigüedad (días en piso) por tramo, coloreado por urgencia. */
 function AgingHistogram({ rows }) {
   const buckets = [
@@ -104,4 +75,4 @@ function AgingHistogram({ rows }) {
   );
 }
 
-Object.assign(window, { Donut, StackedFinancieras, AgingHistogram });
+Object.assign(window, { Donut, AgingHistogram });

@@ -83,8 +83,8 @@ Después de que cada usuario acepte la invitación, necesitas conectar su cuenta
 La forma más sencilla es usar la interfaz web de GitHub:
 
 1. En la página del repositorio vacío, haz clic en **uploading an existing file**.
-2. Arrastra **todos** los archivos de tu carpeta `Automind`:
-   - `Automind - Plan Piso.html`
+2. Arrastra **todos** los archivos de tu carpeta `automind-git`:
+   - `index.html`
    - `config.js`
    - `db.js`
    - `login.jsx`
@@ -96,16 +96,16 @@ La forma más sencilla es usar la interfaz web de GitHub:
    - `import.jsx`
    - `colaboradores.jsx`
    - `inventario-editor.jsx`
+   - `financieras.jsx`
+   - `usuarios.jsx`
+   - `alertas.jsx`
+   - `workspace-selector.jsx`
    - `app.jsx`
 3. En la parte inferior escribe un mensaje como `"Primera versión"` y haz clic en **Commit changes**.
 
-### 3.4 Renombrar el archivo HTML (importante)
-
-GitHub Pages sirve el archivo `index.html` por defecto. Como el tuyo se llama `Automind - Plan Piso.html`, tienes dos opciones:
-
-**Opción A (recomendada):** Renombra el archivo a `index.html` antes de subirlo.
-
-**Opción B:** Después de subirlo, en GitHub haz clic en el archivo → ícono de lápiz (editar) → cambia el nombre a `index.html` → Commit.
+> GitHub Pages sirve `index.html` por defecto, así que no hace falta renombrar nada.
+> Los archivos `.sql` y `.ts` no son necesarios para el sitio: los `.sql` se ejecutan
+> en el SQL Editor de Supabase y los `.ts` se despliegan como Edge Functions.
 
 ### 3.5 Activar GitHub Pages
 

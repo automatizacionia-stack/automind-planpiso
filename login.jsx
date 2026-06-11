@@ -321,7 +321,7 @@ function LoginScreen({ onLogin }) {
         return row;
       });
 
-      // 5. Construir AUTOMIND global (mismo formato que data.js)
+      // 5. Construir AUTOMIND global
       const fins = (financieras||[]).map(f => window.DB.financieraFromDbRow(f));
       window.AUTOMIND = {
         ROWS:      rowsEnriquecidas,
