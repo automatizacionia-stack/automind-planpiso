@@ -364,11 +364,13 @@ function LoginScreen({ onLogin }) {
       if (msg.includes("Invalid login") || msg.includes("invalid_credentials")) {
         setError("Correo o contraseña incorrectos.");
       } else if (msg.includes("Email not confirmed")) {
-        setError("Debes confirmar tu correo. Ve a Supabase → Authentication → Settings y desactiva 'Confirm email'.");
+        setError("Tu correo aún no está confirmado. Contacta a tu administrador para activar tu cuenta.");
       } else if (msg.includes("User not found") || msg.includes("not find user")) {
         setError("Usuario no encontrado. Verifica que el correo esté registrado.");
       } else {
-        setError("Error: " + (msg || "desconocido. Revisa la consola del navegador (F12)."));
+        // No exponer mensajes crudos del backend al usuario final
+        console.error("Login error:", err);
+        setError("No se pudo iniciar sesión. Verifica tu conexión e intenta de nuevo.");
       }
     }
   };

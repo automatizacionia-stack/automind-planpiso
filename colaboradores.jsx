@@ -111,7 +111,13 @@ function ColabDrawer({ u, usuarios, onSave, onClose }) {
     e.preventDefault();
     if (!form.nombre.trim() || !form.email.trim()) return;
     const saved = { ...form };
-    if (isNew) saved.id = form.rol[0].toUpperCase() + Date.now().toString().slice(-4);
+    // ID con entropía real: los últimos 4 dígitos del timestamp se repetían cada
+    // 10 segundos y el upsert por id podía sobrescribir a otro colaborador
+    if (isNew) saved.id = form.rol[0].toUpperCase() + (
+      window.crypto?.randomUUID
+        ? crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()
+        : Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase()
+    );
     onSave(saved, isNew);
     onClose();
   }

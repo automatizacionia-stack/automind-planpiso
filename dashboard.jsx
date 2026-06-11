@@ -37,7 +37,7 @@ function MiniKpi({ icon, label, value, active, onClick, accent }) {
 }
 
 function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuarioActual }) {
-  const { sem, fin, gerente } = filters;
+  const { sem, fin, gerente, marca } = filters;
   const setSem     = (v) => setFilters((f) => ({ ...f, sem: v }));
   const setFin     = (v) => setFilters((f) => ({ ...f, fin: v }));
   const setGerente = (v) => setFilters((f) => ({ ...f, gerente: v }));
@@ -46,6 +46,7 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
     if (sem     && r.semaforo      !== sem)     return false;
     if (fin     && r.financiera    !== fin)      return false;
     if (gerente && r.gerenteId     !== gerente)  return false;
+    if (marca   && r.marca         !== marca)    return false;
     return true;
   });
 
@@ -69,6 +70,7 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
     ? SEM[sem].emoji + " " + SEM[sem].label
     : fin  ? fin
     : gerente ? ("Equipo · " + (gerentesConUnidades.find(g => g.id === gerente)?.nombre || gerente))
+    : marca ? ("Marca · " + marca)
     : null;
 
   return (
@@ -276,7 +278,7 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
           </div>
           <div style={{ display:"flex", gap:8, alignItems:"center" }}>
             {activeFilterLabel && (
-              <button className="chip-clear" onClick={() => setFilters({ sem: null, fin: null, gerente: null })}>
+              <button className="chip-clear" onClick={() => setFilters({ sem: null, fin: null, gerente: null, marca: null })}>
                 {I.filter({ width: 13, height: 13 })} {activeFilterLabel} · {filtered.length}
                 <span className="cc-x">{I.close({ width: 12, height: 12 })}</span>
               </button>
@@ -294,8 +296,8 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
 
         <div className="vlist">
           <div className="vrow vhead">
-            <span style={{ width:32 }}></span>
             <span>Vehículo</span>
+            <span>Financiera</span>
             <span className="r">Días en piso</span>
             <span className="r">Días vencidos</span>
             <span className="r">Interés acum.</span>
@@ -325,6 +327,13 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
                   // Re-enriquecer fila con jerarquía actualizada
                   if (window.AUTOMIND && window.AUTOMIND.enrichRowVendedor) {
                     window.AUTOMIND.enrichRowVendedor(r, window.AUTOMIND.USUARIOS || []);
+                  }
+                  // Persistir la asignación en Supabase (antes solo vivía en memoria)
+                  if (window.DB && window.AUTOMIND && window.AUTOMIND.agencyId) {
+                    window.DB.saveVehicle(window.AUTOMIND.agencyId, r).catch(err => {
+                      console.error("Error guardando asignación:", err);
+                      alert("No se pudo guardar la asignación. Intenta de nuevo.");
+                    });
                   }
                   setFilters(f => ({ ...f }));
                 }

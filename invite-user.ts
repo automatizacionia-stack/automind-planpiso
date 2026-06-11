@@ -41,6 +41,41 @@ Deno.serve(async (req) => {
     if (!email || !nombre || !rol || !workspaceId) {
       throw new Error("Faltan campos: email, nombre, rol, workspaceId");
     }
+    if (!["director", "gerente", "vendedor"].includes(rol)) {
+      throw new Error("Rol inválido");
+    }
+
+    // ── Autorización: validar rol y tenant del invitador ─────────────
+    // Antes cualquier usuario autenticado podía crear directores en
+    // cualquier workspace (escalación de privilegios + cross-tenant).
+
+    // Resolver la agencia dueña del workspace destino (server-side, no del body)
+    const { data: wsRow } = await adminClient
+      .from("workspaces").select("agency_id").eq("id", workspaceId).maybeSingle();
+    const targetAgencyId = wsRow?.agency_id || agencyId || workspaceId;
+
+    // ¿El invitador es agency owner/admin de esa agencia?
+    const { data: agencyMem } = await adminClient
+      .from("agency_memberships").select("role")
+      .eq("user_id", invitador.id).eq("agency_id", targetAgencyId)
+      .maybeSingle();
+    const esAgencyOwner = !!agencyMem;
+
+    if (!esAgencyOwner) {
+      // Cargar el perfil del invitador en la tabla users
+      const { data: inviterRow } = await adminClient
+        .from("users").select("rol, workspace_id, agency_id")
+        .eq("auth_user_id", invitador.id).maybeSingle();
+      if (!inviterRow) throw new Error("Sin permisos para invitar usuarios");
+      const wsInviter = inviterRow.workspace_id || inviterRow.agency_id;
+      if (wsInviter !== workspaceId) throw new Error("No puedes invitar usuarios a otro workspace");
+      if (!["director", "gerente"].includes(inviterRow.rol)) {
+        throw new Error("Solo directores o gerentes pueden invitar usuarios");
+      }
+      if (inviterRow.rol === "gerente" && rol !== "vendedor") {
+        throw new Error("Un gerente solo puede invitar vendedores");
+      }
+    }
 
     const siteUrl = Deno.env.get("SITE_URL") ||
       "https://automatizacionia-stack.github.io/automind-planpiso";
@@ -76,7 +111,9 @@ Deno.serve(async (req) => {
     if (!actionLink) throw new Error("No se pudo generar el link de acceso");
 
     // ── 2. Guardar en tabla users ───────────────────────────────────
-    const rowId = userId || (rol[0].toUpperCase() + Date.now().toString().slice(-6));
+    // ID con entropía real (el sufijo de timestamp podía colisionar)
+    const rowId = userId ||
+      (rol[0].toUpperCase() + crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase());
     const userRow: any = {
       id:            rowId,
       nombre,
@@ -86,7 +123,7 @@ Deno.serve(async (req) => {
       reporta_a:     reportaA || null,
       fecha_ingreso: fechaIngreso || null,
       workspace_id:  workspaceId,
-      agency_id:     agencyId || workspaceId,
+      agency_id:     targetAgencyId, // derivado server-side, no del body
     };
     if (authUserId) userRow.auth_user_id = authUserId;
 

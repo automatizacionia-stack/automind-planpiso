@@ -102,6 +102,25 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // ── Autenticación obligatoria ──────────────────────────────────
+    // Antes esta función no validaba el JWT: cualquiera con la anon key
+    // (pública en config.js) podía usarla como relay de correo abierto.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "No autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user }, error: authErr } = await userClient.auth.getUser();
+    if (authErr || !user) {
+      return new Response(JSON.stringify({ error: "No autenticado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SERVICE_ROLE_KEY")!,
@@ -118,6 +137,28 @@ Deno.serve(async (req) => {
     if (!workspaceId || !semaforoTo) {
       return new Response(JSON.stringify({ skipped: true, reason: "Missing required fields" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── Autorización: el usuario debe pertenecer al workspace ──────
+    const { data: memberRow } = await adminClient
+      .from("users").select("id, email")
+      .eq("auth_user_id", user.id)
+      .or(`workspace_id.eq.${workspaceId},agency_id.eq.${workspaceId}`)
+      .maybeSingle();
+    let autorizado = !!memberRow;
+    if (!autorizado) {
+      // ¿Agency owner de la agencia dueña del workspace?
+      const { data: wsRow } = await adminClient
+        .from("workspaces").select("agency_id").eq("id", workspaceId).maybeSingle();
+      const agId = wsRow?.agency_id || workspaceId;
+      const { data: am } = await adminClient
+        .from("agency_memberships").select("user_id")
+        .eq("user_id", user.id).eq("agency_id", agId).maybeSingle();
+      autorizado = !!am;
+    }
+    if (!autorizado) {
+      return new Response(JSON.stringify({ error: "Sin permisos sobre este workspace" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ── Consultar regla de alerta para este workspace y semáforo ───
@@ -138,8 +179,20 @@ Deno.serve(async (req) => {
     if (rule.notify_vendedor  && vendedorEmail)  recipients.push(vendedorEmail);
     if (rule.notify_gerente   && gerenteEmail)   recipients.push(gerenteEmail);
     if (rule.notify_director  && directorEmail)  recipients.push(directorEmail);
-    // Deduplicar
-    const uniqueRecipients = [...new Set(recipients.filter(Boolean))];
+
+    // Solo se permite enviar a correos registrados en el workspace (o al
+    // propio usuario autenticado) — evita usar la función para spam/phishing
+    const { data: wsUsers } = await adminClient
+      .from("users").select("email")
+      .or(`workspace_id.eq.${workspaceId},agency_id.eq.${workspaceId}`);
+    const permitidos = new Set(
+      (wsUsers || []).map((u: any) => String(u.email || "").toLowerCase()).filter(Boolean)
+    );
+    if (user.email) permitidos.add(user.email.toLowerCase());
+
+    // Deduplicar y filtrar contra la lista permitida
+    const uniqueRecipients = [...new Set(recipients.filter(Boolean))]
+      .filter(e => permitidos.has(String(e).toLowerCase()));
 
     if (uniqueRecipients.length === 0) {
       return new Response(JSON.stringify({ skipped: true, reason: "No recipients configured" }),

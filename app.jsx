@@ -44,11 +44,18 @@ function VehicleDrawer({ v, onClose, usuarioActual }) {
           window.AUTOMIND.enrichRowVendedor(row, window.AUTOMIND.USUARIOS || []);
           Object.assign(v, row);
         }
+        // Persistir la asignación en Supabase (antes solo vivía en memoria)
+        if (window.DB && window.AUTOMIND.agencyId) {
+          window.DB.saveVehicle(window.AUTOMIND.agencyId, row).catch(err => {
+            console.error("Error guardando asignación:", err);
+            alert("No se pudo guardar la asignación. Intenta de nuevo.");
+          });
+        }
       }
     }
   }
 
-  const plazoPct = Math.min(100, Math.round((v.diasEnPiso / v.plazoDias) * 100));
+  const plazoPct = v.plazoDias > 0 ? Math.min(100, Math.round((v.diasEnPiso / v.plazoDias) * 100)) : 0;
   return (
     <>
       <div className="scrim" onClick={onClose} />
@@ -230,7 +237,10 @@ function enriquecerRows(rows, usuariosEnriquecidos) {
     const monto = Number(v.montoFinanciado)||0, tasa = Number(v.pctInteres)||0;
     const interesDiario = Math.round(monto*tasa/365*100)/100;
     const interesAcum   = Math.round(diasVencidos*interesDiario*100)/100;
-    const pctPlanConsumido = diasGraciaTotal>0 ? Math.round(diasEnPiso/diasGraciaTotal*100) : 0;
+    // Sin días de gracia configurados, la unidad genera interés desde el día 1:
+    // marcarla como plan consumido (>100) en vez de "saludable" (0)
+    const pctPlanConsumido = diasGraciaTotal>0 ? Math.round(diasEnPiso/diasGraciaTotal*100)
+                           : (diasEnPiso>0 ? 101 : 0);
     const semaforo = pctPlanConsumido>100?"intereses":pctPlanConsumido>86?"vencer":pctPlanConsumido>76?"comprometido":pctPlanConsumido>61?"rotacion":"saludable";
     const fechaVenc = new Date(fFact.getTime()+diasGraciaTotal*MS_DIA);
     const row = { ...v, diasEnPiso, diasGraciaBase:v.diasGraciaBase, diasGraciaExtra:v.diasGraciaExtra,
@@ -555,6 +565,12 @@ function App() {
     );
   }
 
+  // Recalcular KPIs/pivote/tablas en cada render: ROWS muta tras editar/importar
+  // y antes las tarjetas del dashboard quedaban con cifras viejas hasta recargar.
+  if (A.ROWS && window.computarKpis)   A.KPIS   = window.computarKpis(A.ROWS);
+  if (A.ROWS && window.computarPivote) A.PIVOTE = window.computarPivote(A.ROWS);
+  if (A.ROWS && window.buildTablas)    A.TABLAS = window.buildTablas(A.ROWS, A.USUARIOS || []);
+
   const tablaNombre = (A.TABLAS.find((b) => b.id === tablaId) || A.TABLAS[0]).nombre;
   const crumb = view === "database"     ? "Datos · " + tablaNombre
     : view === "inventario"    ? "Plan Piso · Captura de datos"
@@ -570,7 +586,13 @@ function App() {
     <div className="shell">
       <Sidebar view={view} setView={setView} onMenu={handleMenu} tablaActiva={tablaId} tenant={tenant}
         onLogout={handleLogout}
-        onSwitchWorkspace={tenant?.isAgencyOwner ? () => { setTenant(null); } : null} />
+        onSwitchWorkspace={tenant?.isAgencyOwner ? () => {
+          // Restaurar el contexto de agencia para volver al selector de subcuentas
+          // (antes esto mandaba al owner a la pantalla de login)
+          sessionStorage.removeItem("automind_workspace_id");
+          setAgencyCtx(tenant.agencyCtx || agencyCtx);
+          setTenant(null);
+        } : null} />
       <main className="main">
         <TopBar crumb={crumb} />
         <div className="scroll">
@@ -601,7 +623,7 @@ function App() {
               {tenant.isAgencyOwner && (
                 <div style={{ marginBottom:24 }}>
                   <div className="block-label">Financieras (nivel agencia)</div>
-                  <GestionFinancieras usuarioActual={tenant.usuarioActual} />
+                  <GestionFinancieras usuarioActual={tenant.usuarioActual} isAgencyOwner={tenant.isAgencyOwner} />
                 </div>
               )}
               {!tenant.isAgencyOwner && (

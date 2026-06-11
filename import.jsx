@@ -84,19 +84,32 @@ function parsearCSV(text) {
 
 function parsearFecha(s) {
   if (!s) return null;
-  // dd/mm/yyyy · yyyy-mm-dd · mm/dd/yyyy
+  // dd/mm/yyyy · yyyy-mm-dd · dd-mm-yyyy (si "mes" > 12 se asume mm/dd/yyyy)
   const s1 = String(s).trim();
+  // Construye la fecha a mediodía (estable ante husos horarios) y valida
+  // que día/mes sean reales (evita rollover silencioso tipo 06/13 → enero)
+  const mk = (y, mo, d) => {
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    const dt = new Date(y, mo - 1, d, 12);
+    return (dt.getMonth() === mo - 1 && dt.getDate() === d) ? dt : null;
+  };
   let m;
-  if ((m = s1.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) return new Date(+m[3], +m[2]-1, +m[1]);
-  if ((m = s1.match(/^(\d{4})-(\d{2})-(\d{2})$/))) return new Date(+m[1], +m[2]-1, +m[3]);
-  if ((m = s1.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/))) return new Date(+m[3], +m[2]-1, +m[1]);
+  if ((m = s1.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)))
+    return +m[2] > 12 ? mk(+m[3], +m[1], +m[2]) : mk(+m[3], +m[2], +m[1]);
+  if ((m = s1.match(/^(\d{4})-(\d{2})-(\d{2})$/))) return mk(+m[1], +m[2], +m[3]);
+  if ((m = s1.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)))
+    return +m[2] > 12 ? mk(+m[3], +m[1], +m[2]) : mk(+m[3], +m[2], +m[1]);
   const d = new Date(s1);
   return isNaN(d) ? null : d;
 }
 
 function parsearNumero(s) {
   if (s === "" || s == null) return 0;
-  return parseFloat(String(s).replace(/[$,\s]/g, "").replace(",", ".")) || 0;
+  let t = String(s).replace(/[$\s]/g, "");
+  // Formato europeo "1.234,56" → coma decimal; si no, quitar comas de miles
+  if (/,\d{1,2}$/.test(t)) t = t.replace(/\./g, "").replace(",", ".");
+  else t = t.replace(/,/g, "");
+  return parseFloat(t) || 0;
 }
 
 function parsearPct(s) {
@@ -122,15 +135,21 @@ function aplicarMapeo(rows, mapeo) {
     const plazo = parsearNumero(get("plazoDias")) || 120;
     const graciaBase  = parsearNumero(get("diasGraciaBase")) || 30;
     const graciaExtra = parsearNumero(get("diasGraciaExtra")) || 0;
-    const diasEnPiso  = Math.round((HOY - fechaLlegada) / MS_DIA);
+    // Misma fórmula que el motor canónico (app.jsx → enriquecerRows):
+    // días en piso desde fecha FACTURA con −1, interés sobre /365.
+    // Antes este módulo usaba fechaLlegada y /360, y los montos cambiaban al recargar.
+    const diasEnPiso  = Math.max(0, Math.round((HOY - fechaFactura) / MS_DIA) - 1);
     const diasGraciaTotal = graciaBase + graciaExtra;
-    const diasConInteres  = Math.max(0, diasEnPiso - diasGraciaTotal);
-    const interesAcum     = Math.round(monto * tasa / 360 * diasConInteres * 100) / 100;
+    const diasLibresRestantes = diasGraciaTotal - diasEnPiso;
+    const diasConInteres  = diasLibresRestantes < 0 ? Math.abs(diasLibresRestantes) : 0;
+    const interesDiario   = Math.round(monto * tasa / 365 * 100) / 100;
+    const interesAcum     = Math.round(diasConInteres * interesDiario * 100) / 100;
     const interesPctMonto = monto ? interesAcum / monto : 0;
     const diasRestantes   = plazo - diasEnPiso;
     const proximoVencer   = diasRestantes <= 25;
-    const pctPlanConsumido = (graciaBase + graciaExtra) > 0
-      ? Math.round((diasEnPiso / (graciaBase + graciaExtra)) * 100) : 0;
+    const pctPlanConsumido = diasGraciaTotal > 0
+      ? Math.round((diasEnPiso / diasGraciaTotal) * 100)
+      : (diasEnPiso > 0 ? 101 : 0);
     let semaforo;
     if      (pctPlanConsumido > 100) semaforo = "intereses";
     else if (pctPlanConsumido > 86)  semaforo = "vencer";
@@ -164,7 +183,8 @@ function aplicarMapeo(rows, mapeo) {
       plazoDias: plazo,
       observaciones: get("observaciones") || "",
       // computed
-      diasEnPiso, diasGraciaTotal, diasConInteres,
+      diasEnPiso, diasGraciaTotal, diasConInteres, diasLibresRestantes,
+      diasVencidos: diasConInteres, interesDiario, pctPlanConsumido,
       interesAcum, interesPctMonto, diasRestantes, proximoVencer, semaforo,
       fechaFacturaTxt: fmtFecha(fechaFactura),
       fechaLlegadaTxt: fmtFecha(fechaLlegada),
@@ -408,32 +428,43 @@ function ImportarInventario({ onIrInventario, onImportDone }) {
     setImportando(true);
     setTimeout(async () => {
       try {
-        const nuevas = aplicarMapeo(rows, mapeo);
+        let nuevas = aplicarMapeo(rows, mapeo);
         const A = window.AUTOMIND;
-        A.ROWS.push(...nuevas);
-        // Recalcular KPIs con campos del nuevo semáforo
-        const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
-        A.KPIS.total        = A.ROWS.length;
-        A.KPIS.saludable    = A.ROWS.filter(r => r.semaforo === "saludable").length;
-        A.KPIS.rotacion     = A.ROWS.filter(r => r.semaforo === "rotacion").length;
-        A.KPIS.comprometido = A.ROWS.filter(r => r.semaforo === "comprometido").length;
-        A.KPIS.vencer       = A.ROWS.filter(r => r.semaforo === "vencer").length;
-        A.KPIS.intereses    = A.ROWS.filter(r => r.semaforo === "intereses").length;
-        A.KPIS.interesTotal = sum(A.ROWS, r => r.interesAcum || 0);
-        A.KPIS.montoTotal   = sum(A.ROWS, r => r.montoFinanciado || 0);
-        // Guardar en Supabase
+
+        // Detectar VINs que ya existen en el inventario para no duplicar unidades
+        const vinsExistentes = new Set(
+          (A.ROWS || []).map(r => String(r.vin || "").trim().toUpperCase()).filter(Boolean)
+        );
+        const esDup = v => v.vin && vinsExistentes.has(String(v.vin).trim().toUpperCase());
+        const dups = nuevas.filter(esDup);
+        if (dups.length > 0) {
+          const seguir = confirm(
+            `${dups.length} fila(s) tienen un VIN que ya existe en el inventario y se omitirán.\n` +
+            `¿Continuar con las ${nuevas.length - dups.length} restantes?`
+          );
+          if (!seguir) return;
+          nuevas = nuevas.filter(v => !esDup(v));
+          if (!nuevas.length) { alert("No hay unidades nuevas que importar."); return; }
+        }
+
+        // Guardar PRIMERO en Supabase; solo agregar al inventario lo que sí se guardó
+        let guardadas = nuevas;
         if (window.DB && A.agencyId) {
           const resultados = await Promise.allSettled(
             nuevas.map(v => window.DB.saveVehicle(A.agencyId, v))
           );
+          guardadas = nuevas.filter((_, i) => resultados[i].status === "fulfilled");
           const errores = resultados.filter(r => r.status === "rejected");
           if (errores.length > 0) {
             const msg = errores[0].reason?.message || JSON.stringify(errores[0].reason);
             alert(`⚠️ ${errores.length} registro(s) no se pudieron guardar en Supabase.\n\nError: ${msg}\n\nWorkspace ID: ${A.agencyId}`);
           }
+          if (!guardadas.length) return; // nada se guardó — permanecer en preview
         }
+        A.ROWS.push(...guardadas);
+        // (los KPIs se recalculan automáticamente en App en cada render)
         onImportDone && onImportDone();
-        setCount(nuevas.length);
+        setCount(guardadas.length);
         setPaso(4);
       } catch(e) {
         alert("Error al importar: " + e.message);

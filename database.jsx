@@ -48,8 +48,12 @@ function Grid({ tabla, openVehicle }) {
     if (editing && inputRef.current) inputRef.current.focus();
   }, [editing]);
 
+  // Solo el inventario soporta edición/eliminación inline: commitEdit y deleteRow
+  // operan sobre AUTOMIND.ROWS y la tabla `inventario` de Supabase.
+  const esInventario = tabla.id === "inventario";
+
   // Campos NO editables (calculados o protegidos)
-  const esEditable = (col) => col.tipo !== "calc" && col.key !== "id" && col.key !== "semaforo";
+  const esEditable = (col) => esInventario && col.tipo !== "calc" && col.key !== "id" && col.key !== "semaforo";
 
   function startEdit(ri, ci, row, col) {
     if (!esEditable(col)) return;
@@ -103,56 +107,13 @@ function Grid({ tabla, openVehicle }) {
     if (e.key === "Escape") cancelEdit();
   }
 
-  if (!cols.length) {
-    return (
-      <div className="grid-empty">
-        <span className="ge-ico">{I.table({ width: 30, height: 30 })}</span>
-        <h3>{tabla.nombre}</h3>
-        <p>Esta tabla existe en tu base pero aún no tiene datos de ejemplo cargados aquí.<br />Conéctala para ver y editar sus registros con fórmulas.</p>
-        <span className="ph-tag">Sin datos de ejemplo</span>
-      </div>
-    );
-  }
+  // ── Todos los hooks ANTES del return condicional (regla de hooks de React) ──
+  // Antes estos hooks estaban después del early-return de tabla vacía, lo que
+  // rompía la vista al cambiar entre pestañas con y sin columnas.
 
   // Menú contextual de fila
   const [ctxMenu, setCtxMenu] = React.useState(null); // { x, y, row }
   const [delConfirm, setDelConfirm] = React.useState(null); // row a eliminar
-
-  // Cerrar menú al hacer clic fuera
-  React.useEffect(() => {
-    if (!ctxMenu) return;
-    const close = () => setCtxMenu(null);
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
-  }, [ctxMenu]);
-
-  // Tecla Delete para eliminar fila seleccionada
-  React.useEffect(() => {
-    function onKey(e) {
-      if ((e.key === "Delete" || e.key === "Backspace") && sel && !editing) {
-        const r = data[sel.r];
-        if (r) setDelConfirm(r);
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [sel, editing]);
-
-  async function deleteRow(r) {
-    setDelConfirm(null);
-    const A = window.AUTOMIND;
-    if (!A) return;
-    // Quitar de memoria
-    A.ROWS = A.ROWS.filter(x => x.id !== r.id);
-    const tab = A.TABLAS && A.TABLAS.find(t => t.id === tabla.id);
-    if (tab) tab.rows = A.ROWS;
-    // Forzar re-render actualizando sel
-    setSel({ r: 0, c: 0 });
-    // Eliminar en Supabase
-    if (window.DB) {
-      try { await window.DB.deleteVehicle(r.id); } catch(e) { console.error(e); }
-    }
-  }
 
   const hasSem = cols.some((c) => c.key === "semaforo");
   const data = tabla.rows.filter((r) => {
@@ -163,6 +124,63 @@ function Grid({ tabla, openVehicle }) {
     }
     return true;
   });
+
+  // Cerrar menú al hacer clic fuera
+  React.useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [ctxMenu]);
+
+  // Tecla Delete para eliminar fila seleccionada (solo inventario)
+  React.useEffect(() => {
+    function onKey(e) {
+      // No interceptar cuando el usuario escribe en un campo (buscador, selects…)
+      const tag = (e.target && e.target.tagName) || "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (!esInventario) return;
+      if ((e.key === "Delete" || e.key === "Backspace") && sel && !editing) {
+        const r = data[sel.r];
+        if (r) setDelConfirm(r);
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [sel, editing, data, esInventario]);
+
+  async function deleteRow(r) {
+    setDelConfirm(null);
+    if (!esInventario) return; // deleteVehicle opera sobre `inventario`
+    const A = window.AUTOMIND;
+    if (!A) return;
+    // Eliminar primero en Supabase; solo quitar de memoria si tuvo éxito
+    if (window.DB) {
+      try {
+        await window.DB.deleteVehicle(r.id);
+      } catch(e) {
+        console.error(e);
+        alert("No se pudo eliminar el registro. Intenta de nuevo.");
+        return;
+      }
+    }
+    A.ROWS = A.ROWS.filter(x => x.id !== r.id);
+    const tab = A.TABLAS && A.TABLAS.find(t => t.id === tabla.id);
+    if (tab) tab.rows = A.ROWS;
+    // Forzar re-render actualizando sel
+    setSel({ r: 0, c: 0 });
+  }
+
+  if (!cols.length) {
+    return (
+      <div className="grid-empty">
+        <span className="ge-ico">{I.table({ width: 30, height: 30 })}</span>
+        <h3>{tabla.nombre}</h3>
+        <p>Esta tabla existe en tu base pero aún no tiene datos de ejemplo cargados aquí.<br />Conéctala para ver y editar sus registros con fórmulas.</p>
+        <span className="ph-tag">Sin datos de ejemplo</span>
+      </div>
+    );
+  }
 
   const col = cols[sel.c];
   const row = data[sel.r] || data[0];
@@ -301,8 +319,8 @@ function Grid({ tabla, openVehicle }) {
               <span>{I.arrowUR({ width:14, height:14 })}</span> Abrir ficha
             </button>
           )}
-          <div className="ctx-sep" />
-          <button className="ctx-item danger" onClick={() => { setDelConfirm(ctxMenu.row); setCtxMenu(null); }}>
+          {esInventario && <div className="ctx-sep" />}
+          {esInventario && <button className="ctx-item danger" onClick={() => { setDelConfirm(ctxMenu.row); setCtxMenu(null); }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
               strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
               <polyline points="3 6 5 6 21 6"/>
@@ -310,7 +328,7 @@ function Grid({ tabla, openVehicle }) {
               <path d="M10 11v6M14 11v6"/>
             </svg>
             Eliminar fila
-          </button>
+          </button>}
         </div>
       )}
 

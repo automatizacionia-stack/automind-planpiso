@@ -214,14 +214,15 @@ function FinancieraCard({ fin, onEdit, onToggle }) {
 }
 
 /* ── Vista principal ─────────────────────────────────────────────────────── */
-function GestionFinancieras({ usuarioActual }) {
+function GestionFinancieras({ usuarioActual, isAgencyOwner }) {
   // Financieras pertenecen a la AGENCIA (Coperva), no al workspace
-  // Solo agency_owner puede gestionar financieras globales
+  // Solo agency_owner puede gestionar financieras globales — los directores
+  // de workspace las ven en modo lectura (la RLS de financieras_v2 los bloquearía
+  // de todos modos y verían errores confusos al intentar guardar)
   const agencyId = window.AUTOMIND
     ? (window.AUTOMIND.agencyParentId || window.AUTOMIND.agencyId)
     : null;
-  const puedeGestionar = usuarioActual?.rol === "director"
-    || (window.AUTOMIND?.tenant?.isAgencyOwner)
+  const puedeGestionar = !!isAgencyOwner
     || usuarioActual?.id === "agency-owner";
   const [financieras, setFinancieras] = React.useState(
     window.AUTOMIND ? (window.AUTOMIND.FINANCIERAS || []) : []

@@ -434,6 +434,9 @@
       fecha_llegada:    toISO(v.fechaLlegada),
       foto_url:         v.fotoUrl          || v.foto || null,
       vendedor_id:      v.vendedorId       || null,
+      // Persistir el semáforo actual para que la detección de cambios
+      // (saveVehicle → triggerSemAlert) funcione y no se re-dispare en cada guardado
+      semaforo_snapshot: v.semaforo        || null,
     };
   }
 
@@ -460,6 +463,7 @@
       fechaFactura:    parseDate(row.fecha_factura),
       fechaLlegada:    parseDate(row.fecha_llegada),
       foto:            row.foto_url         || null,
+      fotoUrl:         row.foto_url         || null, // la UI (inventario-editor) lee fotoUrl
       vendedorId:      row.vendedor_id      || null,
     };
   }

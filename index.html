@@ -803,15 +803,32 @@ select.ef-input{cursor:pointer;}
 <div id='root'></div>
 <div id='err-overlay' style='display:none;position:fixed;inset:0;background:#fff;z-index:9999;padding:32px;font-family:monospace;font-size:13px;overflow:auto;'></div>
 <script>
-window.onerror = function(msg, src, line, col, err) {
+// Construir el overlay con textContent (no innerHTML) para no inyectar
+// HTML proveniente de mensajes de error potencialmente controlables
+function __errBlock(title, lines, stack) {
   var d = document.getElementById('err-overlay');
   d.style.display = 'block';
-  d.innerHTML = '<h2 style="color:#e0492f;margin:0 0 16px">Error detectado</h2><b>' + msg + '</b><br><br>Archivo: ' + src + '<br>Línea: ' + line + '<br><br><pre>' + (err && err.stack ? err.stack : '') + '</pre>';
+  var h = document.createElement('h2');
+  h.style.cssText = 'color:#e0492f;margin:16px 0 8px';
+  h.textContent = title;
+  d.appendChild(h);
+  (lines || []).forEach(function(t) {
+    var p = document.createElement('div');
+    p.style.cssText = 'margin:2px 0;font-weight:700';
+    p.textContent = t;
+    d.appendChild(p);
+  });
+  var pre = document.createElement('pre');
+  pre.textContent = stack || '';
+  d.appendChild(pre);
+}
+window.onerror = function(msg, src, line, col, err) {
+  __errBlock('Error detectado', [String(msg), 'Archivo: ' + src + ' · Línea: ' + line],
+    err && err.stack ? err.stack : '');
 };
 window.addEventListener('unhandledrejection', function(e) {
-  var d = document.getElementById('err-overlay');
-  d.style.display = 'block';
-  d.innerHTML = (d.innerHTML||'') + '<h2 style="color:#e0492f;margin:16px 0 8px">Promise rechazada</h2><pre>' + (e.reason && e.reason.stack ? e.reason.stack : String(e.reason)) + '</pre>';
+  __errBlock('Promise rechazada', [],
+    e.reason && e.reason.stack ? e.reason.stack : String(e.reason));
 });
 </script>
 

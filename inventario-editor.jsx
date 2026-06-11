@@ -188,8 +188,11 @@ function InventarioEditor({ rows: rowsInit, usuarios, financieras, usuarioActual
     setForm(f => ({
       ...f,
       financiera: nombre,
-      pctInteres: fin ? fin.tasa    : f.pctInteres,
-      plazoDias:  fin ? fin.plazo   : f.plazoDias,
+      pctInteres: fin ? fin.tasa : f.pctInteres,
+      // Las financieras reales (db.js → financieraFromDbRow) exponen plazoDias;
+      // fin.plazo solo existía en los datos demo
+      plazoDias:  fin ? (fin.plazoDias ?? fin.plazo ?? f.plazoDias) : f.plazoDias,
+      diasGraciaExtra: fin && fin.diasGraciaExtra != null ? fin.diasGraciaExtra : f.diasGraciaExtra,
     }));
     setDirty(true);
   }
@@ -258,7 +261,7 @@ function InventarioEditor({ rows: rowsInit, usuarios, financieras, usuarioActual
       fechaFactura: HOY, fechaLlegada: HOY,
       montoFinanciado:0, diasGraciaBase:30, diasGraciaExtra:0,
       pctInteres:0.14, financiera: financierasList[0]?.nombre || "",
-      plazoDias: financierasList[0]?.plazo || 120, observaciones:"",
+      plazoDias: financierasList[0]?.plazoDias ?? financierasList[0]?.plazo ?? 120, observaciones:"",
       vendedorId:null, fotoUrl:null,
     });
     const nextRows = [newRow, ...rows];

@@ -128,10 +128,13 @@ function ConfigAlertas({ usuarioActual }) {
     setLoading(true);
     try {
       // Reglas
-      const { data: rulesData } = await window.DB.client
+      const { data: rulesData, error: rulesErr } = await window.DB.client
         .from("alert_rules").select("*")
         .eq("workspace_id", workspaceId)
         .order("semaforo");
+      // Si la lectura falló (red/RLS), NO asumir "sin reglas": antes esto
+      // sobrescribía la configuración del usuario con los defaults
+      if (rulesErr) throw rulesErr;
       // Si no hay reglas aún, crear defaults y guardarlos en Supabase
       if (!rulesData || rulesData.length === 0) {
         const defaults = SEM_CONFIG.map(s => ({
