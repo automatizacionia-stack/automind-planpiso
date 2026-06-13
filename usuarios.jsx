@@ -229,7 +229,13 @@ function RegistroUsuarios({ usuarioActual }) {
   async function handleDelete(u) {
     setDeleting(true);
     try {
-      await window.DB.client.from("users").delete().eq("id", u.id);
+      const { data: deleted, error } = await window.DB.client
+        .from("users").delete().eq("id", u.id).select("id");
+      if (error) throw new Error(error.message);
+      // Si RLS bloqueó el delete silenciosamente, el array viene vacío
+      if (!deleted || deleted.length === 0) {
+        throw new Error("No se pudo eliminar el usuario. Solo directores pueden eliminar colaboradores de su workspace.");
+      }
       const next = usuarios.filter(x => x.id !== u.id);
       setUsuarios(next);
       if (window.AUTOMIND) window.AUTOMIND.USUARIOS = next;

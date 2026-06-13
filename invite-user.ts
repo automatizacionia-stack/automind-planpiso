@@ -154,6 +154,22 @@ Deno.serve(async (req) => {
         // No existe en este workspace → crear nueva fila (mismo email, distinto workspace = válido)
         ({ data: savedUser, error: saveErr } = await adminClient
           .from("users").insert(userRow).select().single());
+
+        // Fallback: si el INSERT falla por constraint de unicidad (email+workspace),
+        // significa que la fila existe pero no fue encontrada arriba (ej: delete
+        // bloqueado silenciosamente por RLS). Actualizar la fila existente en vez de fallar.
+        if (saveErr?.code === "23505") {
+          const { data: staleRow } = await adminClient
+            .from("users").select("id")
+            .eq("email", email)
+            .eq("workspace_id", workspaceId)
+            .maybeSingle();
+          if (staleRow) {
+            ({ data: savedUser, error: saveErr } = await adminClient
+              .from("users").update({ ...userRow, id: staleRow.id })
+              .eq("id", staleRow.id).select().single());
+          }
+        }
       }
     }
 
