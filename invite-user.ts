@@ -51,8 +51,9 @@ Deno.serve(async (req) => {
 
     // Resolver la agencia dueña del workspace destino (server-side, no del body)
     const { data: wsRow } = await adminClient
-      .from("workspaces").select("agency_id").eq("id", workspaceId).maybeSingle();
-    const targetAgencyId = wsRow?.agency_id || agencyId || workspaceId;
+      .from("workspaces").select("agency_id, nombre").eq("id", workspaceId).maybeSingle();
+    const targetAgencyId  = wsRow?.agency_id || agencyId || workspaceId;
+    const workspaceName   = wsRow?.nombre || null;
 
     // ¿El invitador es agency owner/admin de esa agencia?
     const { data: agencyMem } = await adminClient
@@ -95,20 +96,33 @@ Deno.serve(async (req) => {
       actionLink = linkData.properties.action_link;
       authUserId = linkData.user?.id || null;
     } else {
-      // Usuario ya existe — generar link de recuperación
+      // Usuario ya existe en auth — buscar su auth_user_id y generar magic link
+      // (magiclink es mejor que recovery: el usuario hace clic y entra directo, sin flujo de contraseña)
       const { data: { users } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
       const existing = users?.find((u: any) => u.email === email);
       authUserId = existing?.id || null;
 
-      const { data: recoveryData } = await adminClient.auth.admin.generateLink({
-        type: "recovery",
-        email,
-        options: { redirectTo: siteUrl },
-      });
-      actionLink = recoveryData?.properties?.action_link || null;
+      if (authUserId) {
+        // Generar magic link para usuario ya registrado
+        const { data: magicData, error: magicErr } = await adminClient.auth.admin.generateLink({
+          type: "magiclink",
+          email,
+          options: { redirectTo: siteUrl },
+        });
+        actionLink = magicData?.properties?.action_link || null;
+        if (magicErr && !actionLink) {
+          // Fallback final: recovery link
+          const { data: recoveryData } = await adminClient.auth.admin.generateLink({
+            type: "recovery",
+            email,
+            options: { redirectTo: siteUrl },
+          });
+          actionLink = recoveryData?.properties?.action_link || null;
+        }
+      }
     }
 
-    if (!actionLink) throw new Error("No se pudo generar el link de acceso");
+    if (!actionLink) throw new Error("No se pudo generar el link de acceso para " + email);
 
     // ── 2. Guardar en tabla users ───────────────────────────────────
     // ID con entropía real (el sufijo de timestamp podía colisionar)
@@ -177,10 +191,11 @@ Deno.serve(async (req) => {
 
     // ── 3. Enviar email via Brevo con el link ───────────────────────
     const brevoKey = Deno.env.get("BREVO_API_KEY");
-    if (!brevoKey) throw new Error("BREVO_API_KEY no configurado");
+    if (!brevoKey) throw new Error("BREVO_API_KEY no configurado en los secrets de la Edge Function");
 
     const rolLabel = rol === "director" ? "Director" : rol === "gerente" ? "Gerente" : "Vendedor";
     const rolColor = rol === "director" ? "#2f6fed" : rol === "gerente" ? "#1f9d57" : "#d99613";
+    const agencyDisplay = workspaceName || "tu agencia";
 
     const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
@@ -188,7 +203,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         sender: { name: "Automind Plan Piso", email: "no-reply@coperva.com" },
         to: [{ email, name: nombre }],
-        subject: "Te invitaron a Automind Plan Piso",
+        subject: `Te invitaron a ${agencyDisplay} en Automind Plan Piso`,
         htmlContent: `
           <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
             max-width:500px;margin:0 auto;padding:32px 20px;background:#f4f6fb">
@@ -208,19 +223,21 @@ Deno.serve(async (req) => {
                   Hola, ${nombre} 👋
                 </h2>
                 <p style="color:#555;line-height:1.7;margin:0 0 20px;font-size:15px">
-                  Has sido invitado a unirte a la plataforma
-                  <strong style="color:#1a1a2e">Automind Plan Piso</strong> como:
+                  Has sido invitado a unirte a
+                  <strong style="color:#1a1a2e">${agencyDisplay}</strong>
+                  en la plataforma Automind Plan Piso como:
                 </p>
 
-                <!-- Rol badge -->
+                <!-- Rol + agencia -->
                 <div style="background:#f4f6fb;border-radius:10px;padding:14px 18px;
-                  margin-bottom:24px;display:inline-block">
+                  margin-bottom:24px;display:flex;align-items:center;gap:12px">
                   <span style="background:${rolColor};color:#fff;font-size:12px;font-weight:700;
-                    padding:4px 12px;border-radius:20px">${rolLabel}</span>
+                    padding:4px 12px;border-radius:20px;white-space:nowrap">${rolLabel}</span>
+                  <span style="font-size:13px;color:#555;font-weight:600">${agencyDisplay}</span>
                 </div>
 
                 <p style="color:#555;line-height:1.7;margin:0 0 28px;font-size:14px">
-                  Haz clic en el botón para activar tu cuenta y crear tu contraseña:
+                  Haz clic en el botón para acceder a tu cuenta:
                 </p>
 
                 <!-- CTA -->
@@ -229,7 +246,7 @@ Deno.serve(async (req) => {
                     style="display:inline-block;background:#2f6fed;color:#fff;
                     text-decoration:none;padding:15px 36px;border-radius:12px;
                     font-weight:700;font-size:15px;letter-spacing:-.2px">
-                    Activar mi cuenta →
+                    Entrar a Automind →
                   </a>
                 </div>
 
@@ -250,10 +267,17 @@ Deno.serve(async (req) => {
     });
 
     const brevoJson = await brevoRes.json();
-    if (!brevoRes.ok) throw new Error("Brevo error: " + JSON.stringify(brevoJson));
+    if (!brevoRes.ok) {
+      // Devolver detalle del error de Brevo para que el front pueda mostrarlo
+      throw new Error(`Brevo (${brevoRes.status}): ${brevoJson?.message || JSON.stringify(brevoJson)}`);
+    }
 
     return new Response(
-      JSON.stringify({ success: true, user: savedUser }),
+      JSON.stringify({
+        success:  true,
+        user:     savedUser,
+        email_id: brevoJson?.messageId || null,  // ID de mensaje Brevo para diagnóstico
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
