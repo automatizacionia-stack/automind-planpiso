@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
     const { data: memberRow } = await adminClient
       .from("users").select("id, email")
       .eq("auth_user_id", user.id)
-      .or(`workspace_id.eq.${workspaceId},agency_id.eq.${workspaceId}`)
+      .eq("workspace_id", workspaceId)
       .maybeSingle();
     let autorizado = !!memberRow;
     if (!autorizado) {
@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
     // propio usuario autenticado) — evita usar la función para spam/phishing
     const { data: wsUsers } = await adminClient
       .from("users").select("email")
-      .or(`workspace_id.eq.${workspaceId},agency_id.eq.${workspaceId}`);
+      .eq("workspace_id", workspaceId);
     const permitidos = new Set(
       (wsUsers || []).map((u: any) => String(u.email || "").toLowerCase()).filter(Boolean)
     );

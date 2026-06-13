@@ -95,6 +95,19 @@
       .select()
       .single();
     if (error) throw error;
+
+    // Sembrar reglas de alerta por defecto para el workspace recién creado.
+    // Sin esto, send-alert no encuentra reglas y omite los emails silenciosamente.
+    const defaultRules = ["saludable","rotacion","comprometido","vencer","intereses"].map(sem => ({
+      workspace_id:    data.id,
+      semaforo:        sem,
+      notify_vendedor: ["comprometido","vencer","intereses"].includes(sem),
+      notify_gerente:  ["comprometido","vencer","intereses"].includes(sem),
+      notify_director: ["comprometido","vencer","intereses"].includes(sem),
+      activa:          ["comprometido","vencer","intereses"].includes(sem),
+    }));
+    await client.from("alert_rules").upsert(defaultRules, { onConflict: "workspace_id,semaforo" });
+
     return data;
   }
 
