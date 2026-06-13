@@ -109,15 +109,15 @@
     let me = null;
 
     if (!workspaceId) {
-      // Buscar en users por auth_user_id
-      const { data: userRow, error: meErr } = await client
+      // Buscar en users por auth_user_id — puede haber múltiples filas (multi-tenant)
+      const { data: userRows } = await client
         .from("users")
         .select("*")
-        .eq("auth_user_id", authData.user.id)
-        .single();
-      if (meErr) throw new Error("Usuario no encontrado en la plataforma.");
-      me = userRow;
-      workspaceId = userRow.workspace_id || userRow.agency_id;
+        .eq("auth_user_id", authData.user.id);
+      if (!userRows || userRows.length === 0) throw new Error("Usuario no encontrado en la plataforma.");
+      // Si está en varios workspaces, tomar el primero (el selector de workspace ya maneja la elección)
+      me = userRows[0];
+      workspaceId = me.workspace_id || me.agency_id;
     }
 
     // Obtener config del workspace
@@ -384,8 +384,8 @@
       fecha_ingreso: userData.fechaIngreso || null,
     };
 
-    // Multi-tenant: el mismo email puede existir en distintas agencias.
-    // El constraint correcto en BD es UNIQUE(email, agency_id), no UNIQUE(email).
+    // Multi-tenant: el mismo email puede existir en distintos workspaces.
+    // El constraint en BD es UNIQUE(email, workspace_id).
     // Upsert por id: si la fila existe → update; si no → insert.
     const { data: existing } = await client
       .from("users").select("id").eq("id", row.id).maybeSingle();
@@ -398,9 +398,9 @@
     }
 
     if (error) {
-      // Conflicto por (email, agency_id): mismo email ya existe en esta agencia
-      if (error.code === "23505" || (error.message || "").includes("users_email_agency_key")) {
-        throw new Error("Este correo ya está registrado en esta agencia. Usa un correo diferente.");
+      // Conflicto por (email, workspace_id): mismo email ya existe en este workspace
+      if (error.code === "23505" || (error.message || "").includes("users_email_workspace_key")) {
+        throw new Error("Este correo ya está registrado en este workspace. Usa un correo diferente.");
       }
       throw error;
     }

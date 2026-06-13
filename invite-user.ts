@@ -127,25 +127,31 @@ Deno.serve(async (req) => {
     };
     if (authUserId) userRow.auth_user_id = authUserId;
 
-    // Verificar si ya existe una fila con este id para decidir insert vs update.
-    // Un upsert por id puede violar users_email_key si el email existe con otro id;
-    // y upsert por email sobrescribiría el id del usuario (rompe auth_user_id).
+    // Multi-tenant: buscar SIEMPRE filtrando por workspace_id.
+    // El mismo email puede existir en workspaces distintos (UNIQUE es email+workspace_id).
+    // Prioridad: buscar por id → buscar por (email, workspace) → insertar nuevo.
     const { data: existingById } = await adminClient
       .from("users").select("id").eq("id", userRow.id).maybeSingle();
 
     let savedUser, saveErr;
     if (existingById) {
+      // Fila con ese id ya existe → actualizar
       ({ data: savedUser, error: saveErr } = await adminClient
         .from("users").update(userRow).eq("id", userRow.id).select().single());
     } else {
-      // Si el email ya existe con otro id, actualizar ese registro
-      const { data: existingByEmail } = await adminClient
-        .from("users").select("id").eq("email", email).maybeSingle();
-      if (existingByEmail) {
+      // Buscar por email DENTRO de este workspace (no globalmente)
+      const { data: existingByEmailInWorkspace } = await adminClient
+        .from("users").select("id")
+        .eq("email", email)
+        .eq("workspace_id", workspaceId)
+        .maybeSingle();
+      if (existingByEmailInWorkspace) {
+        // Ya existe en este workspace → actualizar esa fila
         ({ data: savedUser, error: saveErr } = await adminClient
-          .from("users").update({ ...userRow, id: existingByEmail.id })
-          .eq("id", existingByEmail.id).select().single());
+          .from("users").update({ ...userRow, id: existingByEmailInWorkspace.id })
+          .eq("id", existingByEmailInWorkspace.id).select().single());
       } else {
+        // No existe en este workspace → crear nueva fila (mismo email, distinto workspace = válido)
         ({ data: savedUser, error: saveErr } = await adminClient
           .from("users").insert(userRow).select().single());
       }
