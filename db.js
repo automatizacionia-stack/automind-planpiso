@@ -371,23 +371,39 @@
 
   async function saveColaborador(agencyId, userData) {
     const parentId = (window.AUTOMIND && window.AUTOMIND.agencyParentId) || agencyId;
+    const email = (userData.email || "").toLowerCase().trim();
     const row = {
       id:           userData.id,
       workspace_id: agencyId,
       agency_id:    parentId,
       nombre:       userData.nombre,
-      email:        userData.email,
+      email,
       tel:          userData.tel || null,
       rol:          userData.rol,
       reporta_a:    userData.reportaA || null,
       fecha_ingreso: userData.fechaIngreso || null,
     };
-    const { data, error } = await client
-      .from("users")
-      .upsert(row, { onConflict: "id" })
-      .select()
-      .single();
-    if (error) throw error;
+
+    // Multi-tenant: el mismo email puede existir en distintas agencias.
+    // El constraint correcto en BD es UNIQUE(email, agency_id), no UNIQUE(email).
+    // Upsert por id: si la fila existe → update; si no → insert.
+    const { data: existing } = await client
+      .from("users").select("id").eq("id", row.id).maybeSingle();
+
+    let data, error;
+    if (existing) {
+      ({ data, error } = await client.from("users").update(row).eq("id", row.id).select().single());
+    } else {
+      ({ data, error } = await client.from("users").insert(row).select().single());
+    }
+
+    if (error) {
+      // Conflicto por (email, agency_id): mismo email ya existe en esta agencia
+      if (error.code === "23505" || (error.message || "").includes("users_email_agency_key")) {
+        throw new Error("Este correo ya está registrado en esta agencia. Usa un correo diferente.");
+      }
+      throw error;
+    }
     return data;
   }
 

@@ -90,7 +90,9 @@ function ColabDrawer({ u, usuarios, onSave, onClose }) {
     ? { ...u }
     : { id:"", nombre:"", email:"", tel:"", rol:"vendedor", reportaA:"", fechaIngreso:new Date().toISOString().slice(0,10) }
   );
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const [saving,   setSaving]   = React.useState(false);
+  const [errorMsg, setErrorMsg] = React.useState("");
+  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); if (k === "email") setErrorMsg(""); };
   const isNew = !u;
 
   const directores = usuarios.filter(x => x.rol === "director");
@@ -107,10 +109,20 @@ function ColabDrawer({ u, usuarios, onSave, onClose }) {
                      : form.rol === "vendedor"  ? (gerenteObj ? (usuarios.find(x => x.id === gerenteObj.reportaA) || null) : null)
                      : null;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!form.nombre.trim() || !form.email.trim()) return;
-    const saved = { ...form };
+    setErrorMsg("");
+
+    // Validar email único en el workspace antes de tocar la BD
+    const emailNorm = form.email.trim().toLowerCase();
+    const duplicate = usuarios.find(x => x.email.trim().toLowerCase() === emailNorm && x.id !== form.id);
+    if (duplicate) {
+      setErrorMsg("Ya existe un colaborador con ese correo (" + duplicate.nombre + ").");
+      return;
+    }
+
+    const saved = { ...form, email: emailNorm };
     // ID con entropía real: los últimos 4 dígitos del timestamp se repetían cada
     // 10 segundos y el upsert por id podía sobrescribir a otro colaborador
     if (isNew) saved.id = form.rol[0].toUpperCase() + (
@@ -118,8 +130,15 @@ function ColabDrawer({ u, usuarios, onSave, onClose }) {
         ? crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()
         : Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase()
     );
-    onSave(saved, isNew);
-    onClose();
+
+    setSaving(true);
+    try {
+      await onSave(saved, isNew);
+      onClose();
+    } catch(err) {
+      setErrorMsg(err?.message || "Error al guardar. Intenta de nuevo.");
+      setSaving(false);
+    }
   }
 
   return (
@@ -205,9 +224,22 @@ function ColabDrawer({ u, usuarios, onSave, onClose }) {
               onChange={e => set("fechaIngreso", e.target.value)} />
           </div>
 
+          {errorMsg && (
+            <div className="login-error" style={{ marginBottom:12 }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"
+                strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              {errorMsg}
+            </div>
+          )}
+
           <div className="dr-actions">
-            <button type="submit" className="btn primary">{isNew ? "Agregar colaborador" : "Guardar cambios"}</button>
-            <button type="button" className="btn" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn primary" disabled={saving}>
+              {saving && <span className="login-spinner" style={{ width:13, height:13, borderWidth:2 }} />}
+              {saving ? "Guardando…" : (isNew ? "Agregar colaborador" : "Guardar cambios")}
+            </button>
+            <button type="button" className="btn" onClick={onClose} disabled={saving}>Cancelar</button>
           </div>
         </form>
       </aside>
@@ -274,58 +306,56 @@ function Colaboradores({ usuarios: usuariosInit, rows, usuarioActual, autoOpenFo
     };
   }
 
-  function handleSave(saved, isNew) {
+  async function handleSave(saved, isNew) {
+    // Persistir en Supabase PRIMERO — si falla, el drawer muestra el error
+    // y la lista local no se actualiza (evita estado desincronizado)
+    if (window.DB && window.AUTOMIND && window.AUTOMIND.agencyId) {
+      const A = window.AUTOMIND;
+      await window.DB.saveColaborador(A.agencyId, saved); // lanza si hay error → ColabDrawer lo captura
+    }
+
+    // Solo actualizar estado local si el save fue exitoso
     setUsuarios(prev => {
       const idx = prev.findIndex(u => u.id === saved.id);
       const enriquecido = enriquecer(saved, prev);
-      let next;
-      if (idx >= 0) {
-        next = [...prev]; next[idx] = enriquecido;
-      } else {
-        next = [...prev, enriquecido];
-      }
-      // Sync a AUTOMIND
+      const next = idx >= 0
+        ? prev.map((u, i) => i === idx ? enriquecido : u)
+        : [...prev, enriquecido];
       if (window.AUTOMIND) {
         window.AUTOMIND.USUARIOS = next;
-        const tablaColab = window.AUTOMIND.TABLAS.find(t => t.id === "colaboradores");
+        const tablaColab = window.AUTOMIND.TABLAS?.find(t => t.id === "colaboradores");
         if (tablaColab) tablaColab.rows = next;
       }
       return next;
     });
-    // Persistir en Supabase
-    if (window.DB && window.AUTOMIND && window.AUTOMIND.agencyId) {
+
+    // Enviar invitación por email si es usuario nuevo (fire-and-forget — no bloquea la UI)
+    if (isNew && saved.email && window.DB && window.AUTOMIND) {
       const A = window.AUTOMIND;
-      window.DB.saveColaborador(A.agencyId, saved).catch(err => {
-        console.error("Error guardando colaborador:", err);
-        alert("⚠️ No se pudo guardar el colaborador.\n\nError: " + (err?.message || JSON.stringify(err)));
+      window.DB.client.auth.getSession().then(({ data: { session } }) => {
+        if (!session) return;
+        fetch(`${window.SUPABASE_URL}/functions/v1/invite-user`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`,
+            "apikey": window.SUPABASE_ANON,
+          },
+          body: JSON.stringify({
+            email:        saved.email,
+            nombre:       saved.nombre,
+            tel:          saved.tel || null,
+            rol:          saved.rol,
+            reportaA:     saved.reportaA || null,
+            fechaIngreso: saved.fechaIngreso || null,
+            workspaceId:  A.agencyId,
+            agencyId:     A.agencyParentId || A.agencyId,
+            userId:       saved.id,
+          }),
+        }).then(r => r.json()).then(json => {
+          if (json.error) console.warn("Invitación:", json.error);
+        }).catch(e => console.warn("Error enviando invitación:", e.message));
       });
-      // Enviar invitación por email si es usuario nuevo
-      if (isNew && saved.email) {
-        window.DB.client.auth.getSession().then(({ data: { session } }) => {
-          if (!session) return;
-          fetch(`${window.SUPABASE_URL}/functions/v1/invite-user`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${session.access_token}`,
-              "apikey": window.SUPABASE_ANON,
-            },
-            body: JSON.stringify({
-              email:        saved.email,
-              nombre:       saved.nombre,
-              tel:          saved.tel || null,
-              rol:          saved.rol,
-              reportaA:     saved.reportaA || null,
-              fechaIngreso: saved.fechaIngreso || null,
-              workspaceId:  A.agencyId,
-              agencyId:     A.agencyParentId || A.agencyId,
-              userId:       saved.id,
-            }),
-          }).then(r => r.json()).then(json => {
-            if (json.error) console.warn("Invitación:", json.error);
-          }).catch(e => console.warn("Error enviando invitación:", e.message));
-        });
-      }
     }
   }
 

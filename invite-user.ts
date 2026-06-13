@@ -127,10 +127,29 @@ Deno.serve(async (req) => {
     };
     if (authUserId) userRow.auth_user_id = authUserId;
 
-    const { data: savedUser, error: saveErr } = await adminClient
-      .from("users")
-      .upsert(userRow, { onConflict: "id" })
-      .select().single();
+    // Verificar si ya existe una fila con este id para decidir insert vs update.
+    // Un upsert por id puede violar users_email_key si el email existe con otro id;
+    // y upsert por email sobrescribiría el id del usuario (rompe auth_user_id).
+    const { data: existingById } = await adminClient
+      .from("users").select("id").eq("id", userRow.id).maybeSingle();
+
+    let savedUser, saveErr;
+    if (existingById) {
+      ({ data: savedUser, error: saveErr } = await adminClient
+        .from("users").update(userRow).eq("id", userRow.id).select().single());
+    } else {
+      // Si el email ya existe con otro id, actualizar ese registro
+      const { data: existingByEmail } = await adminClient
+        .from("users").select("id").eq("email", email).maybeSingle();
+      if (existingByEmail) {
+        ({ data: savedUser, error: saveErr } = await adminClient
+          .from("users").update({ ...userRow, id: existingByEmail.id })
+          .eq("id", existingByEmail.id).select().single());
+      } else {
+        ({ data: savedUser, error: saveErr } = await adminClient
+          .from("users").insert(userRow).select().single());
+      }
+    }
 
     if (saveErr) throw new Error("Error DB: " + saveErr.message);
 
