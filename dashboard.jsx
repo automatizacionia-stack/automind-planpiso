@@ -345,7 +345,6 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
       <div className="vlist">
         <div className="vrow vhead">
           <span>Vehículo</span>
-          <span>Financiera</span>
           <span className="r">Días en piso</span>
           <span className="r">Días vencidos</span>
           <span className="r">Interés acum.</span>
@@ -388,7 +387,6 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
                     <b>{r.marca} {r.modelo}</b>
                     <small>{r.anio} · {r.colorExterior} · INV {r.inv}</small>
                   </span>
-                  <span className="v-fin">{r.financiera}</span>
                   <span className="r">{r.diasEnPiso}</span>
                   <span className={"r " + (r.diasVencidos > 0 ? "neg" : "")}>{r.diasVencidos || "—"}</span>
                   <span className="r">{fmtMoney(r.interesAcum)}</span>
