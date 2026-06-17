@@ -44,7 +44,6 @@ create table if not exists inventario (
   color_interior     text,
   estatus            text default 'NUEVOS',
   inv                text,
-  financiera         text,
   monto_financiado   numeric default 0,
   pct_interes        numeric default 0,
   dias_gracia_base   int default 0,

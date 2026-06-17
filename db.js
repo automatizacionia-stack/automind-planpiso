@@ -209,32 +209,6 @@
       .or(`workspace_id.eq.${wsField},agency_id.eq.${wsField}`)
       .order("created_at", { ascending: false });
 
-    // Obtener financieras — nivel AGENCIA (no workspace)
-    // Las financieras son globales para todos los workspaces de la agencia
-    let financieras = [];
-    try {
-      // Primero obtener el agency_id del workspace
-      const agencyIdForFin = workspace.agency_id || wsField;
-      const { data: finData } = await client
-        .from("financieras")
-        .select("*")
-        .eq("agency_id", agencyIdForFin)
-        .eq("activa", true)
-        .order("nombre");
-      if (finData && finData.length > 0) {
-        financieras = finData;
-      } else {
-        // Fallback: intentar con workspace_id/agency_id directo (schema viejo)
-        const { data: finFallback } = await client
-          .from("financieras")
-          .select("*")
-          .or(`workspace_id.eq.${wsField},agency_id.eq.${wsField}`)
-          .eq("activa", true)
-          .order("nombre");
-        if (finFallback) financieras = finFallback;
-      }
-    } catch(e) { console.warn("Error cargando financieras:", e.message); }
-
     // Normalizar: workspace sirve como "agency" para el resto de la app
     const agency = {
       id:        workspace.id,
@@ -246,61 +220,7 @@
       sidebar:   workspace.sidebar  || "#1b2a57",
     };
 
-    return { agency, me, usuarios: usuarios||[], rows: rows||[], financieras };
-  }
-
-  /* ── Financieras — CRUD ──────────────────────────────────────── */
-
-  async function saveFinanciera(agencyId, fin) {
-    const row = {
-      id:               fin.id   || undefined,
-      agency_id:        agencyId, // financieras pertenecen a la AGENCIA, no al workspace
-      nombre:           fin.nombre,
-      tasa:             Number(fin.tasa)            || 0,
-      plazo_dias:       Number(fin.plazoDias)       || 0,
-      dias_gracia_extra:Number(fin.diasGraciaExtra) || 0,
-      logo_url:         fin.logoUrl || null,
-      activa:           fin.activa !== false,
-    };
-    if (!row.id) delete row.id; // dejar que Supabase genere el UUID
-    const { data, error } = await client
-      .from("financieras")
-      .upsert(row, { onConflict: "id" })
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  }
-
-  async function deleteFinanciera(id) {
-    // Soft delete — marcar como inactiva
-    const { error } = await client
-      .from("financieras")
-      .update({ activa: false })
-      .eq("id", id);
-    if (error) throw error;
-  }
-
-  async function loadFinancieras(agencyId) {
-    const { data, error } = await client
-      .from("financieras")
-      .select("*")
-      .eq("agency_id", agencyId)
-      .order("nombre");
-    if (error) throw error;
-    return data || [];
-  }
-
-  function financieraFromDbRow(row) {
-    return {
-      id:               row.id,
-      nombre:           row.nombre,
-      tasa:             Number(row.tasa),
-      plazoDias:        Number(row.plazo_dias),
-      diasGraciaExtra:  Number(row.dias_gracia_extra),
-      logoUrl:          row.logo_url || null,
-      activa:           row.activa,
-    };
+    return { agency, me, usuarios: usuarios||[], rows: rows||[] };
   }
 
   /* ── Inventario — CRUD ────────────────────────────────────── */
@@ -453,7 +373,6 @@
       color_interior:   v.colorInterior    || null,
       estatus:          v.estatus          || "NUEVOS",
       inv:              v.inv              || null,
-      financiera:       v.financiera       || null,
       monto_financiado: Number(v.montoFinanciado) || 0,
       pct_interes:      Number(v.pctInteres)       || 0,
       dias_gracia_base: Number(v.diasGraciaBase)   || 0,
@@ -483,7 +402,6 @@
       colorInterior:   row.color_interior   || "",
       estatus:         row.estatus          || "NUEVOS",
       inv:             row.inv              || "",
-      financiera:      row.financiera       || "",
       montoFinanciado: Number(row.monto_financiado)  || 0,
       pctInteres:      Number(row.pct_interes)        || 0,
       diasGraciaBase:  Number(row.dias_gracia_base)   || 0,
@@ -547,10 +465,6 @@
     saveColaborador,
     deleteColaborador,
     inviteUser,
-    saveFinanciera,
-    deleteFinanciera,
-    loadFinancieras,
-    financieraFromDbRow,
     dbRowFromVehicle,
     vehicleFromDbRow,
     colaboradorFromDbRow,

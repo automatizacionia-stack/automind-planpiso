@@ -155,7 +155,7 @@ function JerarquiaSection({ vendedorId, usuarios, onChange }) {
 }
 
 /* ── Editor principal ───────────────────────────────────────────────────── */
-function InventarioEditor({ rows: rowsInit, usuarios, financieras, usuarioActual, onRowsChange }) {
+function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChange }) {
   const [rows,      setRows]      = React.useState(rowsInit || []);
   const [selId,     setSelId]     = React.useState(rowsInit && rowsInit[0] ? rowsInit[0].id : null);
   const [form,      setForm]      = React.useState(null);
@@ -180,22 +180,6 @@ function InventarioEditor({ rows: rowsInit, usuarios, financieras, usuarioActual
   }, [selId, rows]);
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setDirty(true); setSaved(false); };
-
-  const financierasList = financieras || (window.AUTOMIND ? window.AUTOMIND.FINANCIERAS || [] : []);
-
-  function handleFinancieraChange(nombre) {
-    const fin = financierasList.find(f => f.nombre === nombre);
-    setForm(f => ({
-      ...f,
-      financiera: nombre,
-      pctInteres: fin ? fin.tasa : f.pctInteres,
-      // Las financieras reales (db.js → financieraFromDbRow) exponen plazoDias;
-      // fin.plazo solo existía en los datos demo
-      plazoDias:  fin ? (fin.plazoDias ?? fin.plazo ?? f.plazoDias) : f.plazoDias,
-      diasGraciaExtra: fin && fin.diasGraciaExtra != null ? fin.diasGraciaExtra : f.diasGraciaExtra,
-    }));
-    setDirty(true);
-  }
 
   function handleSave() {
     if (!form) return;
@@ -260,8 +244,8 @@ function InventarioEditor({ rows: rowsInit, usuarios, financieras, usuarioActual
       anio:2026, tipo:"", colorExterior:"BLANCO PURO", colorInterior:"NEGRO",
       fechaFactura: HOY, fechaLlegada: HOY,
       montoFinanciado:0, diasGraciaBase:30, diasGraciaExtra:0,
-      pctInteres:0.14, financiera: financierasList[0]?.nombre || "",
-      plazoDias: financierasList[0]?.plazoDias ?? financierasList[0]?.plazo ?? 120, observaciones:"",
+      pctInteres:0.14,
+      plazoDias: 120, observaciones:"",
       vendedorId:null, fotoUrl:null,
     });
     const nextRows = [newRow, ...rows];
@@ -285,7 +269,7 @@ function InventarioEditor({ rows: rowsInit, usuarios, financieras, usuarioActual
 
   const filteredRows = rows.filter(r => {
     if (!q) return true;
-    return [r.vin, r.descripcion, r.marca, r.modelo, r.financiera, String(r.inv)]
+    return [r.vin, r.descripcion, r.marca, r.modelo, String(r.inv)]
       .join(" ").toLowerCase().includes(q.toLowerCase());
   });
 
@@ -409,13 +393,6 @@ function InventarioEditor({ rows: rowsInit, usuarios, financieras, usuarioActual
             <div className="ef-seccion">
               <div className="ef-sec-head">{I.coins({ width:15, height:15 })} Plan Piso</div>
               <div className="ef-grid-2">
-                <FormField label="Financiera" required>
-                  <select className="ef-input" value={form.financiera || ""}
-                    onChange={e => handleFinancieraChange(e.target.value)}>
-                    <option value="">— Seleccionar —</option>
-                    {financierasList.map(f => <option key={f.nombre} value={f.nombre}>{f.nombre}</option>)}
-                  </select>
-                </FormField>
                 <FormField label="Monto Financiado ($)" required>
                   <input className="ef-input" type="number" step="0.01"
                     value={form.montoFinanciado || ""}

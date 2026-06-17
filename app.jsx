@@ -64,7 +64,7 @@ function VehicleDrawer({ v, onClose, usuarioActual }) {
           <div>
             <div className="dr-eyebrow">{v.id} · {v.vin}</div>
             <h2>{v.marca} {v.modelo}</h2>
-            <div className="dr-meta">{v.anio} · {v.colorExterior} · INV {v.inv} · {v.financiera}</div>
+            <div className="dr-meta">{v.anio} · {v.colorExterior} · INV {v.inv}</div>
           </div>
           <button className="icon-btn ghost" onClick={onClose}>{I.close({ width: 20, height: 20 })}</button>
         </div>
@@ -257,14 +257,13 @@ function enriquecerRows(rows, usuariosEnriquecidos) {
   });
 }
 
-function buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, financieras, parentAgencyId) {
+function buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, parentAgencyId) {
   // Funciones definidas en login.jsx — acceder via window
   const _kpis   = window.computarKpis   || ((r) => ({ total:r.length, vencidos:0, proximos:0, interesTotal:0, montoTotal:0 }));
   const _pivote = window.computarPivote || ((r) => []);
   const _tablas = window.buildTablas    || ((r,u) => [{ id:"inventario", nombre:"Inventario", cols:[], rows:r }, { id:"colaboradores", nombre:"Colaboradores", cols:[], rows:u }]);
   return {
     ROWS: rowsEnriquecidas, USUARIOS: usuariosEnriquecidos,
-    FINANCIERAS: financieras,
     KPIS:   _kpis(rowsEnriquecidas),
     PIVOTE: _pivote(rowsEnriquecidas),
     TABLAS: _tablas(rowsEnriquecidas, usuariosEnriquecidos),
@@ -359,11 +358,10 @@ function App() {
             if (savedWsId) {
               try {
                 const data = await window.DB.loadAgencyData(savedWsId);
-                const { agency, me, usuarios, rows, financieras } = data;
+                const { agency, me, usuarios, rows } = data;
                 const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
                 const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
-                const fins = (financieras||[]).map(f => window.DB.financieraFromDbRow(f));
-                window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, fins, ctx.agencyId);
+                window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, ctx.agencyId);
                 const usuarioActual = { nombre: ctx.agency?.name || "Admin", rol: "director", email: "", id: "agency-owner" };
                 handleLogin({
                   id:agency.id, nombre:agency.nombre, ciudad:agency.ciudad,
@@ -380,11 +378,10 @@ function App() {
             handleLogin({ __agencyCtx: ctx });
           } else {
             // Usuario de workspace normal — cargar directamente
-            const { agency, me, usuarios, rows, financieras } = await window.DB.loadAgencyData();
+            const { agency, me, usuarios, rows } = await window.DB.loadAgencyData();
             const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
             const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
-            const fins = (financieras||[]).map(f => window.DB.financieraFromDbRow(f));
-            window.AUTOMIND   = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, fins);
+            window.AUTOMIND   = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos);
             const usuarioActual = usuariosEnriquecidos.find(u=>u.auth_user_id===me.auth_user_id)||me;
             handleLogin({
               id:agency.id, nombre:agency.nombre, ciudad:agency.ciudad,
@@ -516,11 +513,10 @@ function App() {
       <WorkspaceSelector
         agencyCtx={agencyCtx}
         onSelect={(ws, data) => {
-          const { agency, me, usuarios, rows, financieras } = data;
+          const { agency, me, usuarios, rows } = data;
           const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
           const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
-          const fins = (financieras||[]).map(f => window.DB.financieraFromDbRow(f));
-          window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, fins, agencyCtx.agencyId);
+          window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, agencyCtx.agencyId);
           // Para agency owner, el usuarioActual es un objeto sintético
           const usuarioActual = usuariosEnriquecidos.find(u => u.auth_user_id === agencyCtx.authUserId)
             || { nombre: agencyCtx.agency?.name || "Admin", rol: "director",
@@ -608,7 +604,7 @@ function App() {
           {view === "colaboradores" && <Colaboradores usuarios={A.USUARIOS || []} rows={A.ROWS} usuarioActual={tenant.usuarioActual}
             autoOpenForm={colabAutoOpen} onAutoOpenConsumed={() => setColabAutoOpen(false)} />}
           {view === "inventario" && <InventarioEditor
-            rows={A.ROWS} usuarios={A.USUARIOS || []} financieras={A.FINANCIERAS}
+            rows={A.ROWS} usuarios={A.USUARIOS || []}
             usuarioActual={tenant.usuarioActual}
             onRowsChange={() => setRowsVersion(v => v + 1)} />}
           {view === "ventas" && <Placeholder title="Proceso de Venta" icon={I.sale({ width: 30, height: 30 })}
@@ -619,13 +615,6 @@ function App() {
                 <h1>Configuración</h1>
                 <p className="page-sub">Ajustes generales del workspace — semáforo, notificaciones y preferencias.</p>
               </div>
-              {/* Solo agency owners ven la gestión de financieras desde aquí */}
-              {tenant.isAgencyOwner && (
-                <div style={{ marginBottom:24 }}>
-                  <div className="block-label">Financieras (nivel agencia)</div>
-                  <GestionFinancieras usuarioActual={tenant.usuarioActual} isAgencyOwner={tenant.isAgencyOwner} />
-                </div>
-              )}
               {!tenant.isAgencyOwner && (
                 <div className="ph" style={{ textAlign:"center", padding:"48px 0" }}>
                   {I.gear({ width: 28, height: 28 })}
