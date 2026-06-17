@@ -82,6 +82,7 @@ Deno.serve(async (req) => {
       "https://automatizacionia-stack.github.io/automind-planpiso";
 
     // ── 1. Generar link de invitación (sin que Supabase mande email) ─
+    console.log("[invite-user] STEP 1: generando link para", email, "workspace:", workspaceId);
     let actionLink: string | null = null;
     let authUserId: string | null = null;
 
@@ -95,29 +96,31 @@ Deno.serve(async (req) => {
     if (!linkErr && linkData?.properties?.action_link) {
       actionLink = linkData.properties.action_link;
       authUserId = linkData.user?.id || null;
+      console.log("[invite-user] STEP 1 OK: invite link generado, authUserId:", authUserId);
     } else {
+      console.log("[invite-user] STEP 1: usuario ya existe en auth, linkErr:", linkErr?.message);
       // Usuario ya existe en auth — buscar su auth_user_id y generar magic link
-      // (magiclink es mejor que recovery: el usuario hace clic y entra directo, sin flujo de contraseña)
       const { data: { users } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
       const existing = users?.find((u: any) => u.email === email);
       authUserId = existing?.id || null;
+      console.log("[invite-user] STEP 1: auth user encontrado:", !!authUserId, "id:", authUserId);
 
       if (authUserId) {
-        // Generar magic link para usuario ya registrado
         const { data: magicData, error: magicErr } = await adminClient.auth.admin.generateLink({
           type: "magiclink",
           email,
           options: { redirectTo: siteUrl },
         });
         actionLink = magicData?.properties?.action_link || null;
+        console.log("[invite-user] STEP 1: magiclink generado:", !!actionLink, "magicErr:", magicErr?.message);
         if (magicErr && !actionLink) {
-          // Fallback final: recovery link
           const { data: recoveryData } = await adminClient.auth.admin.generateLink({
             type: "recovery",
             email,
             options: { redirectTo: siteUrl },
           });
           actionLink = recoveryData?.properties?.action_link || null;
+          console.log("[invite-user] STEP 1: recovery link generado:", !!actionLink);
         }
       }
     }
@@ -188,8 +191,10 @@ Deno.serve(async (req) => {
     }
 
     if (saveErr) throw new Error("Error DB: " + saveErr.message);
+    console.log("[invite-user] STEP 2 OK: usuario guardado en DB, id:", savedUser?.id);
 
     // ── 3. Enviar email via Brevo con el link ───────────────────────
+    console.log("[invite-user] STEP 3: enviando email a", email, "via Brevo");
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) throw new Error("BREVO_API_KEY no configurado en los secrets de la Edge Function");
 
@@ -267,16 +272,17 @@ Deno.serve(async (req) => {
     });
 
     const brevoJson = await brevoRes.json();
+    console.log("[invite-user] STEP 3: Brevo status:", brevoRes.status, "response:", JSON.stringify(brevoJson));
     if (!brevoRes.ok) {
-      // Devolver detalle del error de Brevo para que el front pueda mostrarlo
       throw new Error(`Brevo (${brevoRes.status}): ${brevoJson?.message || JSON.stringify(brevoJson)}`);
     }
+    console.log("[invite-user] DONE: email enviado exitosamente a", email);
 
     return new Response(
       JSON.stringify({
         success:  true,
         user:     savedUser,
-        email_id: brevoJson?.messageId || null,  // ID de mensaje Brevo para diagnóstico
+        email_id: brevoJson?.messageId || null,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
