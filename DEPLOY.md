@@ -143,6 +143,13 @@ Cuando hagas cambios en los archivos locales y quieras publicarlos:
 2. Haz clic en el ícono de lápiz → pega el nuevo contenido → **Commit changes**.
 3. GitHub Pages se actualiza automáticamente en ~1 minuto.
 
+> **Importante — cache-busting:** los scripts en `index.html` se cargan con un sufijo de
+> versión (`?v=20260618`). Si editas cualquier `.jsx`/`.js`, **sube también el número de
+> versión** (p. ej. a la fecha del día: `?v=20260619`) en TODAS las líneas de `index.html`.
+> Eso obliga al navegador a descargar la versión nueva en vez de servir la vieja desde caché
+> — es la razón #1 por la que "subo cambios y no se ven". Si no lo bumpeas, el cambio igual
+> aparece, pero puede tardar hasta 10 min y requerir Ctrl+Shift+R.
+
 > **Tip:** Para cambios frecuentes, considera instalar [GitHub Desktop](https://desktop.github.com/) — es una app visual que simplifica subir cambios sin usar línea de comandos.
 
 ---

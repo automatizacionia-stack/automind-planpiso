@@ -11,20 +11,20 @@ function avg(arr) {
 /* ── KPI card superior ──────────────────────────────────────── */
 function TopKpi({ label, value, sub, tone }) {
   const colors = {
-    danger:  "#c0392b",
-    warn:    "#b7770d",
-    ok:      "#1a7a40",
-    neutral: "var(--color-ink)",
+    danger:  "#e0492f",
+    warn:    "#d99613",
+    ok:      "#1f9d57",
+    neutral: "var(--ink)",
   };
   return (
-    <div style={{ background: "var(--color-bg-2,#f7f8fa)", borderRadius: 10, padding: "13px 16px" }}>
-      <div style={{ fontSize: 11, color: "var(--color-muted)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 5 }}>
+    <div style={{ background: "var(--bg)", borderRadius: 10, padding: "13px 16px" }}>
+      <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 5 }}>
         {label}
       </div>
       <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1, color: colors[tone] || colors.neutral }}>
         {value}
       </div>
-      {sub && <div style={{ fontSize: 11, color: "var(--color-muted)", marginTop: 4 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -33,8 +33,8 @@ function TopKpi({ label, value, sub, tone }) {
 function Card({ children, style }) {
   return (
     <div style={{
-      background: "var(--color-surface,#fff)",
-      border: "1px solid var(--color-line,#e8e8ec)",
+      background: "var(--card)",
+      border: "1px solid var(--line)",
       borderRadius: 12,
       overflow: "hidden",
       ...style,
@@ -48,12 +48,12 @@ function CardHead({ title, badge }) {
   return (
     <div style={{
       padding: "9px 16px",
-      borderBottom: "1px solid var(--color-line,#e8e8ec)",
+      borderBottom: "1px solid var(--line)",
       display: "flex", alignItems: "center", justifyContent: "space-between",
     }}>
-      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-ink)" }}>{title}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>{title}</span>
       {badge !== undefined && (
-        <span style={{ fontSize: 10, color: "var(--color-muted)", background: "var(--color-bg-2,#f7f8fa)", padding: "2px 8px", borderRadius: 20 }}>
+        <span style={{ fontSize: 10, color: "var(--muted)", background: "var(--bg)", padding: "2px 8px", borderRadius: 20 }}>
           {badge}
         </span>
       )}
@@ -75,7 +75,7 @@ function StackedBar({ rows }) {
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "5px 14px", marginTop: 7 }}>
         {SEM_ORDEN.map(k => (
-          <span key={k} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--color-muted)" }}>
+          <span key={k} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--muted)" }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: SEM[k].sol, display: "inline-block", flexShrink: 0 }} />
             {SEM[k].label}
           </span>
@@ -100,10 +100,10 @@ function TablaSemaforo({ rows, kpis, filters, setFilters }) {
           <tr>
             {["Estado", "Unidades", "% inventario", "Distribución", "Interés acum."].map((h, i) => (
               <th key={h} style={{
-                padding: "6px 16px", fontSize: 10, color: "var(--color-muted)",
+                padding: "6px 16px", fontSize: 10, color: "var(--muted)",
                 textTransform: "uppercase", letterSpacing: ".04em", fontWeight: 500,
                 textAlign: i === 0 ? "left" : "right",
-                borderBottom: "1px solid var(--color-line,#e8e8ec)",
+                borderBottom: "1px solid var(--line)",
               }}>{h}</th>
             ))}
           </tr>
@@ -117,24 +117,24 @@ function TablaSemaforo({ rows, kpis, filters, setFilters }) {
             return (
               <tr key={k} onClick={() => setSem(k)}
                 style={{ cursor: "pointer", background: isAct ? SEM[k].bg : "transparent", transition: "background .12s" }}>
-                <td style={{ padding: "9px 16px", borderBottom: "1px solid var(--color-line-2,#f0f0f4)" }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600, color: "var(--color-ink)" }}>
+                <td style={{ padding: "9px 16px", borderBottom: "1px solid var(--line-2)" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: SEM[k].sol, flexShrink: 0 }} />
                     {SEM[k].label}
                   </span>
                 </td>
-                <td style={{ padding: "9px 16px", textAlign: "right", borderBottom: "1px solid var(--color-line-2,#f0f0f4)" }}>
-                  <b style={{ fontSize: 14, color: (k === "intereses" || k === "vencer") ? "#c0392b" : "var(--color-ink)" }}>{count}</b>
+                <td style={{ padding: "9px 16px", textAlign: "right", borderBottom: "1px solid var(--line-2)" }}>
+                  <b style={{ fontSize: 14, color: (k === "intereses" || k === "vencer") ? "#e0492f" : "var(--ink)" }}>{count}</b>
                 </td>
-                <td style={{ padding: "9px 16px", textAlign: "right", fontSize: 12, color: "var(--color-muted)", borderBottom: "1px solid var(--color-line-2,#f0f0f4)" }}>
+                <td style={{ padding: "9px 16px", textAlign: "right", fontSize: 12, color: "var(--muted)", borderBottom: "1px solid var(--line-2)" }}>
                   {pct}%
                 </td>
-                <td style={{ padding: "9px 16px", borderBottom: "1px solid var(--color-line-2,#f0f0f4)" }}>
-                  <div style={{ flex: 1, height: 5, background: "var(--color-bg-2,#f7f8fa)", borderRadius: 3, overflow: "hidden" }}>
+                <td style={{ padding: "9px 16px", borderBottom: "1px solid var(--line-2)" }}>
+                  <div style={{ flex: 1, height: 5, background: "var(--bg)", borderRadius: 3, overflow: "hidden" }}>
                     <div style={{ width: pct + "%", height: "100%", background: SEM[k].sol, borderRadius: 3 }} />
                   </div>
                 </td>
-                <td style={{ padding: "9px 16px", textAlign: "right", fontSize: 12, borderBottom: "1px solid var(--color-line-2,#f0f0f4)", color: interesK ? "#c0392b" : "var(--color-muted)" }}>
+                <td style={{ padding: "9px 16px", textAlign: "right", fontSize: 12, borderBottom: "1px solid var(--line-2)", color: interesK ? "#e0492f" : "var(--muted)" }}>
                   {interesK ? fmtMoney(interesK, 0) : "—"}
                 </td>
               </tr>
@@ -158,17 +158,17 @@ function DiasPorSemaforo({ rows }) {
           const dias  = avg(group.map(r => r.diasEnPiso || 0));
           const pct   = maxDias ? (dias / maxDias) * 100 : 0;
           return (
-            <div key={k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderBottom: "1px solid var(--color-line-2,#f0f0f4)" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: "var(--color-ink)", width: 118, flexShrink: 0 }}>
+            <div key={k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderBottom: "1px solid var(--line-2)" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: "var(--ink)", width: 118, flexShrink: 0 }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: SEM[k].sol, flexShrink: 0 }} />
                 {SEM[k].label}
               </span>
-              <div style={{ flex: 1, height: 7, background: "var(--color-bg-2,#f7f8fa)", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ flex: 1, height: 7, background: "var(--bg)", borderRadius: 4, overflow: "hidden" }}>
                 <div style={{ width: pct + "%", height: "100%", background: SEM[k].sol, borderRadius: 4 }} />
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", minWidth: 54 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-ink)" }}>{dias} días</span>
-                <span style={{ fontSize: 10, color: "var(--color-muted)" }}>{group.length} uds.</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{dias} días</span>
+                <span style={{ fontSize: 10, color: "var(--muted)" }}>{group.length} uds.</span>
               </div>
             </div>
           );
@@ -196,22 +196,22 @@ function PorMarca({ rows, filters, setFilters }) {
           onClick={() => setFilters(f => ({ ...f, marca: f.marca === marca ? null : marca }))}
           style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "8px 16px", borderBottom: "1px solid var(--color-line-2,#f0f0f4)",
+            padding: "8px 16px", borderBottom: "1px solid var(--line-2)",
             cursor: "pointer", fontSize: 12,
-            background: filters.marca === marca ? "var(--color-bg-2,#f7f8fa)" : "transparent",
+            background: filters.marca === marca ? "var(--bg)" : "transparent",
           }}>
-          <span style={{ fontWeight: 600, color: "var(--color-ink)" }}>{marca}</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-muted)" }}>
+          <span style={{ fontWeight: 600, color: "var(--ink)" }}>{marca}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--muted)" }}>
             {d.total} uds.
             {d.alertas > 0 && (
-              <span style={{ background: "#fde8e8", color: "#c0392b", fontWeight: 700, fontSize: 10, padding: "1px 7px", borderRadius: 20 }}>
+              <span style={{ background: "#fcebe7", color: "#e0492f", fontWeight: 700, fontSize: 10, padding: "1px 7px", borderRadius: 20 }}>
                 {d.alertas} ⚠
               </span>
             )}
           </span>
         </div>
       ))}
-      {!list.length && <div style={{ padding: "20px 16px", color: "var(--color-muted)", fontSize: 12 }}>Sin datos</div>}
+      {!list.length && <div style={{ padding: "20px 16px", color: "var(--muted)", fontSize: 12 }}>Sin datos</div>}
     </Card>
   );
 }
@@ -222,7 +222,7 @@ function Antiguedad({ rows }) {
     { label: "0 – 30 días",  fn: r => r.diasEnPiso <= 30,                       color: "#1f9d57" },
     { label: "31 – 60 días", fn: r => r.diasEnPiso > 30 && r.diasEnPiso <= 60,  color: "#d99613" },
     { label: "61 – 90 días", fn: r => r.diasEnPiso > 60 && r.diasEnPiso <= 90,  color: "#e07a20" },
-    { label: "91+ días",     fn: r => r.diasEnPiso > 90,                         color: "#c0392b" },
+    { label: "91+ días",     fn: r => r.diasEnPiso > 90,                         color: "#e0492f" },
   ];
   const max = Math.max(...tramos.map(t => rows.filter(t.fn).length), 1);
   return (
@@ -231,9 +231,9 @@ function Antiguedad({ rows }) {
       {tramos.map(t => {
         const count = rows.filter(t.fn).length;
         return (
-          <div key={t.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", borderBottom: "1px solid var(--color-line-2,#f0f0f4)" }}>
-            <span style={{ fontSize: 12, color: "var(--color-muted)", width: 90, flexShrink: 0 }}>{t.label}</span>
-            <div style={{ flex: 1, height: 6, background: "var(--color-bg-2,#f7f8fa)", borderRadius: 3, overflow: "hidden" }}>
+          <div key={t.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", borderBottom: "1px solid var(--line-2)" }}>
+            <span style={{ fontSize: 12, color: "var(--muted)", width: 90, flexShrink: 0 }}>{t.label}</span>
+            <div style={{ flex: 1, height: 6, background: "var(--bg)", borderRadius: 3, overflow: "hidden" }}>
               <div style={{ width: ((count / max) * 100) + "%", height: "100%", background: t.color, borderRadius: 3 }} />
             </div>
             <span style={{ fontSize: 13, fontWeight: 700, color: t.color, minWidth: 28, textAlign: "right" }}>{count}</span>
@@ -267,35 +267,35 @@ function CargaVendedor({ rows, usuarios }) {
         const [bg, txt] = (AVCOLORS[i] || AVCOLORS[0]).split(":");
         const initials  = v.nombre.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
         return (
-          <div key={v.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 16px", borderBottom: "1px solid var(--color-line-2,#f0f0f4)" }}>
+          <div key={v.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 16px", borderBottom: "1px solid var(--line-2)" }}>
             <div style={{ width: 26, height: 26, borderRadius: "50%", background: bg, color: txt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
               {initials}
             </div>
-            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "var(--color-ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {v.nombre.split(" ").slice(0, 2).join(" ")}
             </span>
-            <div style={{ width: 60, height: 5, background: "var(--color-bg-2,#f7f8fa)", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ width: 60, height: 5, background: "var(--bg)", borderRadius: 3, overflow: "hidden" }}>
               <div style={{ width: ((v.total / maxUnits) * 100) + "%", height: "100%", background: "#2f6fed", borderRadius: 3 }} />
             </div>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-ink)", minWidth: 20, textAlign: "right" }}>{v.total}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", minWidth: 20, textAlign: "right" }}>{v.total}</span>
             {v.alertas > 0 && (
-              <span style={{ fontSize: 10, color: "#c0392b", fontWeight: 700, minWidth: 18 }}>⚠{v.alertas}</span>
+              <span style={{ fontSize: 10, color: "#e0492f", fontWeight: 700, minWidth: 18 }}>⚠{v.alertas}</span>
             )}
           </div>
         );
       })}
       {sinAsignar > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 16px" }}>
-          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#f7f8fa", color: "#aaa", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0 }}>—</div>
-          <span style={{ flex: 1, fontSize: 12, color: "var(--color-muted)" }}>Sin asignar</span>
-          <div style={{ width: 60, height: 5, background: "var(--color-bg-2,#f7f8fa)", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--bg)", color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0 }}>—</div>
+          <span style={{ flex: 1, fontSize: 12, color: "var(--muted)" }}>Sin asignar</span>
+          <div style={{ width: 60, height: 5, background: "var(--bg)", borderRadius: 3, overflow: "hidden" }}>
             <div style={{ width: ((sinAsignar / maxUnits) * 100) + "%", height: "100%", background: "#e0492f", borderRadius: 3 }} />
           </div>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#c0392b", minWidth: 20, textAlign: "right" }}>{sinAsignar}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#e0492f", minWidth: 20, textAlign: "right" }}>{sinAsignar}</span>
         </div>
       )}
       {!vendedores.length && !sinAsignar && (
-        <div style={{ padding: "20px 16px", color: "var(--color-muted)", fontSize: 12 }}>Sin vendedores con unidades</div>
+        <div style={{ padding: "20px 16px", color: "var(--muted)", fontSize: 12 }}>Sin vendedores con unidades</div>
       )}
     </Card>
   );
@@ -327,9 +327,9 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
 
   return (
     <Card style={{ marginTop: 10 }}>
-      <div style={{ padding: "9px 16px", borderBottom: "1px solid var(--color-line,#e8e8ec)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ padding: "9px 16px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-ink)" }}>Lista detallada</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>Lista detallada</span>
           {activeLabel && (
             <button className="chip-clear" onClick={() => setFilters({ sem: null, fin: null, gerente: null, marca: null })}>
               {I.filter({ width: 12, height: 12 })} {activeLabel} · {filtered.length}
