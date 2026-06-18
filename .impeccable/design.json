@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-18T00:00:00Z",
+  "title": "Design System: Automind · Plan Piso",
+  "extensions": {
+    "colorMeta": {
+      "accent": { "role": "primary", "displayName": "Azul Acción", "canonical": "#2f6fed", "tonalRamp": ["#0a1f4d","#102c66","#163a85","#1d4aa6","#2f6fed","#5d8df3","#92b3f8","#cdddfc"] },
+      "sidebar": { "role": "secondary", "displayName": "Marino Sidebar", "canonical": "#1b2a57", "tonalRamp": ["#0a1024","#101934","#16224a","#1b2a57","#2b3f78","#43589a","#7385bd","#b4c0de"] },
+      "sem-saludable": { "role": "tertiary", "displayName": "Verde Saludable", "canonical": "#1f9d57", "tonalRamp": ["#063a23","#0a4f2e","#0f6539","#147443","#1f9d57","#46b878","#7fd0a3","#bfe6cf"] },
+      "sem-rotacion": { "role": "tertiary", "displayName": "Ámbar Rotación", "canonical": "#d99613", "tonalRamp": ["#2e1f02","#4d3405","#6e4a08","#9a6a06","#d99613","#e6b34d","#f0cd85","#fbf2da"] },
+      "sem-comprometido": { "role": "tertiary", "displayName": "Naranja Comprometido", "canonical": "#e07a20", "tonalRamp": ["#301704","#4f2807","#723b0a","#9a4e06","#e07a20","#ea9a55","#f2bd8c","#fdf0e6"] },
+      "sem-vencer": { "role": "tertiary", "displayName": "Rojo Por Vencer", "canonical": "#e0492f", "tonalRamp": ["#330f08","#56190d","#7a2414","#bb3018","#e0492f","#ea7461","#f2a394","#fcebe7"] },
+      "sem-intereses": { "role": "tertiary", "displayName": "Negro En Intereses", "canonical": "#2d3142", "tonalRamp": ["#0d0f16","#14171f","#1a1f2e","#2d3142","#454b62","#6b7188","#9aa0b3","#c8cad4"] },
+      "ink": { "role": "neutral", "displayName": "Tinta", "canonical": "#161b2e", "tonalRamp": ["#161b2e","#262d44","#3c4257","#565d74","#6b7488","#9aa1b3","#c3c8d4","#e6e9f1"] },
+      "bg": { "role": "neutral", "displayName": "Lienzo Frío", "canonical": "#f3f5fb", "tonalRamp": ["#11141d","#1f2532","#373f52","#565d74","#8a91a5","#bcc2d2","#e6e9f1","#f3f5fb"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Títulos de página (h1). Único nivel grande, techo 34px." },
+      "metric": { "displayName": "Metric", "purpose": "Cifras de KPI; el dato como protagonista." },
+      "title": { "displayName": "Title", "purpose": "Encabezados de tarjeta y sección." },
+      "body": { "displayName": "Body", "purpose": "Texto descriptivo y subtítulos, line-height 1.6." },
+      "label": { "displayName": "Label", "purpose": "Micro-label en mayúsculas para columnas, menús y bloques de formulario." },
+      "mono": { "displayName": "Mono", "purpose": "Fórmulas, VIN y valores calculados. La voz de lo exacto y verificable." }
+    },
+    "shadows": [
+      { "name": "lift-hover", "value": "0 12px 26px -16px rgba(20,30,60,.45)", "purpose": "Levantar tarjetas interactivas (KPI, semáforo) al hover, junto a translateY(-2px)." },
+      { "name": "ring-active", "value": "0 0 0 2px var(--sol, #2f6fed)", "purpose": "Anillo de selección; color del semáforo o azul de acción." },
+      { "name": "popover-float", "value": "0 18px 44px -16px rgba(10,16,40,.55)", "purpose": "Menús, drawers y paneles flotantes." }
+    ],
+    "motion": [
+      { "name": "ease-state", "value": "0.15s ease", "purpose": "Transición por defecto de fondo/borde en hover y estados." },
+      { "name": "ease-lift", "value": "transform .15s, box-shadow .2s, border-color .15s", "purpose": "Levantamiento de tarjetas interactivas." },
+      { "name": "ease-bar", "value": "width .4s", "purpose": "Llenado de barras de progreso del plan y de histogramas." }
+    ],
+    "breakpoints": [
+      { "name": "sidebar", "value": "252px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal. Azul de acción sólido, texto blanco.",
+      "html": "<button class=\"ds-btn-primary\">Guardar cambios</button>",
+      "css": ".ds-btn-primary{background:#2f6fed;color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:600;font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;cursor:pointer;transition:background .15s;}.ds-btn-primary:hover{background:#2a63d4;}.ds-btn-primary:focus-visible{outline:2px solid #2f6fed;outline-offset:2px;}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Acción secundaria. Blanco con borde de línea.",
+      "html": "<button class=\"ds-btn-secondary\">Cancelar</button>",
+      "css": ".ds-btn-secondary{background:#fff;color:#3c4257;border:1px solid #e6e9f1;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:600;font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;cursor:pointer;transition:background .15s;}.ds-btn-secondary:hover{background:#f3f5fb;}"
+    },
+    {
+      "name": "Semáforo Pill",
+      "kind": "chip",
+      "refersTo": "pill",
+      "description": "Insignia de estado del semáforo. Fondo y texto tintados del estado, con punto de color. Siempre con etiqueta de texto.",
+      "html": "<span class=\"ds-pill-saludable\"><span class=\"ds-pill-dot\"></span>Margen saludable</span>",
+      "css": ".ds-pill-saludable{display:inline-flex;align-items:center;gap:7px;background:#e7f5ed;color:#0f7a40;font-size:13px;font-weight:700;padding:5px 12px;border-radius:20px;font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;white-space:nowrap;}.ds-pill-dot{width:9px;height:9px;border-radius:50%;background:#1f9d57;}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Superficie blanca plana sobre el lienzo frío. Sin sombra en reposo.",
+      "html": "<div class=\"ds-card\"><h3>Distribución del semáforo</h3><p>Estado actual del inventario en piso.</p></div>",
+      "css": ".ds-card{background:#fff;border:1px solid #e6e9f1;border-radius:14px;padding:22px 24px;font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;}.ds-card h3{font-size:17px;font-weight:700;letter-spacing:-.01em;color:#161b2e;margin:0 0 3px;}.ds-card p{font-size:13px;color:#6b7488;margin:0;}"
+    },
+    {
+      "name": "Mini KPI",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Tarjeta de métrica con tile de ícono tintado de azul y cifra grande. Levanta al hover.",
+      "html": "<button class=\"ds-kpi\"><span class=\"ds-kpi-ico\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" width=\"20\" height=\"20\"><path d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/></svg></span><span class=\"ds-kpi-body\"><span class=\"ds-kpi-label\">Total en piso</span><span class=\"ds-kpi-value\">142 unidades</span></span></button>",
+      "css": ".ds-kpi{display:flex;align-items:center;gap:14px;text-align:left;background:#fff;border:1px solid #e6e9f1;border-radius:14px;padding:16px 18px;cursor:pointer;font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;transition:transform .15s,box-shadow .2s,border-color .15s;}.ds-kpi:hover{transform:translateY(-2px);box-shadow:0 12px 24px -16px rgba(20,30,60,.4);border-color:#aac2f7;}.ds-kpi-ico{display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:#eaf1fe;color:#2f6fed;flex:0 0 42px;}.ds-kpi-label{display:block;font-size:13px;color:#6b7488;font-weight:600;}.ds-kpi-value{display:block;font-size:21px;font-weight:700;color:#161b2e;letter-spacing:-.01em;}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de texto. Borde 1.5px, foco azul en el borde sin outline.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Buscar VIN o modelo…\" />",
+      "css": ".ds-input{height:42px;border:1.5px solid #e6e9f1;border-radius:9px;padding:0 13px;font-size:14px;color:#161b2e;background:#fff;font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;transition:border-color .15s;}.ds-input::placeholder{color:#6b7488;}.ds-input:focus{outline:none;border-color:#2f6fed;}"
+    },
+    {
+      "name": "Nav Item (active)",
+      "kind": "nav",
+      "refersTo": "button-primary",
+      "description": "Ítem de navegación del sidebar marino en estado activo.",
+      "html": "<nav class=\"ds-nav\"><button class=\"ds-nav-item active\">Dashboard</button><button class=\"ds-nav-item\">Inventario</button></nav>",
+      "css": ".ds-nav{display:flex;flex-direction:column;gap:4px;background:#1b2a57;padding:12px;border-radius:14px;width:220px;}.ds-nav-item{display:block;width:100%;text-align:left;padding:9px 11px;border-radius:9px;border:none;background:none;color:#c4cce0;font-size:14.5px;font-weight:600;font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;cursor:pointer;transition:background .15s,color .15s;}.ds-nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}.ds-nav-item.active{background:#2f6fed;color:#fff;box-shadow:0 4px 12px -4px rgba(47,111,237,.6);}"
+    }
+  ],
+  "narrative": {
+    "northStar": "La Mesa de Control",
+    "overview": "Automind es una mesa de control financiera: la superficie de un operador que vigila dinero en movimiento. En reposo es tranquila, ordenada y casi monocromática para que la atención no se gaste en decoración. El color saturado entra solo cuando significa algo: el semáforo de riesgo y el azul de acción. El sistema sirve al estado de riesgo: lo crítico salta, lo saludable se mantiene secundario. La calidad viene de la ejecución, no de efectos llamativos. Rechaza el SaaS genérico AI slop y el look de ERP legacy por igual.",
+    "keyCharacteristics": [
+      "Lienzo frío y neutro; el color es señal, no adorno.",
+      "El semáforo de 5 estados es el órgano central del sistema visual.",
+      "Plano en reposo; la elevación es una respuesta a la interacción.",
+      "Tipografía de sistema (Segoe UI Variable) + mono para fórmulas; premium por precisión.",
+      "Densidad ajustable (cómodo / compacto) sin sacrificar legibilidad."
+    ],
+    "rules": [
+      { "name": "La Regla del Color con Significado", "body": "El color saturado solo aparece cuando comunica estado: semáforo (riesgo) o azul (acción/selección). Prohibido el color decorativo.", "section": "colors" },
+      { "name": "La Regla del Marino Cautivo", "body": "#1b2a57 vive solo en la navegación. Nunca como fondo de contenido ni acento de un dato.", "section": "colors" },
+      { "name": "La Regla del Label Funcional", "body": "El micro-label en mayúsculas rotula columnas, menús y bloques de formulario. Prohibido usarlo como eyebrow decorativo sobre cada sección.", "section": "typography" },
+      { "name": "La Regla del Mono para Verdad", "body": "Fórmulas, VIN y valores calculados van en mono. Es la voz de lo exacto y verificable.", "section": "typography" },
+      { "name": "La Regla del Plano por Defecto", "body": "Las superficies son planas en reposo. La sombra aparece solo como respuesta a un estado (hover, selección, foco).", "section": "elevation" }
+    ],
+    "dos": [
+      "Do usar el color saturado solo para significar: semáforo (riesgo) o Azul Acción (interacción/selección).",
+      "Do mantener las superficies planas en reposo; la sombra es respuesta a hover/selección/foco.",
+      "Do acompañar siempre el color del semáforo con etiqueta de texto y/o ícono.",
+      "Do poner fórmulas, VIN y valores calculados en mono (Cascadia Code).",
+      "Do respetar el toggle de densidad variando padding/gap, nunca achicando tipografía ilegiblemente.",
+      "Do usar foco azul en el borde (sin outline) en todos los inputs."
+    ],
+    "donts": [
+      "Don't caer en el SaaS genérico AI slop: sin gradientes morados, sin tarjetas idénticas repetidas, sin hero-número-gigante.",
+      "Don't poner labels en mayúsculas con tracking como eyebrow sobre cada sección por reflejo.",
+      "Don't volver al look de Excel/ERP legacy con tablas grises densas y bordes duros.",
+      "Don't anidar tarjetas ni añadir sombra ambiental permanente en reposo.",
+      "Don't usar el marino fuera de la navegación ni introducir un segundo acento que compita con el azul.",
+      "Don't dejar texto de cuerpo en gris claro de bajo contraste sobre el fondo tintado.",
+      "Don't superar 34px en títulos ni cerrar el tracking más de -0.02em."
+    ]
+  }
+}
