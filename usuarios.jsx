@@ -2,22 +2,7 @@
    Permite a directores y gerentes invitar nuevos usuarios a la plataforma.
    Las invitaciones se envían via Edge Function (invite-user). */
 
-const ROL_COLORS = {
-  director: { bg:"#e8f0fd", txt:"#1a4db5", dot:"#2f6fed" },
-  gerente:  { bg:"#e7f5ed", txt:"#0f7a40", dot:"#1f9d57" },
-  vendedor: { bg:"#fbf2da", txt:"#9a6a06", dot:"#d99613" },
-};
-
-function RolBadgeU({ rol }) {
-  const c = ROL_COLORS[rol] || ROL_COLORS.vendedor;
-  return (
-    <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:12, fontWeight:700,
-      padding:"3px 9px", borderRadius:20, background:c.bg, color:c.txt }}>
-      <span style={{ width:7, height:7, borderRadius:"50%", background:c.dot, display:"inline-block" }} />
-      {rol.charAt(0).toUpperCase() + rol.slice(1)}
-    </span>
-  );
-}
+/* ROL_CFG y RolBadge viven en components.jsx (window.ROL_CFG, window.RolBadge) */
 
 /* ── Drawer para invitar / editar usuario ─────────────────────────────────── */
 function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, onClose }) {
@@ -182,8 +167,7 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
               </div>
             )}
             {success && (
-              <div style={{ background:"#e7f5ed", color:"#0f7a40", borderRadius:9, padding:"10px 14px",
-                fontSize:13, fontWeight:700, marginBottom:12 }}>
+              <div className="fb-ok" style={{ marginBottom:12 }}>
                 ✓ {esEdicion ? "Cambios guardados" : "Invitación enviada correctamente"}
               </div>
             )}
@@ -304,7 +288,7 @@ function RegistroUsuarios({ usuarioActual }) {
               <div className="usr-email">{u.reportaNombre !== "—" ? `↑ ${u.reportaNombre}` : ""}</div>
             </div>
             <div className="usr-email" style={{ fontSize:13 }}>{u.email}</div>
-            <div><RolBadgeU rol={u.rol} /></div>
+            <div><RolBadge rol={u.rol} /></div>
             <div>
               <span className={"usr-status-badge " + (u.auth_user_id ? "activo" : "pendiente")}>
                 <span className="usr-status-badge dot" />

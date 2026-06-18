@@ -1,20 +1,7 @@
 /* Automind · Módulo de Colaboradores
    Organigrama interactivo, lista de usuarios y formulario de alta/edición. */
 
-const ROL_CFG = {
-  director: { label:"Director",  bg:"#e7eefc", txt:"#1c4fcc", dot:"#2f6fed" },
-  gerente:  { label:"Gerente",   bg:"#e7f5ed", txt:"#0f7a40", dot:"#1f9d57" },
-  vendedor: { label:"Vendedor",  bg:"#fbf2da", txt:"#9a6a06", dot:"#d99613" },
-};
-
-function RolBadge({ rol }) {
-  const c = ROL_CFG[rol] || ROL_CFG.vendedor;
-  return (
-    <span className="rol-badge" style={{ background:c.bg, color:c.txt }}>
-      <span className="rol-dot" style={{ background:c.dot }} />{c.label}
-    </span>
-  );
-}
+/* ROL_CFG y RolBadge viven en components.jsx (window.ROL_CFG, window.RolBadge) */
 
 /* ── Nodo del organigrama ─────────────────────────────────────────────────── */
 function OrgNodo({ u, usuarios, rows, activeGerente, onPickGerente, nivel }) {

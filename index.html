@@ -7,7 +7,7 @@
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- Configuración del proyecto (URL + anon key) — editar config.js -->
-<script src="config.js?v=20260618d"></script>
+<script src="config.js?v=20260618e"></script>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
@@ -220,6 +220,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* Dashboard — mini bar */
 .dbar{flex:1;background:var(--bg);border-radius:3px;overflow:hidden;}
 .dbar-fill{height:100%;border-radius:3px;}
+/* Feedback banners (success / error) */
+.fb-ok{background:#e7f5ed;color:#0f7a40;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;}
+.fb-err{background:#fcebe7;color:#e0492f;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;}
+/* Alertas — columna de toggle (Vendedor / Gerente / Director) */
+.alert-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+/* Alertas — header de la tabla de reglas */
+.alert-hd{display:flex;align-items:center;gap:0;padding:12px 24px;background:var(--bg);border-bottom:1px solid var(--line);font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
 
 /* ---------- Vehicle list ---------- */
 .vlist{display:flex;flex-direction:column;}
@@ -864,22 +871,22 @@ window.addEventListener('unhandledrejection', function(e) {
 </template>
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="db.js?v=20260618d"></script>
-<script type="text/babel" src="login.jsx?v=20260618d"></script>
-<script type="text/babel" src="tweaks-panel.jsx?v=20260618d"></script>
+<script src="db.js?v=20260618e"></script>
+<script type="text/babel" src="login.jsx?v=20260618e"></script>
+<script type="text/babel" src="tweaks-panel.jsx?v=20260618e"></script>
 
-<script type="text/babel" src="components.jsx?v=20260618d"></script>
-<script type="text/babel" src="charts.jsx?v=20260618d"></script>
-<script type="text/babel" src="dashboard.jsx?v=20260618d"></script>
-<script type="text/babel" src="database.jsx?v=20260618d"></script>
-<script type="text/babel" src="import.jsx?v=20260618d"></script>
-<script type="text/babel" src="colaboradores.jsx?v=20260618d"></script>
-<script type="text/babel" src="inventario-editor.jsx?v=20260618d"></script>
-<script type="text/babel" src="usuarios.jsx?v=20260618d"></script>
-<script type="text/babel" src="financieras.jsx?v=20260618d"></script>
-<script type="text/babel" src="workspace-selector.jsx?v=20260618d"></script>
-<script type="text/babel" src="alertas.jsx?v=20260618d"></script>
-<script type="text/babel" src="app.jsx?v=20260618d"></script>
+<script type="text/babel" src="components.jsx?v=20260618e"></script>
+<script type="text/babel" src="charts.jsx?v=20260618e"></script>
+<script type="text/babel" src="dashboard.jsx?v=20260618e"></script>
+<script type="text/babel" src="database.jsx?v=20260618e"></script>
+<script type="text/babel" src="import.jsx?v=20260618e"></script>
+<script type="text/babel" src="colaboradores.jsx?v=20260618e"></script>
+<script type="text/babel" src="inventario-editor.jsx?v=20260618e"></script>
+<script type="text/babel" src="usuarios.jsx?v=20260618e"></script>
+<script type="text/babel" src="financieras.jsx?v=20260618e"></script>
+<script type="text/babel" src="workspace-selector.jsx?v=20260618e"></script>
+<script type="text/babel" src="alertas.jsx?v=20260618e"></script>
+<script type="text/babel" src="app.jsx?v=20260618e"></script>
 <script type="text/babel">
   ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>

@@ -52,25 +52,25 @@ function AlertRuleRow({ rule, onUpdate, saving }) {
       </div>
 
       {/* Activar alerta */}
-      <div style={{ flex:"0 0 120px", display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+      <div className="alert-col" style={{ flex:"0 0 120px" }}>
         <Toggle checked={rule.activa} onChange={v => onUpdate(rule.semaforo, "activa", v)} />
         <span style={{ fontSize:11, color:"var(--muted)" }}>{rule.activa ? "Activa" : "Inactiva"}</span>
       </div>
 
       {/* Notificar vendedor */}
-      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+      <div className="alert-col">
         <Toggle checked={rule.notify_vendedor} onChange={v => onUpdate(rule.semaforo, "notify_vendedor", v)} disabled={!rule.activa} />
         <span style={{ fontSize:11, color:"var(--muted)" }}>Vendedor</span>
       </div>
 
       {/* Notificar gerente */}
-      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+      <div className="alert-col">
         <Toggle checked={rule.notify_gerente} onChange={v => onUpdate(rule.semaforo, "notify_gerente", v)} disabled={!rule.activa} />
         <span style={{ fontSize:11, color:"var(--muted)" }}>Gerente</span>
       </div>
 
       {/* Notificar director */}
-      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+      <div className="alert-col">
         <Toggle checked={rule.notify_director} onChange={v => onUpdate(rule.semaforo, "notify_director", v)} disabled={!rule.activa} />
         <span style={{ fontSize:11, color:"var(--muted)" }}>Director</span>
       </div>
@@ -247,8 +247,7 @@ function ConfigAlertas({ usuarioActual }) {
       </div>
 
       {/* Panel de prueba — siempre visible */}
-      <div style={{ background:"var(--card)", border:"1px solid var(--line)", borderRadius:"var(--radius)",
-        padding:"20px 24px", display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
+      <div className="dcard" style={{ padding:"20px 24px", display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
         <div style={{ fontSize:13, fontWeight:700, color:"var(--ink)", flex:"0 0 auto" }}>
           🧪 Prueba de email
         </div>
@@ -266,9 +265,7 @@ function ConfigAlertas({ usuarioActual }) {
           {testSending ? " Enviando…" : "Enviar email de prueba"}
         </button>
         {testResult && (
-          <div style={{ width:"100%", padding:"8px 12px", borderRadius:8, fontSize:13, fontWeight:600,
-            background: testResult.ok ? "#e7f5ed" : "#fcebe7",
-            color: testResult.ok ? "#0f7a40" : "#e0492f" }}>
+          <div className={testResult.ok ? "fb-ok" : "fb-err"} style={{ width:"100%" }}>
             {testResult.msg}
           </div>
         )}
@@ -279,11 +276,9 @@ function ConfigAlertas({ usuarioActual }) {
           <span className="login-spinner" style={{ width:28, height:28, borderWidth:3 }} />
         </div>
       ) : tab === "reglas" ? (
-        <div style={{ background:"var(--card)", borderRadius:"var(--radius)", border:"1px solid var(--line)", overflow:"hidden" }}>
+        <div className="dcard">
           {/* Header tabla */}
-          <div style={{ display:"flex", alignItems:"center", gap:0, padding:"12px 24px",
-            background:"var(--bg)", borderBottom:"1px solid var(--line)",
-            fontSize:11.5, fontWeight:800, textTransform:"uppercase", letterSpacing:".05em", color:"var(--muted)" }}>
+          <div className="alert-hd">
             <div style={{ flex:"0 0 220px" }}>Estado del semáforo</div>
             <div style={{ flex:"0 0 120px", textAlign:"center" }}>Alerta activa</div>
             <div style={{ flex:1, textAlign:"center" }}>Vendedor</div>
@@ -300,7 +295,7 @@ function ConfigAlertas({ usuarioActual }) {
           </div>
         </div>
       ) : (
-        <div style={{ background:"var(--card)", borderRadius:"var(--radius)", border:"1px solid var(--line)", overflow:"hidden" }}>
+        <div className="dcard">
           {log.length === 0 ? (
             <div style={{ padding:"48px 24px", textAlign:"center", color:"var(--muted)" }}>
               No hay alertas enviadas aún.

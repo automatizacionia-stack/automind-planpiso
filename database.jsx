@@ -284,10 +284,7 @@ function Grid({ tabla, openVehicle }) {
                       ) : c.key === "estatus" ? (
                         <span className="estatus-badge" style={{ background: (ESTATUS_TONE[r.estatus] || ESTATUS_TONE.USADOS).bg, color: (ESTATUS_TONE[r.estatus] || ESTATUS_TONE.USADOS).txt }}>{r.estatus}</span>
                       ) : c.key === "rol" && r.rol ? (
-                        <span className="rol-badge" style={{ background: {director:"#e7eefc",gerente:"#e7f5ed",vendedor:"#fbf2da"}[r.rol]||"#eef1f6", color: {director:"#1c4fcc",gerente:"#0f7a40",vendedor:"#9a6a06"}[r.rol]||"#555" }}>
-                          <span className="rol-dot" style={{ background: {director:"#2f6fed",gerente:"#1f9d57",vendedor:"#d99613"}[r.rol]||"#aaa" }} />
-                          {{director:"Director",gerente:"Gerente",vendedor:"Vendedor"}[r.rol]||r.rol}
-                        </span>
+                        <RolBadge rol={r.rol} />
                       ) : (c.key === "email" || c.key.toLowerCase().includes("email")) && r[c.key] && r[c.key] !== "—" ? (
                         <span style={{ color:"var(--accent)", fontSize:"12.5px" }}>{r[c.key]}</span>
                       ) : cellDisplay(c, r)}
