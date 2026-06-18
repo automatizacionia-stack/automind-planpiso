@@ -17,46 +17,24 @@ function TopKpi({ label, value, sub, tone }) {
     neutral: "var(--ink)",
   };
   return (
-    <div style={{ background: "var(--bg)", borderRadius: 10, padding: "13px 16px" }}>
-      <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 5 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1, color: colors[tone] || colors.neutral }}>
-        {value}
-      </div>
-      {sub && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{sub}</div>}
+    <div className="dkpi">
+      <div className="dkpi-label">{label}</div>
+      <div className="dkpi-value" style={{ color: colors[tone] || colors.neutral }}>{value}</div>
+      {sub && <div className="dkpi-sub">{sub}</div>}
     </div>
   );
 }
 
 /* ── Card wrapper ───────────────────────────────────────────── */
 function Card({ children, style }) {
-  return (
-    <div style={{
-      background: "var(--card)",
-      border: "1px solid var(--line)",
-      borderRadius: 12,
-      overflow: "hidden",
-      ...style,
-    }}>
-      {children}
-    </div>
-  );
+  return <div className="dcard" style={style}>{children}</div>;
 }
 
 function CardHead({ title, badge }) {
   return (
-    <div style={{
-      padding: "9px 16px",
-      borderBottom: "1px solid var(--line)",
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-    }}>
-      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>{title}</span>
-      {badge !== undefined && (
-        <span style={{ fontSize: 10, color: "var(--muted)", background: "var(--bg)", padding: "2px 8px", borderRadius: 20 }}>
-          {badge}
-        </span>
-      )}
+    <div className="dcard-h">
+      <span className="dcard-title">{title}</span>
+      {badge !== undefined && <span className="dcard-badge">{badge}</span>}
     </div>
   );
 }
@@ -327,9 +305,9 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
 
   return (
     <Card style={{ marginTop: 10 }}>
-      <div style={{ padding: "9px 16px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div className="dcard-h">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>Lista detallada</span>
+          <span className="dcard-title">Lista detallada</span>
           {activeLabel && (
             <button className="chip-clear" onClick={() => setFilters({ sem: null, fin: null, gerente: null, marca: null })}>
               {I.filter({ width: 12, height: 12 })} {activeLabel} · {filtered.length}

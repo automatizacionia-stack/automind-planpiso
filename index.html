@@ -201,6 +201,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .pdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;}
 .pivot tfoot td{border-top:1.5px solid var(--line);border-bottom:none;padding-top:12px;color:var(--ink);font-weight:600;}
 
+/* ---------- Dashboard (clases reutilizables; ver DESIGN.md) ---------- */
+.dcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+.dcard-h{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-bottom:1px solid var(--line);}
+.dcard-title{font-size:12px;font-weight:700;color:var(--ink);}
+.dcard-badge{font-size:10px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:20px;}
+.dkpi{background:var(--bg);border-radius:10px;padding:13px 16px;}
+.dkpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
+.dkpi-value{font-size:24px;font-weight:700;line-height:1;color:var(--ink);}
+.dkpi-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
 /* ---------- Vehicle list ---------- */
 .vlist{display:flex;flex-direction:column;}
 .vrow{display:grid;grid-template-columns:2.4fr 1.4fr .9fr 1.1fr 1.1fr .8fr .8fr;align-items:center;gap:10px;padding:11px 14px;text-align:left;border-radius:9px;transition:background .12s;font-size:13.5px;color:var(--ink-2);}
