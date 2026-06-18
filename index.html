@@ -7,7 +7,7 @@
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- Configuración del proyecto (URL + anon key) — editar config.js -->
-<script src="config.js?v=20260618c"></script>
+<script src="config.js?v=20260618d"></script>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
@@ -210,6 +210,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dkpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
 .dkpi-value{font-size:24px;font-weight:700;line-height:1;color:var(--ink);}
 .dkpi-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+/* Dashboard — layout grids */
+.dkpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:10px;}
+.d-grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:10px;}
+.d-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+/* Dashboard — list rows */
+.drow{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line-2);}
+.drow:last-child{border-bottom:none;}
+/* Dashboard — mini bar */
+.dbar{flex:1;background:var(--bg);border-radius:3px;overflow:hidden;}
+.dbar-fill{height:100%;border-radius:3px;}
 
 /* ---------- Vehicle list ---------- */
 .vlist{display:flex;flex-direction:column;}
@@ -242,7 +252,7 @@ button.vrow:hover{background:var(--line-2);}
 .fbar-result{flex:0 0 auto;padding:11px 16px;border-left:1px solid var(--line);font-size:14px;color:var(--muted);white-space:nowrap;}
 .fbar-result b{color:var(--ink);}
 .fx-inline{display:inline-flex;align-items:center;gap:3px;color:var(--accent);font-weight:600;}
-.fx-inline i{font-style:italic;font-family:Georgia,serif;}
+.fx-inline i{font-style:italic;font-family:"Cascadia Code","SF Mono",ui-monospace,Menlo,Consolas,monospace;}
 
 /* ---------- Toolbar ---------- */
 .db-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
@@ -303,7 +313,7 @@ button.vrow:hover{background:var(--line-2);}
 /* ---------- Iconos de tipo de campo ---------- */
 .th-inner{display:inline-flex;align-items:center;gap:7px;}
 .ft{display:inline-grid;place-items:center;min-width:15px;height:15px;font-size:10px;font-weight:700;color:#9aa3b8;border:1px solid #cdd4e0;border-radius:3px;padding:0 2px;}
-.ft-a{font-family:Georgia,serif;}
+.ft-a{font-style:italic;}
 .ft-svg{border:none;color:#9aa3b8;}
 .ft-fx{border:none;color:var(--accent);}
 .sheet th.calc .ft-fx{color:var(--accent);}
@@ -854,22 +864,22 @@ window.addEventListener('unhandledrejection', function(e) {
 </template>
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="db.js?v=20260618c"></script>
-<script type="text/babel" src="login.jsx?v=20260618c"></script>
-<script type="text/babel" src="tweaks-panel.jsx?v=20260618c"></script>
+<script src="db.js?v=20260618d"></script>
+<script type="text/babel" src="login.jsx?v=20260618d"></script>
+<script type="text/babel" src="tweaks-panel.jsx?v=20260618d"></script>
 
-<script type="text/babel" src="components.jsx?v=20260618c"></script>
-<script type="text/babel" src="charts.jsx?v=20260618c"></script>
-<script type="text/babel" src="dashboard.jsx?v=20260618c"></script>
-<script type="text/babel" src="database.jsx?v=20260618c"></script>
-<script type="text/babel" src="import.jsx?v=20260618c"></script>
-<script type="text/babel" src="colaboradores.jsx?v=20260618c"></script>
-<script type="text/babel" src="inventario-editor.jsx?v=20260618c"></script>
-<script type="text/babel" src="usuarios.jsx?v=20260618c"></script>
-<script type="text/babel" src="financieras.jsx?v=20260618c"></script>
-<script type="text/babel" src="workspace-selector.jsx?v=20260618c"></script>
-<script type="text/babel" src="alertas.jsx?v=20260618c"></script>
-<script type="text/babel" src="app.jsx?v=20260618c"></script>
+<script type="text/babel" src="components.jsx?v=20260618d"></script>
+<script type="text/babel" src="charts.jsx?v=20260618d"></script>
+<script type="text/babel" src="dashboard.jsx?v=20260618d"></script>
+<script type="text/babel" src="database.jsx?v=20260618d"></script>
+<script type="text/babel" src="import.jsx?v=20260618d"></script>
+<script type="text/babel" src="colaboradores.jsx?v=20260618d"></script>
+<script type="text/babel" src="inventario-editor.jsx?v=20260618d"></script>
+<script type="text/babel" src="usuarios.jsx?v=20260618d"></script>
+<script type="text/babel" src="financieras.jsx?v=20260618d"></script>
+<script type="text/babel" src="workspace-selector.jsx?v=20260618d"></script>
+<script type="text/babel" src="alertas.jsx?v=20260618d"></script>
+<script type="text/babel" src="app.jsx?v=20260618d"></script>
 <script type="text/babel">
   ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>

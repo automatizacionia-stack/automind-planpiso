@@ -136,13 +136,13 @@ function DiasPorSemaforo({ rows }) {
           const dias  = avg(group.map(r => r.diasEnPiso || 0));
           const pct   = maxDias ? (dias / maxDias) * 100 : 0;
           return (
-            <div key={k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderBottom: "1px solid var(--line-2)" }}>
+            <div key={k} className="drow">
               <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: "var(--ink)", width: 118, flexShrink: 0 }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: SEM[k].sol, flexShrink: 0 }} />
                 {SEM[k].label}
               </span>
-              <div style={{ flex: 1, height: 7, background: "var(--bg)", borderRadius: 4, overflow: "hidden" }}>
-                <div style={{ width: pct + "%", height: "100%", background: SEM[k].sol, borderRadius: 4 }} />
+              <div className="dbar" style={{ height: 7 }}>
+                <div className="dbar-fill" style={{ width: pct + "%", background: SEM[k].sol }} />
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", minWidth: 54 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{dias} días</span>
@@ -172,12 +172,8 @@ function PorMarca({ rows, filters, setFilters }) {
       {list.map(([marca, d]) => (
         <div key={marca}
           onClick={() => setFilters(f => ({ ...f, marca: f.marca === marca ? null : marca }))}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "8px 16px", borderBottom: "1px solid var(--line-2)",
-            cursor: "pointer", fontSize: 12,
-            background: filters.marca === marca ? "var(--bg)" : "transparent",
-          }}>
+          className="drow"
+          style={{ justifyContent: "space-between", cursor: "pointer", fontSize: 12, background: filters.marca === marca ? "var(--bg)" : "transparent" }}>
           <span style={{ fontWeight: 600, color: "var(--ink)" }}>{marca}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--muted)" }}>
             {d.total} uds.
@@ -209,10 +205,10 @@ function Antiguedad({ rows }) {
       {tramos.map(t => {
         const count = rows.filter(t.fn).length;
         return (
-          <div key={t.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", borderBottom: "1px solid var(--line-2)" }}>
+          <div key={t.label} className="drow">
             <span style={{ fontSize: 12, color: "var(--muted)", width: 90, flexShrink: 0 }}>{t.label}</span>
-            <div style={{ flex: 1, height: 6, background: "var(--bg)", borderRadius: 3, overflow: "hidden" }}>
-              <div style={{ width: ((count / max) * 100) + "%", height: "100%", background: t.color, borderRadius: 3 }} />
+            <div className="dbar" style={{ height: 6 }}>
+              <div className="dbar-fill" style={{ width: ((count / max) * 100) + "%", background: t.color }} />
             </div>
             <span style={{ fontSize: 13, fontWeight: 700, color: t.color, minWidth: 28, textAlign: "right" }}>{count}</span>
           </div>
@@ -245,7 +241,7 @@ function CargaVendedor({ rows, usuarios }) {
         const [bg, txt] = (AVCOLORS[i] || AVCOLORS[0]).split(":");
         const initials  = v.nombre.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
         return (
-          <div key={v.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 16px", borderBottom: "1px solid var(--line-2)" }}>
+          <div key={v.id} className="drow">
             <div style={{ width: 26, height: 26, borderRadius: "50%", background: bg, color: txt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
               {initials}
             </div>
@@ -263,7 +259,7 @@ function CargaVendedor({ rows, usuarios }) {
         );
       })}
       {sinAsignar > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 16px" }}>
+        <div className="drow" style={{ borderBottom: "none" }}>
           <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--bg)", color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0 }}>—</div>
           <span style={{ flex: 1, fontSize: 12, color: "var(--muted)" }}>Sin asignar</span>
           <div style={{ width: 60, height: 5, background: "var(--bg)", borderRadius: 3, overflow: "hidden" }}>
@@ -416,7 +412,7 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
       </div>
 
       {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 10, marginBottom: 10 }}>
+      <div className="dkpi-grid">
         <TopKpi label="Total inventario"             value={rows.length}                        sub="unidades en piso"                                                    tone="neutral" />
         <TopKpi label="Críticas (intereses + vencer)" value={criticas}                           sub={rows.length ? Math.round((criticas / rows.length) * 100) + "% del inventario" : "—"} tone={criticas > 0 ? "danger" : "ok"} />
         <TopKpi label="Interés acumulado"             value={fmtMoney(kpis.interesTotal || 0, 0)} sub={(kpis.intereses || 0) + " unidades generando interés"}               tone={kpis.interesTotal > 0 ? "warn" : "ok"} />
@@ -424,13 +420,13 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
       </div>
 
       {/* Semáforo + Días promedio */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10, marginBottom: 10 }}>
+      <div className="d-grid-2-1">
         <TablaSemaforo rows={rows} kpis={kpis} filters={filters} setFilters={setFilters} />
         <DiasPorSemaforo rows={rows} />
       </div>
 
       {/* Marca + Antigüedad + Vendedor */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+      <div className="d-grid-3">
         <PorMarca rows={rows} filters={filters} setFilters={setFilters} />
         <Antiguedad rows={rows} />
         <CargaVendedor rows={rows} usuarios={usuarios} />
