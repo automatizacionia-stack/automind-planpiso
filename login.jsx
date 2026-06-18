@@ -500,7 +500,6 @@ function buildTablas(rows, usuarios) {
     col("modelo",             "Modelo",           "text",   { w:160 }),
     col("anio",               "Año",              "num",    { w:60  }),
     col("estatus",            "Estatus",          "select", { w:100 }),
-    col("financiera",         "Financiera",       "text",   { w:110 }),
     col("semaforo",           "Semáforo",         "select", { w:150 }),
     col("diasEnPiso",         "Días en piso",     "num",    { w:95, tipo:"calc", formula:"=DATEDIF(Fecha_Factura,HOY(),\"D\")-1" }),
     col("diasGraciaTotal",    "Gracia total",     "num",    { w:95 }),
