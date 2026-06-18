@@ -6,7 +6,7 @@ gracia le queda antes de empezar a generar intereses de financiamiento, y notifi
 correo a vendedor/gerente/director cuando una unidad cambia de estado.
 
 - **Repo remoto:** https://github.com/automatizacionia-stack/automind-planpiso (`origin/main`)
-- **Hosting:** GitHub Pages (sitio estático, sirve `index.html`)
+- **Hosting:** Vercel — https://automind-planpiso.vercel.app/ (deploy automático desde `main`)
 - **Backend:** Supabase (Postgres + Auth + Edge Functions)
 - **Idioma del producto y del código:** español (mantenerlo así).
 
@@ -125,8 +125,8 @@ consulta `alert_rules` del workspace y envía los correos vía Brevo.
 
 ## Despliegue
 
-No hay CI/CD. Para publicar cambios: hacer commit/push a `main` → GitHub Pages se actualiza
-solo (~1 min). Los `.sql` se corren a mano en el SQL Editor de Supabase; los `.ts` se
+Para publicar cambios: hacer commit/push a `main` → Vercel hace el deploy automáticamente
+(~1 min). Los `.sql` se corren a mano en el SQL Editor de Supabase; los `.ts` se
 despliegan como Edge Functions. Detalle completo en `DEPLOY.md`.
 
 > Si una vista "no muestra cambios" en producción, casi siempre es cache del navegador
