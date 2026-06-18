@@ -10,11 +10,22 @@ colors:
   bg: "#f3f5fb"
   card: "#ffffff"
   line: "#e6e9f1"
+  line-2: "#eef1f6"
   sem-saludable: "#1f9d57"
+  sem-saludable-bg: "#e7f5ed"
+  sem-saludable-ink: "#0f7a40"
   sem-rotacion: "#d99613"
+  sem-rotacion-bg: "#fbf2da"
+  sem-rotacion-ink: "#9a6a06"
   sem-comprometido: "#e07a20"
+  sem-comprometido-bg: "#fdf0e6"
+  sem-comprometido-ink: "#9a4e06"
   sem-vencer: "#e0492f"
+  sem-vencer-bg: "#fcebe7"
+  sem-vencer-ink: "#bb3018"
   sem-intereses: "#2d3142"
+  sem-intereses-bg: "#eaebef"
+  sem-intereses-ink: "#1a1f2e"
 typography:
   display:
     fontFamily: "Segoe UI Variable, Segoe UI, system-ui, -apple-system, sans-serif"
@@ -52,6 +63,13 @@ rounded:
   md: "10px"
   lg: "14px"
   pill: "20px"
+  # Valores adicionales realmente usados en la app. La escala es algo floja
+  # (6/7/8/9/10/11/12 conviven); candidata a tensar vía /impeccable layout.
+  control-xs: "6px"
+  control-sm: "7px"
+  control-md: "9px"
+  control-lg: "11px"
+  panel: "12px"
 spacing:
   gap: "18px"
   pad: "32px"

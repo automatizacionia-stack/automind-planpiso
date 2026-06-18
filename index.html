@@ -7,7 +7,7 @@
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- Configuración del proyecto (URL + anon key) — editar config.js -->
-<script src="config.js?v=20260618b"></script>
+<script src="config.js?v=20260618c"></script>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
@@ -577,7 +577,7 @@ select.cf-input{cursor:pointer;}
 /* Ítem de lista */
 .vie-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-bottom:1px solid var(--line-2);text-align:left;transition:background .1s;border-radius:0;}
 .vie-item:hover{background:var(--bg);}
-.vie-item.active{background:color-mix(in srgb,var(--accent) 8%,#fff);border-left:3px solid var(--accent);}
+.vie-item.active{background:color-mix(in srgb,var(--accent) 12%,#fff);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 30%,transparent);}
 .vie-thumb{width:52px;height:40px;border-radius:7px;overflow:hidden;background:var(--line-2);flex:0 0 52px;display:grid;place-items:center;}
 .vie-thumb img{width:100%;height:100%;object-fit:cover;}
 .vie-thumb-ph{color:var(--muted);opacity:.6;}
@@ -854,22 +854,22 @@ window.addEventListener('unhandledrejection', function(e) {
 </template>
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="db.js?v=20260618b"></script>
-<script type="text/babel" src="login.jsx?v=20260618b"></script>
-<script type="text/babel" src="tweaks-panel.jsx?v=20260618b"></script>
+<script src="db.js?v=20260618c"></script>
+<script type="text/babel" src="login.jsx?v=20260618c"></script>
+<script type="text/babel" src="tweaks-panel.jsx?v=20260618c"></script>
 
-<script type="text/babel" src="components.jsx?v=20260618b"></script>
-<script type="text/babel" src="charts.jsx?v=20260618b"></script>
-<script type="text/babel" src="dashboard.jsx?v=20260618b"></script>
-<script type="text/babel" src="database.jsx?v=20260618b"></script>
-<script type="text/babel" src="import.jsx?v=20260618b"></script>
-<script type="text/babel" src="colaboradores.jsx?v=20260618b"></script>
-<script type="text/babel" src="inventario-editor.jsx?v=20260618b"></script>
-<script type="text/babel" src="usuarios.jsx?v=20260618b"></script>
-<script type="text/babel" src="financieras.jsx?v=20260618b"></script>
-<script type="text/babel" src="workspace-selector.jsx?v=20260618b"></script>
-<script type="text/babel" src="alertas.jsx?v=20260618b"></script>
-<script type="text/babel" src="app.jsx?v=20260618b"></script>
+<script type="text/babel" src="components.jsx?v=20260618c"></script>
+<script type="text/babel" src="charts.jsx?v=20260618c"></script>
+<script type="text/babel" src="dashboard.jsx?v=20260618c"></script>
+<script type="text/babel" src="database.jsx?v=20260618c"></script>
+<script type="text/babel" src="import.jsx?v=20260618c"></script>
+<script type="text/babel" src="colaboradores.jsx?v=20260618c"></script>
+<script type="text/babel" src="inventario-editor.jsx?v=20260618c"></script>
+<script type="text/babel" src="usuarios.jsx?v=20260618c"></script>
+<script type="text/babel" src="financieras.jsx?v=20260618c"></script>
+<script type="text/babel" src="workspace-selector.jsx?v=20260618c"></script>
+<script type="text/babel" src="alertas.jsx?v=20260618c"></script>
+<script type="text/babel" src="app.jsx?v=20260618c"></script>
 <script type="text/babel">
   ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
