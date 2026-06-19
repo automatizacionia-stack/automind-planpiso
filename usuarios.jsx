@@ -197,6 +197,7 @@ function RegistroUsuarios({ usuarioActual }) {
   const agencyId = window.AUTOMIND ? window.AUTOMIND.agencyId : null;
   const [confirmDel, setConfirmDel] = React.useState(null); // usuario a eliminar
   const [deleting,   setDeleting]   = React.useState(false);
+  const [delError,   setDelError]   = React.useState("");
 
   // Permisos: director ve a todos, gerente solo a su equipo
   const visibles = usuarioActual.rol === "director" || usuarioActual.isAgencyOwner
@@ -212,22 +213,27 @@ function RegistroUsuarios({ usuarioActual }) {
 
   async function handleDelete(u) {
     setDeleting(true);
+    setDelError("");
     try {
+      // Desasignar vehículos antes de borrar para no violar la FK
+      const { error: fkErr } = await window.DB.client
+        .from("inventario").update({ vendedor_id: null }).eq("vendedor_id", u.id);
+      if (fkErr) throw new Error("No se pudieron desasignar los vehículos: " + fkErr.message);
+
       const { data: deleted, error } = await window.DB.client
         .from("users").delete().eq("id", u.id).select("id");
       if (error) throw new Error(error.message);
-      // Si RLS bloqueó el delete silenciosamente, el array viene vacío
       if (!deleted || deleted.length === 0) {
         throw new Error("No se pudo eliminar el usuario. Solo directores pueden eliminar colaboradores de su workspace.");
       }
       const next = usuarios.filter(x => x.id !== u.id);
       setUsuarios(next);
       if (window.AUTOMIND) window.AUTOMIND.USUARIOS = next;
+      setConfirmDel(null);
     } catch(err) {
-      alert("Error al eliminar: " + err.message);
+      setDelError(err.message);
     } finally {
       setDeleting(false);
-      setConfirmDel(null);
     }
   }
 
@@ -354,11 +360,22 @@ function RegistroUsuarios({ usuarioActual }) {
             </div>
             <h3>¿Eliminar a {confirmDel.nombre}?</h3>
             <p>Se eliminará <b>{confirmDel.email}</b> del equipo. Esta acción no se puede deshacer.</p>
+            {delError && (
+              <div className="login-error" style={{ margin:"0 0 8px", textAlign:"left" }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"
+                  strokeLinecap="round" strokeLinejoin="round" width="14" height="14" style={{ flexShrink:0 }}>
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                {delError}
+              </div>
+            )}
             <div className="del-modal-btns">
               <button className="btn danger" disabled={deleting} onClick={() => handleDelete(confirmDel)}>
                 {deleting ? "Eliminando…" : "Sí, eliminar"}
               </button>
-              <button className="btn" disabled={deleting} onClick={() => setConfirmDel(null)}>Cancelar</button>
+              <button className="btn" disabled={deleting}
+                onClick={() => { setConfirmDel(null); setDelError(""); }}>Cancelar</button>
             </div>
           </div>
         </>
