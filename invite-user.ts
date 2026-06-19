@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     }
 
     const siteUrl = Deno.env.get("SITE_URL") ||
-      "https://automatizacionia-stack.github.io/automind-planpiso";
+      "https://automind-planpiso.vercel.app";
 
     // ── 1. Generar link de invitación (sin que Supabase mande email) ─
     console.log("[invite-user] STEP 1: generando link para", email, "workspace:", workspaceId);
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
     // ── 3. Enviar email via Brevo con el link ───────────────────────
     console.log("[invite-user] STEP 3: enviando email a", email, "via Brevo");
     const brevoKey = Deno.env.get("BREVO_API_KEY");
-    if (!brevoKey) throw new Error("BREVO_API_KEY no configurado en los secrets de la Edge Function");
+    if (!brevoKey) throw new Error("BREVO_API_KEY no configurado en los secrets de la Edge Function. Ve a Supabase Dashboard → Edge Functions → invite-user → Secrets y agrégalo.");
 
     const rolLabel = rol === "director" ? "Director" : rol === "gerente" ? "Gerente" : "Vendedor";
     const rolColor = rol === "director" ? "#2f6fed" : rol === "gerente" ? "#1f9d57" : "#d99613";
