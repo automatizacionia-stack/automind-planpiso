@@ -32,8 +32,10 @@ function RolBadge({ rol }) {
 const I = {
   truck: (p) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M3 6.5h11v9H3z" /><path d="M14 9.5h3.5L21 13v2.5h-7" />
-      <circle cx="7" cy="17.5" r="1.8" /><circle cx="17" cy="17.5" r="1.8" />
+      <path d="M5.5 13.5L8 9h8l2.5 4.5" />
+      <path d="M2 13.5h20v2.5H2z" />
+      <circle cx="7.5" cy="17.8" r="1.7" />
+      <circle cx="16.5" cy="17.8" r="1.7" />
     </svg>
   ),
   chart: (p) => (
