@@ -112,11 +112,7 @@ function SetPasswordScreen({ onDone }) {
       <div className="login-side">
         <div className="login-brand">
           <span className="login-brand-mark">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
-              strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
-              <path d="M3 6.5h11v9H3z"/><path d="M14 9.5h3.5L21 13v2.5h-7"/>
-              <circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>
-            </svg>
+            {I.truck({ width:28, height:28 })}
           </span>
           <span className="login-brand-name">Automind</span>
         </div>
