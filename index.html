@@ -772,6 +772,13 @@ select.ef-input{cursor:pointer;}
 .inv-field input,.inv-field select{height:42px;border:1.5px solid var(--line);border-radius:9px;padding:0 13px;font-size:14px;color:var(--ink);background:var(--bg);transition:border .15s;font-family:inherit;}
 .inv-field input:focus,.inv-field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent);}
 .inv-hint{background:color-mix(in srgb,var(--accent) 8%,#fff);border:1px solid color-mix(in srgb,var(--accent) 22%,#fff);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ink-2);line-height:1.6;margin-bottom:18px;}
+.inv-link-box{background:color-mix(in srgb,var(--accent) 6%,var(--bg));border:1.5px solid color-mix(in srgb,var(--accent) 22%,var(--line));border-radius:12px;padding:16px;margin-top:4px;}
+.inv-link-success{font-size:14px;font-weight:700;color:#0f7a40;margin-bottom:6px;}
+.inv-link-msg{font-size:13px;color:var(--ink-2);line-height:1.5;margin:0 0 12px;}
+.inv-link-row{display:flex;gap:8px;align-items:center;}
+.inv-link-input{flex:1;min-width:0;height:38px;border:1.5px solid var(--line);border-radius:8px;padding:0 10px;font-size:11.5px;color:var(--ink-2);background:var(--bg);font-family:monospace;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+.inv-link-copy{flex-shrink:0;height:38px;padding:0 14px;font-size:13px;}
+.inv-link-note{font-size:11.5px;color:var(--muted);margin:8px 0 0;text-align:center;}
 .inv-derived{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:13px 15px;display:flex;flex-direction:column;gap:8px;margin-top:4px;}
 .inv-derived-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;}
 .inv-derived-lbl{color:var(--muted);font-weight:600;}
@@ -901,7 +908,7 @@ window.addEventListener('unhandledrejection', function(e) {
 <script type="text/babel" src="import.jsx?v=20260618h"></script>
 <script type="text/babel" src="colaboradores.jsx?v=20260618h"></script>
 <script type="text/babel" src="inventario-editor.jsx?v=20260618h"></script>
-<script type="text/babel" src="usuarios.jsx?v=20260619a"></script>
+<script type="text/babel" src="usuarios.jsx?v=20260623a"></script>
 <script type="text/babel" src="financieras.jsx?v=20260618h"></script>
 <script type="text/babel" src="workspace-selector.jsx?v=20260618h"></script>
 <script type="text/babel" src="alertas.jsx?v=20260618h"></script>

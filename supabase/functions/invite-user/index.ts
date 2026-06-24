@@ -289,9 +289,10 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        success:   true,
-        user:      savedUser,
-        email_via: emailVia,
+        success:     true,
+        user:        savedUser,
+        email_via:   emailVia,
+        action_link: actionLink,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

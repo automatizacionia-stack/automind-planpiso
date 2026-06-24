@@ -10,9 +10,11 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
   const [form, setForm] = React.useState(editTarget || {
     nombre:"", email:"", tel:"", rol:"vendedor", reportaA:"", fechaIngreso:""
   });
-  const [loading, setLoading] = React.useState(false);
-  const [error,   setError]   = React.useState("");
-  const [success, setSuccess] = React.useState(false);
+  const [loading,    setLoading]    = React.useState(false);
+  const [error,      setError]      = React.useState("");
+  const [success,    setSuccess]    = React.useState(false);
+  const [inviteLink, setInviteLink] = React.useState(null);
+  const [copied,     setCopied]     = React.useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -66,7 +68,11 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
       if (!res.ok) throw new Error(json.error || "Error al enviar invitación");
       setSuccess(true);
       onSave && onSave(json.user);
-      setTimeout(() => { setSuccess(false); onClose(); }, 1800);
+      if (json.action_link && !esEdicion) {
+        setInviteLink(json.action_link);
+      } else {
+        setTimeout(() => { setSuccess(false); onClose(); }, 1800);
+      }
     } catch(err) {
       setError(err.message);
     } finally {
@@ -87,7 +93,7 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
           {!esEdicion && (
             <div className="inv-hint">
               {I.bell({ width:14, height:14, style:{ display:"inline", verticalAlign:"middle", marginRight:6 } })}
-              Se enviará un correo de invitación. El usuario deberá crear su contraseña para activar su cuenta.
+              Se intentará enviar un correo de invitación. También recibirás un enlace para compartir directamente.
             </div>
           )}
 
@@ -166,20 +172,38 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
                 {error}
               </div>
             )}
-            {success && (
+            {success && !inviteLink && (
               <div className="fb-ok" style={{ marginBottom:12 }}>
                 ✓ {esEdicion ? "Cambios guardados" : "Invitación enviada correctamente"}
+              </div>
+            )}
+            {success && inviteLink && (
+              <div className="inv-link-box">
+                <div className="inv-link-success">✓ Usuario creado correctamente</div>
+                <p className="inv-link-msg">Comparte este enlace con <strong>{form.nombre.split(" ")[0]}</strong> para que establezca su contraseña:</p>
+                <div className="inv-link-row">
+                  <input readOnly className="inv-link-input" value={inviteLink} onClick={e => e.target.select()} />
+                  <button type="button" className="btn primary inv-link-copy"
+                    onClick={() => { navigator.clipboard.writeText(inviteLink); setCopied(true); setTimeout(() => setCopied(false), 2500); }}>
+                    {copied ? "✓ Copiado" : "Copiar enlace"}
+                  </button>
+                </div>
+                <p className="inv-link-note">Expira en 24 horas · Un solo uso</p>
               </div>
             )}
           </form>
         </div>
 
         <div className="inv-drawer-foot">
-          <button className="btn" onClick={onClose} disabled={loading}>Cancelar</button>
-          <button className="btn primary" form="invite-form" type="submit" disabled={loading}>
-            {loading ? <span className="login-spinner" style={{ width:14, height:14, borderWidth:2 }} /> : null}
-            {loading ? "Enviando…" : esEdicion ? "Guardar cambios" : "Enviar invitación"}
+          <button className="btn" onClick={onClose} disabled={loading}>
+            {inviteLink ? "Cerrar" : "Cancelar"}
           </button>
+          {!inviteLink && (
+            <button className="btn primary" form="invite-form" type="submit" disabled={loading}>
+              {loading ? <span className="login-spinner" style={{ width:14, height:14, borderWidth:2 }} /> : null}
+              {loading ? "Enviando…" : esEdicion ? "Guardar cambios" : "Enviar invitación"}
+            </button>
+          )}
         </div>
       </aside>
     </>
