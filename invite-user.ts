@@ -271,21 +271,14 @@ Deno.serve(async (req) => {
       console.log("[invite-user] BREVO_API_KEY no configurado — usando Supabase email");
     }
 
-    // Fallback: Supabase envía su propio email de invitación si Brevo no pudo
-    if (emailVia !== "brevo") {
-      const { error: invErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
-        redirectTo: siteUrl,
-        data: { nombre, rol, workspace_id: workspaceId },
-      });
-      if (invErr) {
-        console.error("[invite-user] Supabase email también falló:", invErr.message);
-        throw new Error("No se pudo enviar el email de invitación. Configura BREVO_API_KEY en los secrets o verifica el límite de emails de Supabase.");
-      }
-      emailVia = "supabase";
-      console.log("[invite-user] Email enviado via Supabase (fallback)");
+    // NOTA: No usar inviteUserByEmail como fallback — genera un segundo token
+    // que invalida el actionLink ya devuelto a la UI. Si Brevo falla, el admin
+    // puede compartir el link manualmente desde la pantalla de invitación.
+    if (emailVia === "none") {
+      console.warn("[invite-user] Email no enviado (Brevo no configurado o falló). El action_link se devuelve en la respuesta para compartir manualmente.");
     }
 
-    console.log("[invite-user] DONE: email enviado via", emailVia, "a", email);
+    console.log("[invite-user] DONE: email via", emailVia, "a", email);
 
     return new Response(
       JSON.stringify({
