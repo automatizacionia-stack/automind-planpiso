@@ -324,7 +324,8 @@ function LoginScreen({ onLogin }) {
         KPIS:      computarKpis(rowsEnriquecidas),
         PIVOTE:    computarPivote(rowsEnriquecidas),
         TABLAS:    buildTablas(rowsEnriquecidas, usuariosEnriquecidos),
-        agencyId:  agency.id,
+        agencyId:      agency.id,
+        agencyParentId: agency.agency_id || agency.id, // agencia raíz (Coperva)
         enrichRowVendedor: (row, uList) => {
           const vend = uList.find(u => u.id === row.vendedorId) || null;
           const ger  = vend ? (uList.find(u => u.id === vend.reportaA) || null) : null;
