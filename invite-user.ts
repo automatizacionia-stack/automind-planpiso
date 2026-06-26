@@ -230,6 +230,15 @@ Deno.serve(async (req) => {
     if (saveErr) throw new Error("Error DB: " + saveErr.message);
     console.log("[invite-user] STEP 2 OK: usuario guardado, id:", savedUser?.id, "email_via:", emailVia);
 
+    // ── 3. Crear workspace_memberships para que RLS funcione ──────
+    if (authUserId) {
+      const { error: wmErr } = await adminClient
+        .from("workspace_memberships")
+        .upsert({ workspace_id: workspaceId, user_id: authUserId }, { onConflict: "workspace_id,user_id" });
+      if (wmErr) console.warn("[invite-user] workspace_memberships error (no crítico):", wmErr.message);
+      else console.log("[invite-user] STEP 3 OK: workspace_memberships actualizado");
+    }
+
     return new Response(
       JSON.stringify({
         success:     true,
