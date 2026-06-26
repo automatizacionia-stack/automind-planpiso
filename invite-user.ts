@@ -78,54 +78,53 @@ Deno.serve(async (req) => {
       }
     }
 
-    const siteUrl = Deno.env.get("SITE_URL") ||
-      "https://automind-planpiso.vercel.app";
+    // ── 1. Crear usuario con contraseña temporal ──────────────────
+    // Usamos contraseña temporal en lugar de OTP/invite links para evitar
+    // problemas de tokens expirados, pre-scan de emails, y flujos PKCE.
+    console.log("[invite-user] STEP 1: creando/actualizando auth user para", email);
 
-    // ── 1. Generar link de invitación (sin que Supabase mande email) ─
-    console.log("[invite-user] STEP 1: generando link para", email, "workspace:", workspaceId);
-    let actionLink: string | null = null;
+    // Generar contraseña temporal legible: Xxxx-0000-Xxxx
+    const segment = () => {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
+      const nums  = "23456789";
+      return Array.from(crypto.getRandomValues(new Uint8Array(4)))
+        .map((b, i) => i === 0
+          ? chars.slice(0,26)[b % 26]           // mayúscula
+          : i < 3 ? chars.slice(26)[b % 22]     // minúsculas
+          : nums[b % nums.length])               // número
+        .join("");
+    };
+    const tempPassword = `${segment()}-${segment()}-${segment()}`;
+
     let authUserId: string | null = null;
 
-    // Intentar generar link tipo "invite"
-    const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
-      type: "invite",
+    // Intentar crear nuevo usuario en Auth
+    const { data: newUserData, error: createErr } = await adminClient.auth.admin.createUser({
       email,
-      options: { redirectTo: siteUrl, data: { nombre, rol, workspace_id: workspaceId } },
+      password: tempPassword,
+      email_confirm: true,  // confirmar email automáticamente, sin token
+      user_metadata: { nombre, rol, workspace_id: workspaceId, mustChangePassword: true },
     });
 
-    if (!linkErr && linkData?.properties?.action_link) {
-      actionLink = linkData.properties.action_link;
-      authUserId = linkData.user?.id || null;
-      console.log("[invite-user] STEP 1 OK: invite link generado, authUserId:", authUserId);
+    if (!createErr && newUserData?.user) {
+      authUserId = newUserData.user.id;
+      console.log("[invite-user] STEP 1 OK: nuevo auth user creado, id:", authUserId);
     } else {
-      console.log("[invite-user] STEP 1: usuario ya existe en auth, linkErr:", linkErr?.message);
-      // Usuario ya existe en auth — buscar su auth_user_id y generar magic link
+      // Usuario ya existe en Auth — actualizar contraseña temporal y metadata
+      console.log("[invite-user] STEP 1: usuario ya existe, actualizando password. Error:", createErr?.message);
       const { data: { users } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-      const existing = users?.find((u: any) => u.email === email);
+      const existing = (users as any[])?.find((u: any) => u.email === email);
       authUserId = existing?.id || null;
-      console.log("[invite-user] STEP 1: auth user encontrado:", !!authUserId, "id:", authUserId);
-
       if (authUserId) {
-        const { data: magicData, error: magicErr } = await adminClient.auth.admin.generateLink({
-          type: "magiclink",
-          email,
-          options: { redirectTo: siteUrl },
+        await adminClient.auth.admin.updateUserById(authUserId, {
+          password: tempPassword,
+          user_metadata: { nombre, rol, workspace_id: workspaceId, mustChangePassword: true },
         });
-        actionLink = magicData?.properties?.action_link || null;
-        console.log("[invite-user] STEP 1: magiclink generado:", !!actionLink, "magicErr:", magicErr?.message);
-        if (magicErr && !actionLink) {
-          const { data: recoveryData } = await adminClient.auth.admin.generateLink({
-            type: "recovery",
-            email,
-            options: { redirectTo: siteUrl },
-          });
-          actionLink = recoveryData?.properties?.action_link || null;
-          console.log("[invite-user] STEP 1: recovery link generado:", !!actionLink);
-        }
+        console.log("[invite-user] STEP 1 OK: password temporal actualizada, id:", authUserId);
+      } else {
+        throw new Error("No se pudo crear ni encontrar el usuario en Auth: " + email);
       }
     }
-
-    if (!actionLink) throw new Error("No se pudo generar el link de acceso para " + email);
 
     // ── 2. Guardar en tabla users ───────────────────────────────────
     // ID con entropía real (el sufijo de timestamp podía colisionar)
@@ -193,15 +192,16 @@ Deno.serve(async (req) => {
     if (saveErr) throw new Error("Error DB: " + saveErr.message);
     console.log("[invite-user] STEP 2 OK: usuario guardado en DB, id:", savedUser?.id);
 
-    // ── 3. Enviar email — Brevo primero, Supabase como fallback ────
-    console.log("[invite-user] STEP 3: enviando email a", email);
+    // ── 3. Enviar credenciales por email vía Brevo ─────────────────
+    console.log("[invite-user] STEP 3: enviando credenciales a", email);
     const brevoKey = Deno.env.get("BREVO_API_KEY");
+    const siteUrl  = Deno.env.get("SITE_URL") || "https://automind-planpiso.vercel.app";
     let emailVia = "none";
 
     if (brevoKey) {
       try {
-        const rolLabel = rol === "director" ? "Director" : rol === "gerente" ? "Gerente" : "Vendedor";
-        const rolColor = rol === "director" ? "#2f6fed" : rol === "gerente" ? "#1f9d57" : "#d99613";
+        const rolLabel    = rol === "director" ? "Director" : rol === "gerente" ? "Gerente" : "Vendedor";
+        const rolColor    = rol === "director" ? "#2f6fed" : rol === "gerente" ? "#1f9d57" : "#d99613";
         const agencyDisplay = workspaceName || "tu agencia";
 
         const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             sender: { name: "Automind Plan Piso", email: "no-reply@coperva.com" },
             to: [{ email, name: nombre }],
-            subject: `Te invitaron a ${agencyDisplay} en Automind Plan Piso`,
+            subject: `Tu acceso a ${agencyDisplay} en Automind Plan Piso`,
             htmlContent: `
               <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
                 max-width:500px;margin:0 auto;padding:32px 20px;background:#f4f6fb">
@@ -226,27 +226,32 @@ Deno.serve(async (req) => {
                     <p style="color:#555;line-height:1.7;margin:0 0 20px;font-size:15px">
                       Has sido invitado a unirte a
                       <strong style="color:#1a1a2e">${agencyDisplay}</strong>
-                      en la plataforma Automind Plan Piso como:
+                      en Automind Plan Piso como <strong>${rolLabel}</strong>.
                     </p>
-                    <div style="background:#f4f6fb;border-radius:10px;padding:14px 18px;
-                      margin-bottom:24px;display:flex;align-items:center;gap:12px">
-                      <span style="background:${rolColor};color:#fff;font-size:12px;font-weight:700;
-                        padding:4px 12px;border-radius:20px;white-space:nowrap">${rolLabel}</span>
-                      <span style="font-size:13px;color:#555;font-weight:600">${agencyDisplay}</span>
+                    <div style="background:#f4f6fb;border-radius:12px;padding:20px 24px;margin-bottom:24px">
+                      <p style="margin:0 0 12px;font-size:13px;color:#888;text-transform:uppercase;
+                        letter-spacing:.5px;font-weight:600">Tus credenciales de acceso</p>
+                      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                        <span style="color:#555;font-size:14px">Correo</span>
+                        <strong style="color:#1a1a2e;font-size:14px">${email}</strong>
+                      </div>
+                      <div style="display:flex;justify-content:space-between">
+                        <span style="color:#555;font-size:14px">Contraseña temporal</span>
+                        <strong style="color:#2f6fed;font-size:16px;letter-spacing:1px;
+                          font-family:monospace">${tempPassword}</strong>
+                      </div>
                     </div>
-                    <p style="color:#555;line-height:1.7;margin:0 0 28px;font-size:14px">
-                      Haz clic en el botón para acceder a tu cuenta:
-                    </p>
-                    <div style="text-align:center;margin-bottom:28px">
-                      <a href="${actionLink}"
+                    <div style="text-align:center;margin-bottom:20px">
+                      <a href="${siteUrl}"
                         style="display:inline-block;background:#2f6fed;color:#fff;
                         text-decoration:none;padding:15px 36px;border-radius:12px;
                         font-weight:700;font-size:15px;letter-spacing:-.2px">
                         Entrar a Automind →
                       </a>
                     </div>
-                    <p style="color:#aaa;font-size:12px;text-align:center;margin:0">
-                      Este link expira en 24 horas. Si no esperabas esta invitación, ignora este correo.
+                    <p style="color:#aaa;font-size:12px;text-align:center;margin:0;line-height:1.6">
+                      Al iniciar sesión, el sistema te pedirá cambiar tu contraseña.<br>
+                      Si no esperabas esta invitación, ignora este correo.
                     </p>
                   </div>
                   <div style="padding:16px 32px;background:#f9fafb;border-top:1px solid #f0f0f0;
@@ -259,33 +264,25 @@ Deno.serve(async (req) => {
         });
         const brevoJson = await brevoRes.json();
         console.log("[invite-user] Brevo status:", brevoRes.status, JSON.stringify(brevoJson));
-        if (brevoRes.ok) {
-          emailVia = "brevo";
-        } else {
-          console.warn("[invite-user] Brevo falló:", brevoJson?.message, "— usando fallback Supabase");
-        }
+        if (brevoRes.ok) emailVia = "brevo";
+        else console.warn("[invite-user] Brevo falló:", brevoJson?.message);
       } catch (brevoErr: any) {
-        console.warn("[invite-user] Brevo excepción:", brevoErr.message, "— usando fallback Supabase");
+        console.warn("[invite-user] Brevo excepción:", brevoErr.message);
       }
-    } else {
-      console.log("[invite-user] BREVO_API_KEY no configurado — usando Supabase email");
     }
 
-    // NOTA: No usar inviteUserByEmail como fallback — genera un segundo token
-    // que invalida el actionLink ya devuelto a la UI. Si Brevo falla, el admin
-    // puede compartir el link manualmente desde la pantalla de invitación.
     if (emailVia === "none") {
-      console.warn("[invite-user] Email no enviado (Brevo no configurado o falló). El action_link se devuelve en la respuesta para compartir manualmente.");
+      console.warn("[invite-user] Email no enviado — BREVO_API_KEY no configurado o falló. Compartir contraseña manualmente.");
     }
 
     console.log("[invite-user] DONE: email via", emailVia, "a", email);
 
     return new Response(
       JSON.stringify({
-        success:     true,
-        user:        savedUser,
-        email_via:   emailVia,
-        action_link: actionLink,
+        success:       true,
+        user:          savedUser,
+        email_via:     emailVia,
+        temp_password: tempPassword,   // devuelto para mostrar en UI
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

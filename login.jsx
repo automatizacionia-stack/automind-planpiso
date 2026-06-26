@@ -42,8 +42,11 @@ function SetPasswordScreen({ onDone }) {
     if (!allOk) { setError("Completa todos los campos correctamente."); return; }
     setLoading(true); setError("");
     try {
-      // 1. Actualizar contraseña en Supabase Auth
-      const { error: updErr } = await window.DB.client.auth.updateUser({ password });
+      // 1. Actualizar contraseña y limpiar flag mustChangePassword
+      const { error: updErr } = await window.DB.client.auth.updateUser({
+        password,
+        data: { mustChangePassword: false },
+      });
       if (updErr) throw updErr;
 
       // 2. Actualizar nombre en tabla users
@@ -237,7 +240,7 @@ function LoginScreen({ onLogin }) {
       }
 
       // 3. Cargar todos los datos del workspace
-      const { agency, me, usuarios, rows, financieras } = await window.DB.loadAgencyData(ctx.workspaceId);
+      const { agency, me, usuarios, rows } = await window.DB.loadAgencyData(ctx.workspaceId);
 
       // 3. Enriquecer usuarios con jerarquía
       const usuariosEnriquecidos = usuarios.map(u => {
