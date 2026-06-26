@@ -318,11 +318,9 @@ function LoginScreen({ onLogin }) {
       });
 
       // 5. Construir AUTOMIND global
-      const fins = (financieras||[]).map(f => window.DB.financieraFromDbRow(f));
       window.AUTOMIND = {
         ROWS:      rowsEnriquecidas,
         USUARIOS:  usuariosEnriquecidos,
-        FINANCIERAS: fins,
         KPIS:      computarKpis(rowsEnriquecidas),
         PIVOTE:    computarPivote(rowsEnriquecidas),
         TABLAS:    buildTablas(rowsEnriquecidas, usuariosEnriquecidos),
@@ -473,7 +471,7 @@ function computarPivote(rows) {
   const SEM_KEYS = ["saludable","rotacion","comprometido","vencer","intereses"];
   const matriz = {};
   rows.forEach(r => {
-    const fin = r.financiera || "Sin financiera";
+    const fin = "General";
     if (!matriz[fin]) {
       matriz[fin] = { total:0, interes:0 };
       SEM_KEYS.forEach(k => { matriz[fin][k] = 0; });
