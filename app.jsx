@@ -643,3 +643,12 @@ function App() {
         <TweakColor label="Barra lateral" value={t.sidebar}
           options={["#1b2a57", "#15233f", "#1e2530", "#23304d", "#2a1d52"]}
           onChange={(v) => setTweak("sidebar", v)} />
+        <TweakSection label="Diseño" />
+        <TweakRadio label="Densidad" value={t.density} options={["cómodo", "compacto"]}
+          onChange={(v) => setTweak("density", v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+Object.assign(window, { App });
