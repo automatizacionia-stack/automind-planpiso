@@ -230,22 +230,37 @@
   /* ── Inventario — CRUD ────────────────────────────────────── */
 
   async function saveVehicle(agencyId, vehicleData) {
+    console.log("[saveVehicle] agencyId:", agencyId,
+      "| agencyParentId:", window.AUTOMIND?.agencyParentId,
+      "| vehicleId:", vehicleData.id);
+
     // Obtener semáforo anterior antes de guardar (para detectar cambios)
     let semaforoFrom = null;
     try {
       const { data: prev } = await client
         .from("inventario").select("semaforo_snapshot").eq("id", vehicleData.id).maybeSingle();
       semaforoFrom = prev?.semaforo_snapshot || null;
-    } catch(e) {}
+    } catch(e) {
+      console.warn("[saveVehicle] No se pudo leer semaforo_snapshot (columna puede no existir):", e.message);
+    }
 
     // Extraer solo los campos de la tabla (sin campos calculados)
     const row = dbRowFromVehicle(agencyId, vehicleData);
+    console.log("[saveVehicle] row:", { id: row.id, workspace_id: row.workspace_id, agency_id: row.agency_id });
+
+    // Intentar upsert (UPDATE si existe, INSERT si no)
     const { data, error } = await client
       .from("inventario")
       .upsert(row, { onConflict: "id" })
       .select()
       .single();
-    if (error) throw error;
+
+    if (error) {
+      console.error("[saveVehicle] ERROR:", error.code, error.message, error.details);
+      throw new Error(error.message || error.code || "Error guardando en Supabase");
+    }
+
+    console.log("[saveVehicle] OK — guardado, id:", data?.id);
 
     // Detectar cambio de semáforo y disparar alerta
     const semaforoTo = vehicleData.semaforo;
