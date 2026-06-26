@@ -350,13 +350,6 @@ function App() {
 
         const session = await window.DB.getSession();
         if (session) {
-          // Detectar si el usuario debe cambiar su contraseña (flujo invitación con contraseña temporal)
-          if (session.user?.user_metadata?.mustChangePassword) {
-            setInviteMode(true);
-            setAuthLoading(false);
-            return;
-          }
-
           // Detectar rol del usuario para saber si necesita workspace selector
           const ctx = await window.DB.getUserContext();
           if (ctx.type === "agency") {

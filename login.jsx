@@ -42,11 +42,8 @@ function SetPasswordScreen({ onDone }) {
     if (!allOk) { setError("Completa todos los campos correctamente."); return; }
     setLoading(true); setError("");
     try {
-      // 1. Actualizar contraseña y limpiar flag mustChangePassword
-      const { error: updErr } = await window.DB.client.auth.updateUser({
-        password,
-        data: { mustChangePassword: false },
-      });
+      // 1. Actualizar contraseña en Supabase Auth
+      const { error: updErr } = await window.DB.client.auth.updateUser({ password });
       if (updErr) throw updErr;
 
       // 2. Actualizar nombre en tabla users

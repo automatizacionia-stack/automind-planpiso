@@ -5,7 +5,11 @@
 
 (function () {
   const { createClient } = supabase;
-  const client = createClient(window.SUPABASE_URL, window.SUPABASE_ANON);
+  // flowType: 'implicit' — los links de invitación redirigen con #access_token en el hash
+  // (no con ?code= del flujo PKCE), que es lo que la app espera para el flujo de activación.
+  const client = createClient(window.SUPABASE_URL, window.SUPABASE_ANON, {
+    auth: { flowType: 'implicit' },
+  });
 
   /* ── Auth ─────────────────────────────────────────────────── */
 

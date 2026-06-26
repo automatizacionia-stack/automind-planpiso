@@ -12,9 +12,9 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
   });
   const [loading,    setLoading]    = React.useState(false);
   const [error,      setError]      = React.useState("");
-  const [success,      setSuccess]      = React.useState(false);
-  const [tempPassword, setTempPassword] = React.useState(null);
-  const [copied,       setCopied]       = React.useState(false);
+  const [success,    setSuccess]    = React.useState(false);
+  const [actionLink, setActionLink] = React.useState(null);
+  const [copied,     setCopied]     = React.useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -68,8 +68,9 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
       if (!res.ok) throw new Error(json.error || "Error al enviar invitación");
       setSuccess(true);
       onSave && onSave(json.user);
-      if (json.temp_password && !esEdicion) {
-        setTempPassword(json.temp_password);
+      if (json.action_link && !esEdicion) {
+        // Usuario existente re-invitado: Brevo falló, mostrar link para compartir manualmente
+        setActionLink(json.action_link);
       } else {
         setTimeout(() => { setSuccess(false); onClose(); }, 1800);
       }
@@ -177,36 +178,21 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
                 ✓ {esEdicion ? "Cambios guardados" : "Invitación enviada correctamente"}
               </div>
             )}
-            {success && tempPassword && (
+            {success && actionLink && (
               <div className="inv-link-box">
-                <div className="inv-link-success">✓ Usuario creado correctamente</div>
+                <div className="inv-link-success">✓ Usuario actualizado</div>
                 <p className="inv-link-msg">
-                  Comparte estas credenciales con <strong>{form.nombre.split(" ")[0]}</strong>.
-                  Al entrar, el sistema le pedirá cambiar su contraseña:
+                  El correo no se pudo enviar automáticamente. Comparte este enlace con
+                  <strong> {form.nombre.split(" ")[0]}</strong> para que active su cuenta:
                 </p>
-                <div style={{ background:"#f4f6fb", borderRadius:10, padding:"14px 16px", marginBottom:8 }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6, fontSize:13 }}>
-                    <span style={{ color:"#888" }}>Correo</span>
-                    <strong style={{ color:"#1a1a2e" }}>{form.email}</strong>
-                  </div>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <span style={{ color:"#888", fontSize:13 }}>Contraseña temporal</span>
-                    <strong style={{ color:"#2f6fed", fontFamily:"monospace", fontSize:16, letterSpacing:1 }}>{tempPassword}</strong>
-                  </div>
-                </div>
                 <div className="inv-link-row">
-                  <input readOnly className="inv-link-input"
-                    value={`Correo: ${form.email} | Contraseña: ${tempPassword}`}
-                    onClick={e => e.target.select()} />
+                  <input readOnly className="inv-link-input" value={actionLink} onClick={e => e.target.select()} />
                   <button type="button" className="btn primary inv-link-copy"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`Correo: ${form.email}\nContraseña temporal: ${tempPassword}\nEntrar en: https://automind-planpiso.vercel.app`);
-                      setCopied(true); setTimeout(() => setCopied(false), 2500);
-                    }}>
-                    {copied ? "✓ Copiado" : "Copiar"}
+                    onClick={() => { navigator.clipboard.writeText(actionLink); setCopied(true); setTimeout(() => setCopied(false), 2500); }}>
+                    {copied ? "✓ Copiado" : "Copiar enlace"}
                   </button>
                 </div>
-                <p className="inv-link-note">También se envió por correo si Brevo está configurado</p>
+                <p className="inv-link-note">Expira en 24 horas · Un solo uso</p>
               </div>
             )}
           </form>
@@ -214,9 +200,9 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
 
         <div className="inv-drawer-foot">
           <button className="btn" onClick={onClose} disabled={loading}>
-            {tempPassword ? "Cerrar" : "Cancelar"}
+            {actionLink ? "Cerrar" : "Cancelar"}
           </button>
-          {!tempPassword && (
+          {!actionLink && (
             <button className="btn primary" form="invite-form" type="submit" disabled={loading}>
               {loading ? <span className="login-spinner" style={{ width:14, height:14, borderWidth:2 }} /> : null}
               {loading ? "Enviando…" : esEdicion ? "Guardar cambios" : "Enviar invitación"}
