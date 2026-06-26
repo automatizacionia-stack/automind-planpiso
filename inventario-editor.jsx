@@ -163,6 +163,8 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
   const [q,         setQ]         = React.useState("");
   const [showDel,   setShowDel]   = React.useState(false);
   const [saved,     setSaved]     = React.useState(false);
+  const [saveError, setSaveError] = React.useState(null);
+  const [saving,    setSaving]    = React.useState(false);
 
   // Sync si cambia el tenant
   React.useEffect(() => {
@@ -177,11 +179,12 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
     setForm(row ? { ...row } : null);
     setDirty(false);
     setSaved(false);
+    setSaveError(null);
   }, [selId, rows]);
 
-  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setDirty(true); setSaved(false); };
+  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setDirty(true); setSaved(false); setSaveError(null); };
 
-  function handleSave() {
+  async function handleSave() {
     if (!form) return;
     const computed = recomputar(form);
     // Re-enriquecer con jerarquía
@@ -201,15 +204,26 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
     }
     setForm(computed);
     setDirty(false);
-    setSaved(true);
     onRowsChange && onRowsChange(nextRows);
-    setTimeout(() => setSaved(false), 2200);
+
     // Persistir en Supabase
-    if (window.DB && window.AUTOMIND && window.AUTOMIND.agencyId) {
-      window.DB.saveVehicle(window.AUTOMIND.agencyId, computed).catch(err => {
-        console.error("Error guardando vehículo:", err);
-        alert("⚠️ No se pudo guardar en Supabase.\n\nError: " + (err?.message || JSON.stringify(err)) + "\n\nWorkspace ID: " + window.AUTOMIND.agencyId);
-      });
+    if (!window.DB || !window.AUTOMIND || !window.AUTOMIND.agencyId) {
+      setSaveError("Sin conexión a la base de datos (agencyId no disponible).");
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await window.DB.saveVehicle(window.AUTOMIND.agencyId, computed);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
+    } catch (err) {
+      console.error("Error guardando vehículo:", err);
+      setSaveError("⚠️ No se pudo guardar: " + (err?.message || JSON.stringify(err)));
+      // Revertir estado de dirty para que el usuario sepa que debe reintentar
+      setDirty(true);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -316,8 +330,9 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
             </div>
             <div className="inv-form-actions">
               {saved && <span className="save-ok">✓ Guardado</span>}
-              <button className="btn primary" onClick={handleSave} disabled={!dirty}>
-                Guardar cambios
+              {saveError && <span className="save-err" title={saveError}>⚠️ Error al guardar</span>}
+              <button className="btn primary" onClick={handleSave} disabled={!dirty || saving}>
+                {saving ? "Guardando…" : "Guardar cambios"}
               </button>
               <button className="icon-btn ghost del-btn" title="Eliminar unidad" onClick={() => setShowDel(true)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
