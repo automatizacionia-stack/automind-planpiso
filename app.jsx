@@ -325,7 +325,10 @@ function App() {
 
     async function checkSession() {
       try {
-        const hash = window.location.hash;
+        // Supabase procesa y limpia window.location.hash al inicializar,
+        // por eso guardamos el hash original en index.html antes de cargar Supabase.
+        const hash = window.__initialHash || window.location.hash;
+        window.__initialHash = ""; // limpiar para no reusar en recargas
 
         // Detectar error en el hash (ej: link expirado)
         if (hash.includes("error=")) {
@@ -640,12 +643,3 @@ function App() {
         <TweakColor label="Barra lateral" value={t.sidebar}
           options={["#1b2a57", "#15233f", "#1e2530", "#23304d", "#2a1d52"]}
           onChange={(v) => setTweak("sidebar", v)} />
-        <TweakSection label="Diseño" />
-        <TweakRadio label="Densidad" value={t.density} options={["cómodo", "compacto"]}
-          onChange={(v) => setTweak("density", v)} />
-      </TweaksPanel>
-    </div>
-  );
-}
-
-Object.assign(window, { App });

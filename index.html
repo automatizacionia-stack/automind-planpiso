@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Automind · Plan Piso — Semáforo</title>
+<!-- Capturar hash ANTES de que Supabase lo procese y lo limpie -->
+<script>window.__initialHash = window.location.hash;</script>
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- Configuración del proyecto (URL + anon key) — editar config.js -->
@@ -912,9 +914,4 @@ window.addEventListener('unhandledrejection', function(e) {
 <script type="text/babel" src="financieras.jsx?v=20260618h"></script>
 <script type="text/babel" src="workspace-selector.jsx?v=20260618h"></script>
 <script type="text/babel" src="alertas.jsx?v=20260618h"></script>
-<script type="text/babel" src="app.jsx?v=20260618h"></script>
-<script type="text/babel">
-  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-</script>
-</body>
-</html>
+<script type="text/babel" src="app.jsx?v=20260625a"></scr

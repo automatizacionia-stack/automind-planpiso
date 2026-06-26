@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     // Solo funciona para usuarios nuevos (sin cuenta Auth previa).
     const { data: invData, error: invErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
       redirectTo: siteUrl,
-      data: { nombre, rol, workspace_id: workspaceId },
+      data: { nombre, rol, workspace_id: workspaceId, workspace_nombre: workspaceName || "" },
     });
 
     if (!invErr && invData?.user) {
