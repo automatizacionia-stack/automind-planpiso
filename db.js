@@ -345,8 +345,19 @@
   }
 
   async function deleteColaborador(id) {
-    const { error } = await client.from("users").delete().eq("id", id);
-    if (error) throw error;
+    // Llama Edge Function para borrar de users + workspace_memberships + Supabase Auth
+    const { data: { session } } = await client.auth.getSession();
+    const res = await fetch(`${window.SUPABASE_URL}/functions/v1/delete-user`, {
+      method: "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${session.access_token}`,
+        "apikey":        window.SUPABASE_ANON,
+      },
+      body: JSON.stringify({ userId: id }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || "Error al eliminar usuario");
   }
 
   /* ── Helper: mapear objeto de app → fila de DB ────────────── */
