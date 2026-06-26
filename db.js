@@ -249,15 +249,26 @@
     console.log("[saveVehicle] row:", { id: row.id, workspace_id: row.workspace_id, agency_id: row.agency_id });
 
     // Intentar upsert (UPDATE si existe, INSERT si no)
+    // Usar maybeSingle() en lugar de single() para que 0 filas no lance PGRST116
     const { data, error } = await client
       .from("inventario")
       .upsert(row, { onConflict: "id" })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("[saveVehicle] ERROR:", error.code, error.message, error.details);
       throw new Error(error.message || error.code || "Error guardando en Supabase");
+    }
+
+    if (!data) {
+      // 0 filas: RLS bloqueó el upsert (el row no pasó inv_update/inv_insert)
+      console.error("[saveVehicle] RLS bloqueó el guardado — workspace_id:", row.workspace_id, "agency_id:", row.agency_id);
+      throw new Error(
+        "Sin permisos para guardar este vehículo.\n" +
+        "workspace_id del intento: " + row.workspace_id + "\n" +
+        "Corre supabase_fix_save_rls.sql en Supabase SQL Editor."
+      );
     }
 
     console.log("[saveVehicle] OK — guardado, id:", data?.id);

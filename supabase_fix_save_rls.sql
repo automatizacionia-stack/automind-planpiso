@@ -1,18 +1,12 @@
--- Fix: usuarios invitados no pueden guardar vehículos de inventario
--- Causa: my_workspace_ids() solo mira workspace_memberships, no la tabla users.
---        Los usuarios invitados tienen workspace_memberships creado por invite-user.ts,
---        pero los rows de inventario tienen workspace_id = OLD_agency_uuid que puede
---        no coincidir si hay mismatch entre agencies y workspaces.
---
--- Este script expande my_workspace_ids() para incluir los workspace_ids que el usuario
--- tiene en la tabla users (flujo de invitación). Así aunque haya mismatch de UUIDs,
--- el usuario puede acceder a su propio workspace.
---
--- También agrega columna semaforo_snapshot si no existe (necesaria para saveVehicle).
+-- Fix completo: guardado de inventario no persiste para usuarios invitados.
+-- Causas:
+--   1. Columna semaforo_snapshot puede no existir → upsert falla silenciosamente
+--   2. my_workspace_ids() solo mira workspace_memberships, no la tabla users
+--   3. inv_update/inv_select solo verifican workspace_id, no agency_id (legacy)
 --
 -- Ejecutar en Supabase SQL Editor → Run.
 
--- ── 1. Agregar columna semaforo_snapshot si no existe ────────────────────────
+-- ── 1. Columna semaforo_snapshot ─────────────────────────────────────────────
 alter table inventario add column if not exists semaforo_snapshot text;
 
 -- ── 2. Expandir my_workspace_ids() para incluir tabla users ──────────────────
@@ -37,7 +31,40 @@ returns setof uuid language sql stable security definer as $$
   where u.auth_user_id = auth.uid() and u.agency_id is not null;
 $$;
 
--- ── 3. Backfill workspace_memberships para usuarios existentes sin membresía ──
+-- ── 3. Actualizar políticas RLS de inventario ─────────────────────────────────
+-- Se agrega "or agency_id = any(...)" para cubrir rows legacy donde
+-- workspace_id = agency_id y solo uno de los dos coincide con el usuario.
+
+drop policy if exists "inv_select" on inventario;
+drop policy if exists "inv_insert" on inventario;
+drop policy if exists "inv_update" on inventario;
+drop policy if exists "inv_delete" on inventario;
+
+create policy "inv_select" on inventario for select
+  using (
+    workspace_id = any(select my_workspace_ids())
+    or agency_id  = any(select my_workspace_ids())
+  );
+
+create policy "inv_insert" on inventario for insert
+  with check (
+    workspace_id = any(select my_workspace_ids())
+    or agency_id  = any(select my_workspace_ids())
+  );
+
+create policy "inv_update" on inventario for update
+  using (
+    workspace_id = any(select my_workspace_ids())
+    or agency_id  = any(select my_workspace_ids())
+  );
+
+create policy "inv_delete" on inventario for delete
+  using (
+    workspace_id = any(select my_workspace_ids())
+    or agency_id  = any(select my_workspace_ids())
+  );
+
+-- ── 4. Backfill workspace_memberships (solo para workspaces que existen) ──────
 insert into workspace_memberships (workspace_id, user_id, role)
 select u.workspace_id, u.auth_user_id, 'workspace_member'
 from users u
@@ -46,7 +73,10 @@ where u.auth_user_id is not null
   and exists (select 1 from workspaces w where w.id = u.workspace_id)
 on conflict (workspace_id, user_id) do nothing;
 
--- ── 4. Verificar resultado ────────────────────────────────────────────────────
--- Después de ejecutar, puedes verificar con:
--- select * from workspace_memberships;
--- select my_workspace_ids();  -- como el usuario autenticado
+-- ── 5. Query de diagnóstico (ejecutar por separado si aún hay problemas) ──────
+-- Muestra los workspace_ids de los últimos usuarios invitados:
+-- select u.email, u.workspace_id, u.agency_id, u.auth_user_id,
+--        exists(select 1 from workspace_memberships wm
+--               where wm.user_id = u.auth_user_id) as tiene_membership
+-- from users u
+-- order by u.created_at desc nulls last limit 20;
