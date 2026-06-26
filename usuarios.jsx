@@ -173,7 +173,7 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
                 {error}
               </div>
             )}
-            {success && !inviteLink && (
+            {success && !actionLink && (
               <div className="fb-ok" style={{ marginBottom:12 }}>
                 ✓ {esEdicion ? "Cambios guardados" : "Invitación enviada correctamente"}
               </div>
