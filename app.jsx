@@ -652,12 +652,3 @@ function App() {
 }
 
 Object.assign(window, { App });
-        <TweakSection label="Diseño" />
-        <TweakRadio label="Densidad" value={t.density} options={["cómodo", "compacto"]}
-          onChange={(v) => setTweak("density", v)} />
-      </TweaksPanel>
-    </div>
-  );
-}
-
-Object.assign(window, { App });
