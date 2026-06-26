@@ -242,10 +242,9 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success:     true,
-        user:        savedUser,
+        user:              savedUser,
         email_via:   emailVia,
-        action_link: actionLink, // null para nuevos usuarios (Supabase envió el email)
-                                 // link para usuarios existentes (si Brevo falla)
+        action_link: actionLink,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
