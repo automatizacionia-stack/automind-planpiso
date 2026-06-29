@@ -156,6 +156,7 @@ function JerarquiaSection({ vendedorId, usuarios, onChange }) {
 
 /* ── Editor principal ───────────────────────────────────────────────────── */
 function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChange }) {
+  const esVendedor = usuarioActual?.rol === "vendedor";
   const [rows,      setRows]      = React.useState(rowsInit || []);
   const [selId,     setSelId]     = React.useState(rowsInit && rowsInit[0] ? rowsInit[0].id : null);
   const [form,      setForm]      = React.useState(null);
@@ -300,9 +301,11 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
             {I.search({ width:15, height:15 })}
             <input placeholder="Buscar unidad…" value={q} onChange={e => setQ(e.target.value)} />
           </label>
-          <button className="inv-add-btn" onClick={handleAdd} title="Nueva unidad">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
+          {!esVendedor && (
+            <button className="inv-add-btn" onClick={handleAdd} title="Nueva unidad">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          )}
         </div>
         <div className="inv-list-body">
           {filteredRows.map(r => (
@@ -334,13 +337,15 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
               <button className="btn primary" onClick={handleSave} disabled={!dirty || saving}>
                 {saving ? "Guardando…" : "Guardar cambios"}
               </button>
-              <button className="icon-btn ghost del-btn" title="Eliminar unidad" onClick={() => setShowDel(true)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
-                  strokeLinecap="round" strokeLinejoin="round" width="17" height="17">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                  <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                </svg>
-              </button>
+              {!esVendedor && (
+                <button className="icon-btn ghost del-btn" title="Eliminar unidad" onClick={() => setShowDel(true)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+                    strokeLinecap="round" strokeLinejoin="round" width="17" height="17">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 
@@ -368,11 +373,13 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
                 <FormField label="VIN" required>
                   <input className="ef-input" value={form.vin || ""} onChange={e => set("vin", e.target.value.toUpperCase())} placeholder="17 caracteres" />
                 </FormField>
-                <FormField label="Estatus">
-                  <select className="ef-input" value={form.estatus || "NUEVOS"} onChange={e => set("estatus", e.target.value)}>
-                    {ESTATUS_OPTS.map(o => <option key={o}>{o}</option>)}
-                  </select>
-                </FormField>
+                {!esVendedor && (
+                  <FormField label="Estatus">
+                    <select className="ef-input" value={form.estatus || "NUEVOS"} onChange={e => set("estatus", e.target.value)}>
+                      {ESTATUS_OPTS.map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </FormField>
+                )}
                 <FormField label="INV">
                   <input className="ef-input" type="number" value={form.inv || ""} onChange={e => set("inv", e.target.value)} />
                 </FormField>
@@ -405,7 +412,7 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
             </div>
 
             {/* ── Sección: plan piso ─────────────────────────────────── */}
-            <div className="ef-seccion">
+            {!esVendedor && <div className="ef-seccion">
               <div className="ef-sec-head">{I.coins({ width:15, height:15 })} Plan Piso</div>
               <div className="ef-grid-2">
                 <FormField label="Monto Financiado ($)" required>
@@ -444,10 +451,10 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
                     onChange={e => set("fechaLlegada", e.target.value ? new Date(e.target.value + "T12:00:00") : new Date())} />
                 </FormField>
               </div>
-            </div>
+            </div>}
 
             {/* ── Campos calculados ─────────────────────────────────────── */}
-            {calc && (
+            {!esVendedor && calc && (
               <div className="ef-seccion ef-calc-sec">
                 <div className="ef-sec-head">
                   <span>🤖</span> Campos Calculados
