@@ -318,12 +318,17 @@ function LoginScreen({ onLogin }) {
       });
 
       // 5. Construir AUTOMIND global
+      // Vendedor: solo ve sus unidades asignadas + sin asignar
+      const usuarioActualLogin = usuariosEnriquecidos.find(u => u.auth_user_id === me.auth_user_id) || me;
+      const rowsParaRolLogin   = usuarioActualLogin?.rol === "vendedor"
+        ? rowsEnriquecidas.filter(r => !r.vendedorId || r.vendedorId === usuarioActualLogin.id)
+        : rowsEnriquecidas;
       window.AUTOMIND = {
-        ROWS:      rowsEnriquecidas,
+        ROWS:      rowsParaRolLogin,
         USUARIOS:  usuariosEnriquecidos,
-        KPIS:      computarKpis(rowsEnriquecidas),
-        PIVOTE:    computarPivote(rowsEnriquecidas),
-        TABLAS:    buildTablas(rowsEnriquecidas, usuariosEnriquecidos),
+        KPIS:      computarKpis(rowsParaRolLogin),
+        PIVOTE:    computarPivote(rowsParaRolLogin),
+        TABLAS:    buildTablas(rowsParaRolLogin, usuariosEnriquecidos),
         agencyId:      agency.id,
         agencyParentId: agency.agency_id || agency.id, // agencia raíz (Coperva)
         enrichRowVendedor: (row, uList) => {
@@ -342,7 +347,7 @@ function LoginScreen({ onLogin }) {
       };
 
       // 6. Retornar config de tenant para la app
-      const usuarioActual = usuariosEnriquecidos.find(u => u.auth_user_id === me.auth_user_id) || me;
+      const usuarioActual = usuarioActualLogin; // ya computado en paso 5
       onLogin({
         id:             agency.id,
         nombre:         agency.nombre,

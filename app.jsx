@@ -384,8 +384,12 @@ function App() {
             const { agency, me, usuarios, rows } = await window.DB.loadAgencyData();
             const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
             const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
-            window.AUTOMIND   = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos);
+            // Vendedor: solo sus unidades asignadas + sin asignar
             const usuarioActual = usuariosEnriquecidos.find(u=>u.auth_user_id===me.auth_user_id)||me;
+            const rowsParaRol   = usuarioActual?.rol === "vendedor"
+              ? rowsEnriquecidas.filter(r => !r.vendedorId || r.vendedorId === usuarioActual.id)
+              : rowsEnriquecidas;
+            window.AUTOMIND = buildAUTOMIND(agency, rowsParaRol, usuariosEnriquecidos);
             handleLogin({
               id:agency.id, nombre:agency.nombre, ciudad:agency.ciudad,
               iniciales:agency.iniciales||agency.nombre.slice(0,2).toUpperCase(),
