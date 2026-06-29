@@ -504,7 +504,7 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
             />
 
             {/* ── Botón eliminar (solo director/gerente) ──────────────── */}
-            {!esVendedor && selected && (
+            {!esVendedor && selId && (
               <div style={{ padding:"8px 0 8px", display:"flex", justifyContent:"flex-end" }}>
                 <button
                   className="btn danger"
