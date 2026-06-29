@@ -64,9 +64,9 @@ create policy "inv_delete" on inventario for delete
     or agency_id  = any(select my_workspace_ids())
   );
 
--- ── 4. Backfill workspace_memberships (solo para workspaces que existen) ──────
-insert into workspace_memberships (workspace_id, user_id, role)
-select u.workspace_id, u.auth_user_id, 'workspace_member'
+-- ── 4. Backfill workspace_memberships (workspace_memberships no tiene columna role) ───
+insert into workspace_memberships (workspace_id, user_id)
+select u.workspace_id, u.auth_user_id
 from users u
 where u.auth_user_id is not null
   and u.workspace_id is not null
