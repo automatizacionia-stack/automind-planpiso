@@ -156,25 +156,25 @@ function DiasPorSemaforo({ rows }) {
   );
 }
 
-/* ── Por marca ──────────────────────────────────────────────── */
-function PorMarca({ rows, filters, setFilters }) {
-  const marcas = {};
+/* ── Por modelo ─────────────────────────────────────────────── */
+function PorModelo({ rows, filters, setFilters }) {
+  const modelos = {};
   rows.forEach(r => {
-    const m = r.marca || "Sin marca";
-    if (!marcas[m]) marcas[m] = { total: 0, alertas: 0 };
-    marcas[m].total++;
-    if (r.semaforo === "intereses" || r.semaforo === "vencer") marcas[m].alertas++;
+    const m = r.modelo || "Sin modelo";
+    if (!modelos[m]) modelos[m] = { total: 0, alertas: 0 };
+    modelos[m].total++;
+    if (r.semaforo === "intereses" || r.semaforo === "vencer") modelos[m].alertas++;
   });
-  const list = Object.entries(marcas).sort((a, b) => b[1].total - a[1].total).slice(0, 7);
+  const list = Object.entries(modelos).sort((a, b) => b[1].total - a[1].total).slice(0, 7);
   return (
     <Card>
-      <CardHead title="Por marca" />
-      {list.map(([marca, d]) => (
-        <div key={marca}
-          onClick={() => setFilters(f => ({ ...f, marca: f.marca === marca ? null : marca }))}
+      <CardHead title="Por modelo" />
+      {list.map(([modelo, d]) => (
+        <div key={modelo}
+          onClick={() => setFilters(f => ({ ...f, modelo: f.modelo === modelo ? null : modelo }))}
           className="drow"
-          style={{ justifyContent: "space-between", cursor: "pointer", fontSize: 12, background: filters.marca === marca ? "var(--bg)" : "transparent" }}>
-          <span style={{ fontWeight: 600, color: "var(--ink)" }}>{marca}</span>
+          style={{ justifyContent: "space-between", cursor: "pointer", fontSize: 12, background: filters.modelo === modelo ? "var(--bg)" : "transparent" }}>
+          <span style={{ fontWeight: 600, color: "var(--ink)" }}>{modelo}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--muted)" }}>
             {d.total} uds.
             {d.alertas > 0 && (
@@ -280,12 +280,12 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
   const [collapsed, setCollapsed] = React.useState({});
   const toggle = k => setCollapsed(c => ({ ...c, [k]: !c[k] }));
 
-  const { sem, fin, gerente, marca } = filters;
+  const { sem, fin, gerente, modelo } = filters;
   const filtered = rows.filter(r => {
     if (sem     && r.semaforo   !== sem)     return false;
     if (fin     && r.financiera !== fin)     return false;
     if (gerente && r.gerenteId  !== gerente) return false;
-    if (marca   && r.marca      !== marca)   return false;
+    if (modelo  && r.modelo     !== modelo)  return false;
     return true;
   });
 
@@ -296,7 +296,7 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
   const activeLabel = sem     ? SEM[sem].emoji + " " + SEM[sem].label
     : fin     ? fin
     : gerente ? "Gerente filtrado"
-    : marca   ? "Marca · " + marca
+    : modelo  ? "Modelo · " + modelo
     : null;
 
   return (
@@ -305,7 +305,7 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span className="dcard-title">Lista detallada</span>
           {activeLabel && (
-            <button className="chip-clear" onClick={() => setFilters({ sem: null, fin: null, gerente: null, marca: null })}>
+            <button className="chip-clear" onClick={() => setFilters({ sem: null, fin: null, gerente: null, modelo: null, urgente: false })}>
               {I.filter({ width: 12, height: 12 })} {activeLabel} · {filtered.length}
               <span className="cc-x">{I.close({ width: 11, height: 11 })}</span>
             </button>
@@ -358,8 +358,8 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
               return (
                 <button className="vrow" key={r.id} onClick={() => openVehicle(r)}>
                   <span className="v-name">
-                    <b>{r.marca} {r.modelo}</b>
-                    <small>{r.anio} · {r.colorExterior} · INV {r.inv}</small>
+                    <b>{r.descripcion || [r.marca, r.modelo].filter(Boolean).join(" ") || "Sin descripción"}</b>
+                    <small>{[r.tipo, r.anio, r.colorExterior, r.inv ? "INV " + r.inv : null].filter(Boolean).join(" · ")}</small>
                   </span>
                   <span className="r">{r.diasEnPiso}</span>
                   <span className={"r " + (r.diasVencidos > 0 ? "neg" : "")}>{r.diasVencidos || "—"}</span>
@@ -425,9 +425,9 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
         <DiasPorSemaforo rows={rows} />
       </div>
 
-      {/* Marca + Antigüedad + Vendedor */}
+      {/* Modelo + Antigüedad + Vendedor */}
       <div className="d-grid-3">
-        <PorMarca rows={rows} filters={filters} setFilters={setFilters} />
+        <PorModelo rows={rows} filters={filters} setFilters={setFilters} />
         <Antiguedad rows={rows} />
         <CargaVendedor rows={rows} usuarios={usuarios} />
       </div>
