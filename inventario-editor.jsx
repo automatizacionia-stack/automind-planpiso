@@ -503,6 +503,24 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
               }}
             />
 
+            {/* ── Botón eliminar (solo director/gerente) ──────────────── */}
+            {!esVendedor && selected && (
+              <div style={{ padding:"8px 0 8px", display:"flex", justifyContent:"flex-end" }}>
+                <button
+                  className="btn danger"
+                  style={{ gap:8, display:"flex", alignItems:"center" }}
+                  onClick={() => setShowDel(true)}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+                    strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                  </svg>
+                  Eliminar unidad
+                </button>
+              </div>
+            )}
+
             {/* Espacio inferior */}
             <div style={{ height:40 }} />
           </div>
