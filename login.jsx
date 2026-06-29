@@ -212,11 +212,30 @@ function SetPasswordScreen({ onDone }) {
 }
 
 function LoginScreen({ onLogin }) {
-  const [email, setEmail]       = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [error, setError]       = React.useState("");
-  const [loading, setLoading]   = React.useState(false);
-  const [showPass, setShowPass] = React.useState(false);
+  const [email, setEmail]         = React.useState("");
+  const [password, setPassword]   = React.useState("");
+  const [error, setError]         = React.useState("");
+  const [loading, setLoading]     = React.useState(false);
+  const [showPass, setShowPass]   = React.useState(false);
+  const [resetSent, setResetSent] = React.useState(false);
+  const [resetLoading, setResetLoading] = React.useState(false);
+
+  async function handleForgot(e) {
+    e.preventDefault();
+    if (!email) { setError("Escribe tu correo primero para recuperar tu contraseña."); return; }
+    setResetLoading(true); setError("");
+    try {
+      const { error: err } = await window.DB.client.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: window.location.origin + window.location.pathname,
+      });
+      if (err) throw err;
+      setResetSent(true);
+    } catch(err) {
+      setError(err.message || "No se pudo enviar el correo de recuperación.");
+    } finally {
+      setResetLoading(false);
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -449,6 +468,21 @@ function LoginScreen({ onLogin }) {
               {loading ? <span className="login-spinner" /> : null}
               {loading ? "Verificando…" : "Entrar"}
             </button>
+
+            {resetSent ? (
+              <div style={{ marginTop:14, padding:"10px 14px", borderRadius:10,
+                background:"#e7f5ed", color:"#1f9d57", fontSize:13, lineHeight:1.5 }}>
+                ✅ Correo enviado a <b>{email}</b>. Revisa tu bandeja (y spam).
+              </div>
+            ) : (
+              <button type="button"
+                onClick={handleForgot}
+                disabled={resetLoading}
+                style={{ marginTop:12, background:"none", border:"none", color:"var(--muted)",
+                  fontSize:13, cursor:"pointer", textDecoration:"underline", padding:0 }}>
+                {resetLoading ? "Enviando…" : "¿Olvidaste tu contraseña?"}
+              </button>
+            )}
           </form>
         </div>
       </div>
