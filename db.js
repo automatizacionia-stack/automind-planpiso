@@ -426,6 +426,8 @@
       fecha_llegada:    toISO(v.fechaLlegada),
       foto_url:         v.fotoUrl          || v.foto || null,
       vendedor_id:      v.vendedorId       || null,
+      estado_venta:     v.estadoVenta      || 'DISPONIBLE',
+      fecha_venta:      toISO(v.fechaVenta) || null,
       // Persistir el semáforo actual para que la detección de cambios
       // (saveVehicle → triggerSemAlert) funcione y no se re-dispare en cada guardado
       semaforo_snapshot: v.semaforo        || null,
@@ -459,6 +461,8 @@
       foto:            row.foto_url         || null,
       fotoUrl:         row.foto_url         || null, // la UI (inventario-editor) lee fotoUrl
       vendedorId:      row.vendedor_id      || null,
+      estadoVenta:     row.estado_venta     || 'DISPONIBLE',
+      fechaVenta:      parseDate(row.fecha_venta),
     };
   }
 

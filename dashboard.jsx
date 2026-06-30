@@ -398,10 +398,83 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
   );
 }
 
+/* ── Vendidos del mes ───────────────────────────────────────── */
+function VendidosMes({ rows }) {
+  const HOY = new Date();
+  const mesActual = HOY.getFullYear() * 100 + HOY.getMonth();
+  const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+  const vendidos = rows.filter(r => {
+    if (r.estadoVenta !== "VENDIDO") return false;
+    if (!r.fechaVenta) return true; // sin fecha → mostrar igual
+    const fv = r.fechaVenta instanceof Date ? r.fechaVenta : new Date(r.fechaVenta);
+    return fv.getFullYear() * 100 + fv.getMonth() === mesActual;
+  });
+
+  return (
+    <Card>
+      <CardHead title={"Vendidos · " + MESES[HOY.getMonth()]} badge={vendidos.length} />
+      {vendidos.length === 0 ? (
+        <div style={{ padding:"20px 16px", color:"var(--muted)", fontSize:12 }}>Sin ventas registradas este mes.</div>
+      ) : (
+        <div style={{ padding:"0 0 4px" }}>
+          {vendidos.map(r => {
+            const fv = r.fechaVenta ? (r.fechaVenta instanceof Date ? r.fechaVenta : new Date(r.fechaVenta)) : null;
+            return (
+              <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 16px",
+                borderBottom:"1px solid var(--line-2)", fontSize:12 }}>
+                <span style={{ width:8, height:8, borderRadius:"50%", background:"#7c3aed", flexShrink:0 }} />
+                <span style={{ flex:1 }}>
+                  <b style={{ color:"var(--ink)", fontSize:13 }}>
+                    {r.descripcion || [r.marca, r.modelo].filter(Boolean).join(" ") || "Sin descripción"}
+                  </b>
+                  <br />
+                  <span style={{ color:"var(--muted)" }}>
+                    {[r.inv ? "INV " + r.inv : null, r.anio, r.colorExterior].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+                {fv && (
+                  <span style={{ color:"#7c3aed", fontSize:11, fontWeight:700, whiteSpace:"nowrap" }}>
+                    {fv.getDate()}/{fv.getMonth()+1}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 /* ── Dashboard principal ────────────────────────────────────── */
 function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuarioActual }) {
-  const criticas   = (kpis.intereses || 0) + (kpis.vencer || 0);
-  const sinAsignar = rows.filter(r => !r.vendedorId).length;
+  // Separar inventario activo de vendidos del mes
+  const HOY = new Date();
+  const mesActual = HOY.getFullYear() * 100 + HOY.getMonth();
+
+  const rowsActivos = rows.filter(r => r.estadoVenta !== "VENDIDO");
+  const rowsVendidosMes = rows.filter(r => {
+    if (r.estadoVenta !== "VENDIDO") return false;
+    if (!r.fechaVenta) return true;
+    const fv = r.fechaVenta instanceof Date ? r.fechaVenta : new Date(r.fechaVenta);
+    return fv.getFullYear() * 100 + fv.getMonth() === mesActual;
+  });
+
+  // Recomputar KPIs solo sobre activos
+  const kpisActivos = {
+    ...kpis,
+    total:        rowsActivos.length,
+    interesTotal: rowsActivos.reduce((s, r) => s + (r.interesAcum || 0), 0),
+    intereses:    rowsActivos.filter(r => r.semaforo === "intereses").length,
+    vencer:       rowsActivos.filter(r => r.semaforo === "vencer").length,
+    comprometido: rowsActivos.filter(r => r.semaforo === "comprometido").length,
+    rotacion:     rowsActivos.filter(r => r.semaforo === "rotacion").length,
+    saludable:    rowsActivos.filter(r => r.semaforo === "saludable").length,
+  };
+
+  const criticas   = (kpisActivos.intereses || 0) + (kpisActivos.vencer || 0);
+  const sinAsignar = rowsActivos.filter(r => !r.vendedorId).length;
   const usuarios   = window.AUTOMIND ? window.AUTOMIND.USUARIOS || [] : [];
 
   return (
@@ -413,27 +486,28 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
 
       {/* KPIs */}
       <div className="dkpi-grid">
-        <TopKpi label="Total inventario"             value={rows.length}                        sub="unidades en piso"                                                    tone="neutral" />
-        <TopKpi label="Críticas (intereses + vencer)" value={criticas}                           sub={rows.length ? Math.round((criticas / rows.length) * 100) + "% del inventario" : "—"} tone={criticas > 0 ? "danger" : "ok"} />
-        <TopKpi label="Interés acumulado"             value={fmtMoney(kpis.interesTotal || 0, 0)} sub={(kpis.intereses || 0) + " unidades generando interés"}               tone={kpis.interesTotal > 0 ? "warn" : "ok"} />
-        <TopKpi label="Sin vendedor asignado"         value={sinAsignar}                         sub={rows.length ? Math.round((sinAsignar / rows.length) * 100) + "% sin asignar" : "—"} tone={sinAsignar > 5 ? "warn" : "ok"} />
+        <TopKpi label="Total inventario"             value={rowsActivos.length}                    sub="unidades en piso"                                                        tone="neutral" />
+        <TopKpi label="Críticas (intereses + vencer)" value={criticas}                               sub={rowsActivos.length ? Math.round((criticas / rowsActivos.length) * 100) + "% del inventario" : "—"} tone={criticas > 0 ? "danger" : "ok"} />
+        <TopKpi label="Interés acumulado"             value={fmtMoney(kpisActivos.interesTotal || 0, 0)} sub={(kpisActivos.intereses || 0) + " unidades generando interés"}         tone={kpisActivos.interesTotal > 0 ? "warn" : "ok"} />
+        <TopKpi label="Vendidos este mes"             value={rowsVendidosMes.length}                sub="unidades cerradas"                                                       tone={rowsVendidosMes.length > 0 ? "ok" : "neutral"} />
       </div>
 
       {/* Semáforo + Días promedio */}
       <div className="d-grid-2-1">
-        <TablaSemaforo rows={rows} kpis={kpis} filters={filters} setFilters={setFilters} />
-        <DiasPorSemaforo rows={rows} />
+        <TablaSemaforo rows={rowsActivos} kpis={kpisActivos} filters={filters} setFilters={setFilters} />
+        <DiasPorSemaforo rows={rowsActivos} />
       </div>
 
-      {/* Modelo + Antigüedad + Vendedor */}
+      {/* Modelo + Antigüedad + Vendedor + Vendidos del mes */}
       <div className="d-grid-3">
-        <PorModelo rows={rows} filters={filters} setFilters={setFilters} />
-        <Antiguedad rows={rows} />
-        <CargaVendedor rows={rows} usuarios={usuarios} />
+        <PorModelo rows={rowsActivos} filters={filters} setFilters={setFilters} />
+        <Antiguedad rows={rowsActivos} />
+        <CargaVendedor rows={rowsActivos} usuarios={usuarios} />
+        <VendidosMes rows={rows} />
       </div>
 
-      {/* Lista detallada */}
-      <ListaDetallada rows={rows} filters={filters} setFilters={setFilters} openVehicle={openVehicle} usuarioActual={usuarioActual} />
+      {/* Lista detallada — solo activos */}
+      <ListaDetallada rows={rowsActivos} filters={filters} setFilters={setFilters} openVehicle={openVehicle} usuarioActual={usuarioActual} />
     </div>
   );
 }

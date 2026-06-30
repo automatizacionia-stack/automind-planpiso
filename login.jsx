@@ -337,11 +337,21 @@ function LoginScreen({ onLogin }) {
       });
 
       // 5. Construir AUTOMIND global
+      // Excluir vendidos de meses anteriores (solo se muestran los del mes en curso)
+      const _hoyLogin = new Date();
+      const _mesActualLogin = _hoyLogin.getFullYear() * 100 + _hoyLogin.getMonth();
+      const rowsSinVencidos = rowsEnriquecidas.filter(r => {
+        if (r.estadoVenta !== "VENDIDO") return true;
+        if (!r.fechaVenta) return true;
+        const fv = r.fechaVenta instanceof Date ? r.fechaVenta : new Date(r.fechaVenta);
+        return fv.getFullYear() * 100 + fv.getMonth() === _mesActualLogin;
+      });
+
       // Vendedor: solo ve sus unidades asignadas + sin asignar
       const usuarioActualLogin = usuariosEnriquecidos.find(u => u.auth_user_id === me.auth_user_id) || me;
       const rowsParaRolLogin   = usuarioActualLogin?.rol === "vendedor"
-        ? rowsEnriquecidas.filter(r => !r.vendedorId || r.vendedorId === usuarioActualLogin.id)
-        : rowsEnriquecidas;
+        ? rowsSinVencidos.filter(r => !r.vendedorId || r.vendedorId === usuarioActualLogin.id)
+        : rowsSinVencidos;
       window.AUTOMIND = {
         ROWS:      rowsParaRolLogin,
         USUARIOS:  usuariosEnriquecidos,

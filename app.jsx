@@ -384,11 +384,20 @@ function App() {
             const { agency, me, usuarios, rows } = await window.DB.loadAgencyData();
             const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
             const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
+            // Excluir vendidos de meses anteriores
+            const _hoyApp = new Date();
+            const _mesActualApp = _hoyApp.getFullYear() * 100 + _hoyApp.getMonth();
+            const rowsSinVendidosViejos = rowsEnriquecidas.filter(r => {
+              if (r.estadoVenta !== "VENDIDO") return true;
+              if (!r.fechaVenta) return true;
+              const fv = r.fechaVenta instanceof Date ? r.fechaVenta : new Date(r.fechaVenta);
+              return fv.getFullYear() * 100 + fv.getMonth() === _mesActualApp;
+            });
             // Vendedor: solo sus unidades asignadas + sin asignar
             const usuarioActual = usuariosEnriquecidos.find(u=>u.auth_user_id===me.auth_user_id)||me;
             const rowsParaRol   = usuarioActual?.rol === "vendedor"
-              ? rowsEnriquecidas.filter(r => !r.vendedorId || r.vendedorId === usuarioActual.id)
-              : rowsEnriquecidas;
+              ? rowsSinVendidosViejos.filter(r => !r.vendedorId || r.vendedorId === usuarioActual.id)
+              : rowsSinVendidosViejos;
             window.AUTOMIND = buildAUTOMIND(agency, rowsParaRol, usuariosEnriquecidos);
             handleLogin({
               id:agency.id, nombre:agency.nombre, ciudad:agency.ciudad,

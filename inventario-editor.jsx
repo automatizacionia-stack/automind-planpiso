@@ -4,6 +4,11 @@
    Permite agregar, editar y eliminar unidades sin entrar a la base de datos. */
 
 const ESTATUS_OPTS = ["NUEVOS", "DEMO", "SEMINUEVOS", "USADOS"];
+const ESTADO_VENTA_OPTS = [
+  { val: "DISPONIBLE", label: "Disponible", color: "#1f9d57", bg: "#e7f5ed" },
+  { val: "APARTADO",   label: "Apartado",   color: "#c05c00", bg: "#faeeda" },
+  { val: "VENDIDO",    label: "Vendido",    color: "#7c3aed", bg: "#f3eeff" },
+];
 const COLORES_EXT  = ["AZUL ANEMONA","AZUL MONTERREY","NEGRO PROFUNDO","ROJO KINGS","BLANCO PURO","GRIS FRANELA","PLATA REFLEX","OTRO"];
 const COLORES_INT  = ["NEGRO","BEIGE","GRIS","CAFÉ","OTRO"];
 const MS_DIA       = 86400000;
@@ -380,6 +385,47 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
                     </select>
                   </FormField>
                 )}
+
+                {/* ── Estado de venta ─── */}
+                <FormField label="Estado de venta" style={{ gridColumn: "1 / -1" }}>
+                  {esVendedor ? (
+                    (() => {
+                      const opt = ESTADO_VENTA_OPTS.find(o => o.val === (form.estadoVenta || "DISPONIBLE")) || ESTADO_VENTA_OPTS[0];
+                      return (
+                        <span style={{ display:"inline-flex", alignItems:"center", gap:6,
+                          padding:"5px 12px", borderRadius:20,
+                          background:opt.bg, color:opt.color, fontSize:12, fontWeight:700 }}>
+                          ● {opt.label}
+                        </span>
+                      );
+                    })()
+                  ) : (
+                    <div style={{ display:"flex", gap:6 }}>
+                      {ESTADO_VENTA_OPTS.map(o => {
+                        const active = (form.estadoVenta || "DISPONIBLE") === o.val;
+                        return (
+                          <button key={o.val} type="button"
+                            style={{ flex:1, padding:"7px 4px", borderRadius:8,
+                              border:"2px solid " + (active ? o.color : "var(--line)"),
+                              background: active ? o.bg : "var(--card)",
+                              color: active ? o.color : "var(--muted)",
+                              fontSize:12, fontWeight:700, cursor:"pointer", transition:"all .12s" }}
+                            onClick={() => {
+                              setForm(f => {
+                                const next = { ...f, estadoVenta: o.val };
+                                if (o.val === "VENDIDO" && !f.fechaVenta) next.fechaVenta = new Date();
+                                return next;
+                              });
+                              setDirty(true);
+                            }}>
+                            ● {o.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </FormField>
+
                 <FormField label="INV">
                   <input className="ef-input" type="number" value={form.inv || ""} onChange={e => set("inv", e.target.value)} />
                 </FormField>
