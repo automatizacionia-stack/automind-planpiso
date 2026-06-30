@@ -576,7 +576,7 @@ function App() {
 
   const tablaNombre = (A.TABLAS.find((b) => b.id === tablaId) || A.TABLAS[0]).nombre;
   const crumb = view === "database"     ? "Datos · " + tablaNombre
-    : view === "inventario"    ? "Plan Piso · Captura de datos"
+    : view === "inventario"    ? "Plan Piso · Registro de Inventario"
     : view === "colaboradores" ? "Equipo · Colaboradores"
     : view === "usuarios"      ? "Equipo · Registro de usuarios"
     : view === "alertas"       ? "Admin · Alertas"

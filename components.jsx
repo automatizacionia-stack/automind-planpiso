@@ -192,7 +192,7 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
             </button>
             {/* Base de datos — oculto del nav pero la ruta sigue activa */}
             <button className={"nav-child" + (view === "inventario" ? " active" : "")} onClick={() => setView("inventario")}>
-              Captura de datos
+              Registro de Inventario
             </button>
           </div>
         </div>
