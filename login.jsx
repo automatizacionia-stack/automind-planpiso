@@ -318,13 +318,16 @@ function LoginScreen({ onLogin }) {
           plazoDias:       v.plazoDias || 0,
         };
 
-        // Enriquecer vendedor/gerente/director
+        // Enriquecer vendedor/gerente/director (multi-vendedor)
         if (window.DB.enrichRowVendedor) {
           window.DB.enrichRowVendedor(row, usuariosEnriquecidos);
         } else {
-          const vend = usuariosEnriquecidos.find(u => u.id === row.vendedorId) || null;
+          const vids = Array.isArray(row.vendedorIds) && row.vendedorIds.length > 0
+            ? row.vendedorIds : (row.vendedorId ? [row.vendedorId] : []);
+          const vend = vids.length > 0 ? (usuariosEnriquecidos.find(u => u.id === vids[0]) || null) : null;
           const ger  = vend ? (usuariosEnriquecidos.find(u => u.id === vend.reportaA) || null) : null;
           const dir  = ger  ? (usuariosEnriquecidos.find(u => u.id === ger.reportaA)  || null) : null;
+          row.vendedores     = vids.map(id => usuariosEnriquecidos.find(u => u.id === id)).filter(Boolean);
           row.vendedorNombre = vend?.nombre || "";
           row.vendedorEmail  = vend?.email  || "";
           row.gerenteId      = ger?.id      || "";
@@ -347,10 +350,13 @@ function LoginScreen({ onLogin }) {
         return fv.getFullYear() * 100 + fv.getMonth() === _mesActualLogin;
       });
 
-      // Vendedor: solo ve sus unidades asignadas + sin asignar
+      // Vendedor: solo ve sus unidades asignadas + sin asignar (soporta multi-vendedor)
       const usuarioActualLogin = usuariosEnriquecidos.find(u => u.auth_user_id === me.auth_user_id) || me;
       const rowsParaRolLogin   = usuarioActualLogin?.rol === "vendedor"
-        ? rowsSinVencidos.filter(r => !r.vendedorId || r.vendedorId === usuarioActualLogin.id)
+        ? rowsSinVencidos.filter(r => {
+            const ids = r.vendedorIds || (r.vendedorId ? [r.vendedorId] : []);
+            return ids.length === 0 || ids.includes(usuarioActualLogin.id);
+          })
         : rowsSinVencidos;
       window.AUTOMIND = {
         ROWS:      rowsParaRolLogin,

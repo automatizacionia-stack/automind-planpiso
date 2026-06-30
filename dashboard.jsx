@@ -224,14 +224,17 @@ function CargaVendedor({ rows, usuarios }) {
   const vendedores = (usuarios || [])
     .map(v => ({
       ...v,
-      total:   rows.filter(r => r.vendedorId === v.id).length,
-      alertas: rows.filter(r => r.vendedorId === v.id && (r.semaforo === "intereses" || r.semaforo === "vencer")).length,
+      total:   rows.filter(r => (r.vendedorIds || (r.vendedorId ? [r.vendedorId] : [])).includes(v.id)).length,
+      alertas: rows.filter(r => (r.vendedorIds || (r.vendedorId ? [r.vendedorId] : [])).includes(v.id) && (r.semaforo === "intereses" || r.semaforo === "vencer")).length,
     }))
     .filter(v => v.total > 0)
     .sort((a, b) => b.total - a.total)
     .slice(0, 6);
 
-  const sinAsignar = rows.filter(r => !r.vendedorId).length;
+  const sinAsignar = rows.filter(r => {
+    const ids = r.vendedorIds || (r.vendedorId ? [r.vendedorId] : []);
+    return ids.length === 0;
+  }).length;
   const maxUnits   = Math.max(...vendedores.map(v => v.total), sinAsignar, 1);
 
   return (
@@ -337,13 +340,16 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
               <span className="vg-count">{g.items.length}</span>
             </button>
             {!collapsed[g.k] && g.items.map(r => {
-              const usuarios = window.AUTOMIND ? window.AUTOMIND.USUARIOS || [] : [];
-              const vendedor = usuarios.find(u => u.id === r.vendedorId);
-              const esYo     = usuarioActual && r.vendedorId === usuarioActual.id;
+              const uList   = window.AUTOMIND ? window.AUTOMIND.USUARIOS || [] : [];
+              const vids    = r.vendedorIds || (r.vendedorId ? [r.vendedorId] : []);
+              const vends   = r.vendedores || vids.map(id => uList.find(u => u.id === id)).filter(Boolean);
+              const esYo    = usuarioActual && vids.includes(usuarioActual.id);
               function toggleAsignar(e) {
                 e.stopPropagation();
                 if (!usuarioActual) return;
-                r.vendedorId = esYo ? null : usuarioActual.id;
+                const prev = r.vendedorIds || (r.vendedorId ? [r.vendedorId] : []);
+                r.vendedorIds = esYo ? prev.filter(id => id !== usuarioActual.id) : [...prev, usuarioActual.id];
+                r.vendedorId  = r.vendedorIds[0] || null;
                 if (window.AUTOMIND && window.AUTOMIND.enrichRowVendedor) {
                   window.AUTOMIND.enrichRowVendedor(r, window.AUTOMIND.USUARIOS || []);
                 }
@@ -371,14 +377,17 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
                     {r.diasLibresRestantes}
                   </span>
                   <span className="v-vendedor" onClick={e => e.stopPropagation()}>
-                    {vendedor ? (
+                    {vends.length > 0 ? (
                       <span className={"vend-chip" + (esYo ? " yo" : "")}>
                         <span className="vend-names">
-                          <span className="vend-vend">{vendedor.nombre.split(" ")[0]}</span>
-                          {r.gerenteNombre && <span className="vend-ger">{r.gerenteNombre.split(" ")[0]}</span>}
+                          <span className="vend-vend">{vends[0].nombre.split(" ")[0]}</span>
+                          {vends.length > 1
+                            ? <span className="vend-ger">+{vends.length - 1}</span>
+                            : r.gerenteNombre ? <span className="vend-ger">{r.gerenteNombre.split(" ")[0]}</span> : null
+                          }
                         </span>
                         {esYo && usuarioActual.rol !== "director" && (
-                          <button className="vend-remove" onClick={toggleAsignar} title="Desasignar">×</button>
+                          <button className="vend-remove" onClick={toggleAsignar} title="Desasignarme">×</button>
                         )}
                       </span>
                     ) : (
@@ -474,7 +483,10 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
   };
 
   const criticas   = (kpisActivos.intereses || 0) + (kpisActivos.vencer || 0);
-  const sinAsignar = rowsActivos.filter(r => !r.vendedorId).length;
+  const sinAsignar = rowsActivos.filter(r => {
+    const ids = r.vendedorIds || (r.vendedorId ? [r.vendedorId] : []);
+    return ids.length === 0;
+  }).length;
   const usuarios   = window.AUTOMIND ? window.AUTOMIND.USUARIOS || [] : [];
 
   return (

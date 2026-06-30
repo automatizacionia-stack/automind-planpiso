@@ -425,7 +425,9 @@
       fecha_factura:    toISO(v.fechaFactura),
       fecha_llegada:    toISO(v.fechaLlegada),
       foto_url:         v.fotoUrl          || v.foto || null,
-      vendedor_id:      v.vendedorId       || null,
+      // multi-vendedor: guardar array completo + primer elemento en campo legacy
+      vendedor_ids:     Array.isArray(v.vendedorIds) ? v.vendedorIds.filter(Boolean) : (v.vendedorId ? [v.vendedorId] : []),
+      vendedor_id:      (Array.isArray(v.vendedorIds) && v.vendedorIds.filter(Boolean)[0]) || v.vendedorId || null,
       estado_venta:     v.estadoVenta      || 'DISPONIBLE',
       fecha_venta:      toISO(v.fechaVenta) || null,
       // Persistir el semáforo actual para que la detección de cambios
@@ -459,8 +461,12 @@
       fechaFactura:    parseDate(row.fecha_factura),
       fechaLlegada:    parseDate(row.fecha_llegada),
       foto:            row.foto_url         || null,
-      fotoUrl:         row.foto_url         || null, // la UI (inventario-editor) lee fotoUrl
-      vendedorId:      row.vendedor_id      || null,
+      fotoUrl:         row.foto_url         || null,
+      // multi-vendedor: leer array; fallback a campo legacy si el array está vacío
+      vendedorIds:     Array.isArray(row.vendedor_ids) && row.vendedor_ids.length > 0
+                         ? row.vendedor_ids
+                         : (row.vendedor_id ? [row.vendedor_id] : []),
+      vendedorId:      (Array.isArray(row.vendedor_ids) && row.vendedor_ids[0]) || row.vendedor_id || null,
       estadoVenta:     row.estado_venta     || 'DISPONIBLE',
       fechaVenta:      parseDate(row.fecha_venta),
     };

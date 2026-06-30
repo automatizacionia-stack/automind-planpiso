@@ -106,12 +106,19 @@ function CalcField({ label, value, warn, neg }) {
   );
 }
 
-/* ── Sección de asignación de jerarquía ─────────────────────────────────── */
-function JerarquiaSection({ vendedorId, usuarios, onChange }) {
-  const vendedores  = usuarios.filter(u => u.rol === "vendedor");
-  const vendedor    = usuarios.find(u => u.id === vendedorId) || null;
-  const gerente     = vendedor ? (usuarios.find(u => u.id === vendedor.reportaA) || null) : null;
-  const director    = gerente  ? (usuarios.find(u => u.id === gerente.reportaA)  || null) : null;
+/* ── Sección de asignación de jerarquía (multi-vendedor) ───────────────── */
+function JerarquiaSection({ vendedorIds, usuarios, onChange }) {
+  const vendedorIds_ = Array.isArray(vendedorIds) ? vendedorIds : [];
+  const vendedores   = usuarios.filter(u => u.rol === "vendedor");
+  const asignados    = vendedorIds_.map(id => usuarios.find(u => u.id === id)).filter(Boolean);
+
+  function toggle(vid) {
+    if (vendedorIds_.includes(vid)) {
+      onChange(vendedorIds_.filter(id => id !== vid));
+    } else {
+      onChange([...vendedorIds_, vid]);
+    }
+  }
 
   const NivelChip = ({ u, color, lbl }) => u ? (
     <div className="jq-nivel">
@@ -132,29 +139,44 @@ function JerarquiaSection({ vendedorId, usuarios, onChange }) {
     <div className="ef-seccion jq-wrap">
       <div className="ef-sec-head">
         <span>{I.users({ width:15, height:15 })}</span>
-        Asignación de jerarquía
+        Asignación de vendedores
       </div>
 
-      <FormField label="Vendedor asignado">
-        <select className="ef-input"
-          value={vendedorId || ""}
-          onChange={e => onChange(e.target.value || null)}>
-          <option value="">— Sin asignar —</option>
-          {vendedores.map(v => (
-            <option key={v.id} value={v.id}>{v.nombre}</option>
-          ))}
-        </select>
-      </FormField>
+      {/* Chips de selección múltiple */}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, padding:"6px 0 10px" }}>
+        {vendedores.length === 0 && (
+          <span style={{ color:"var(--muted)", fontSize:12 }}>Sin vendedores registrados en este workspace.</span>
+        )}
+        {vendedores.map(v => {
+          const sel = vendedorIds_.includes(v.id);
+          return (
+            <button key={v.id} type="button"
+              onClick={() => toggle(v.id)}
+              style={{ padding:"5px 12px", borderRadius:20, border:"2px solid",
+                borderColor: sel ? "#2f6fed" : "var(--line)",
+                background:  sel ? "#e6f1fb" : "var(--card)",
+                color:       sel ? "#185fa5" : "var(--muted)",
+                fontSize:12, fontWeight: sel ? 700 : 400, cursor:"pointer",
+                transition:"all .12s", display:"flex", alignItems:"center", gap:5 }}>
+              {sel && <span style={{ fontSize:10 }}>✓</span>}
+              {v.nombre.split(" ").slice(0,2).join(" ")}
+            </button>
+          );
+        })}
+      </div>
 
-      {vendedor && (
-        <div className="jq-chain">
-          <NivelChip u={vendedor} color="#d99613" lbl="Vendedor" />
-          {gerente  && <div className="jq-arrow">↑</div>}
-          <NivelChip u={gerente}  color="#1f9d57" lbl="Gerente" />
-          {director && <div className="jq-arrow">↑</div>}
-          <NivelChip u={director} color="#2f6fed" lbl="Director" />
-        </div>
-      )}
+      {/* Cadena jerárquica por cada vendedor asignado */}
+      {asignados.map(vend => {
+        const ger = usuarios.find(u => u.id === vend.reportaA) || null;
+        const dir = ger ? (usuarios.find(u => u.id === ger.reportaA) || null) : null;
+        return (
+          <div key={vend.id} className="jq-chain" style={{ marginBottom:8 }}>
+            <NivelChip u={vend} color="#d99613" lbl="Vendedor" />
+            {ger  && <><div className="jq-arrow">↑</div><NivelChip u={ger}  color="#1f9d57" lbl="Gerente" /></>}
+            {dir  && <><div className="jq-arrow">↑</div><NivelChip u={dir}  color="#2f6fed" lbl="Director" /></>}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -266,7 +288,7 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
       montoFinanciado:0, diasGraciaBase:30, diasGraciaExtra:0,
       pctInteres:0.14,
       plazoDias: 120, observaciones:"",
-      vendedorId:null, fotoUrl:null,
+      vendedorIds:[], vendedorId:null, fotoUrl:null,
     });
     const nextRows = [newRow, ...rows];
     setRows(nextRows);
@@ -533,18 +555,18 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
               </div>
             )}
 
-            {/* ── Jerarquía ─────────────────────────────────────────────── */}
+            {/* ── Jerarquía (multi-vendedor) ────────────────────────────── */}
             <JerarquiaSection
-              vendedorId={form.vendedorId}
+              vendedorIds={form.vendedorIds || (form.vendedorId ? [form.vendedorId] : [])}
               usuarios={usuarios || []}
-              onChange={vid => {
-                set("vendedorId", vid);
-                // Enriquecer inmediatamente para mostrar la cadena
+              onChange={vids => {
+                const vid0 = vids[0] || null;
+                setForm(f => ({ ...f, vendedorIds: vids, vendedorId: vid0 }));
+                setDirty(true);
                 if (window.AUTOMIND && window.AUTOMIND.enrichRowVendedor) {
-                  const tmp = { ...form, vendedorId: vid };
+                  const tmp = { ...form, vendedorIds: vids, vendedorId: vid0 };
                   window.AUTOMIND.enrichRowVendedor(tmp, window.AUTOMIND.USUARIOS || []);
-                  setForm(f => ({ ...f, vendedorId: vid, ...tmp }));
-                  setDirty(true);
+                  setForm(f => ({ ...f, vendedorIds: vids, vendedorId: vid0, ...tmp }));
                 }
               }}
             />

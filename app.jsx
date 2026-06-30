@@ -247,9 +247,11 @@ function enriquecerRows(rows, usuariosEnriquecidos) {
       diasGraciaTotal, diasLibresRestantes, diasVencidos, interesDiario, interesAcum,
       pctPlanConsumido, semaforo, plazoDias:v.plazoDias||0,
       fechaFacturaTxt:fmtF(fFact), fechaLlegadaTxt:fmtF(fLleg), fechaVencTxt:fmtF(fechaVenc) };
-    const vd=usuariosEnriquecidos.find(u=>u.id===row.vendedorId)||null;
+    const vids=Array.isArray(row.vendedorIds)&&row.vendedorIds.length>0?row.vendedorIds:(row.vendedorId?[row.vendedorId]:[]);
+    const vd=vids.length>0?(usuariosEnriquecidos.find(u=>u.id===vids[0])||null):null;
     const gr=vd?(usuariosEnriquecidos.find(u=>u.id===vd.reportaA)||null):null;
     const dr=gr?(usuariosEnriquecidos.find(u=>u.id===gr.reportaA)||null):null;
+    row.vendedores=vids.map(id=>usuariosEnriquecidos.find(u=>u.id===id)).filter(Boolean);
     row.vendedorNombre=vd?.nombre||""; row.vendedorEmail=vd?.email||"";
     row.gerenteId=gr?.id||""; row.gerenteNombre=gr?.nombre||""; row.gerenteEmail=gr?.email||"";
     row.directorNombre=dr?.nombre||""; row.directorEmail=dr?.email||"";
@@ -270,9 +272,11 @@ function buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, parentAge
     agencyId:       agency.id,           // workspace ID (para inventario, usuarios)
     agencyParentId: parentAgencyId || agency.agency_id || agency.id, // agencia raíz (Coperva)
     enrichRowVendedor: (row, uList) => {
-      const vd=uList.find(u=>u.id===row.vendedorId)||null;
+      const vids=Array.isArray(row.vendedorIds)&&row.vendedorIds.length>0?row.vendedorIds:(row.vendedorId?[row.vendedorId]:[]);
+      const vd=vids.length>0?(uList.find(u=>u.id===vids[0])||null):null;
       const gr=vd?(uList.find(u=>u.id===vd.reportaA)||null):null;
       const dr=gr?(uList.find(u=>u.id===gr.reportaA)||null):null;
+      row.vendedores=vids.map(id=>uList.find(u=>u.id===id)).filter(Boolean);
       row.vendedorNombre=vd?.nombre||""; row.vendedorEmail=vd?.email||"";
       row.gerenteId=gr?.id||""; row.gerenteNombre=gr?.nombre||""; row.gerenteEmail=gr?.email||"";
       row.directorNombre=dr?.nombre||""; row.directorEmail=dr?.email||""; return row;
@@ -396,7 +400,10 @@ function App() {
             // Vendedor: solo sus unidades asignadas + sin asignar
             const usuarioActual = usuariosEnriquecidos.find(u=>u.auth_user_id===me.auth_user_id)||me;
             const rowsParaRol   = usuarioActual?.rol === "vendedor"
-              ? rowsSinVendidosViejos.filter(r => !r.vendedorId || r.vendedorId === usuarioActual.id)
+              ? rowsSinVendidosViejos.filter(r => {
+                  const ids = r.vendedorIds || (r.vendedorId ? [r.vendedorId] : []);
+                  return ids.length === 0 || ids.includes(usuarioActual.id);
+                })
               : rowsSinVendidosViejos;
             window.AUTOMIND = buildAUTOMIND(agency, rowsParaRol, usuariosEnriquecidos);
             handleLogin({
