@@ -223,9 +223,11 @@ function RegistroUsuarios({ usuarioActual }) {
   );
 
   const agencyId = window.AUTOMIND ? window.AUTOMIND.agencyId : null;
-  const [confirmDel, setConfirmDel] = React.useState(null); // usuario a eliminar
-  const [deleting,   setDeleting]   = React.useState(false);
-  const [delError,   setDelError]   = React.useState("");
+  const [confirmDel,   setConfirmDel]   = React.useState(null); // usuario a eliminar
+  const [deleting,     setDeleting]     = React.useState(false);
+  const [delError,     setDelError]     = React.useState("");
+  // resendStates: { [userId]: null | 'loading' | 'ok' | 'err:<msg>' }
+  const [resendStates, setResendStates] = React.useState({});
 
   // Permisos: director ve a todos, gerente solo a su equipo
   const visibles = usuarioActual.rol === "director" || usuarioActual.isAgencyOwner
@@ -238,6 +240,38 @@ function RegistroUsuarios({ usuarioActual }) {
 
   const puedeInvitar  = ["director", "gerente"].includes(usuarioActual.rol) || usuarioActual.isAgencyOwner;
   const puedeEliminar = ["director", "gerente"].includes(usuarioActual.rol) || usuarioActual.isAgencyOwner;
+
+  async function handleReenviar(u) {
+    setResendStates(s => ({ ...s, [u.id]: 'loading' }));
+    try {
+      const { data: { session } } = await window.DB.client.auth.getSession();
+      const res = await fetch(`${window.SUPABASE_URL}/functions/v1/invite-user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+          "apikey": window.SUPABASE_ANON,
+        },
+        body: JSON.stringify({
+          email:       u.email,
+          nombre:      u.nombre,
+          tel:         u.tel || "",
+          rol:         u.rol,
+          reportaA:    u.reportaA || null,
+          workspaceId: agencyId,
+          agencyId:    window.AUTOMIND?.agencyParentId || agencyId,
+          userId:      u.id,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Error al reenviar");
+      setResendStates(s => ({ ...s, [u.id]: 'ok' }));
+      setTimeout(() => setResendStates(s => ({ ...s, [u.id]: null })), 3500);
+    } catch(err) {
+      setResendStates(s => ({ ...s, [u.id]: 'err:' + err.message }));
+      setTimeout(() => setResendStates(s => ({ ...s, [u.id]: null })), 5000);
+    }
+  }
 
   async function handleDelete(u) {
     setDeleting(true);
@@ -315,63 +349,73 @@ function RegistroUsuarios({ usuarioActual }) {
             No hay usuarios registrados aún.
           </div>
         )}
-        {visibles.map(u => (
-          <div key={u.id} className="usr-row">
-            <div>
-              <div className="usr-name">{u.nombre}</div>
-              <div className="usr-email">{u.reportaNombre !== "—" ? `↑ ${u.reportaNombre}` : ""}</div>
+        {visibles.map(u => {
+          const rs = resendStates[u.id] || null;
+          const rsOk      = rs === 'ok';
+          const rsErr     = rs && rs.startsWith('err:');
+          const rsLoading = rs === 'loading';
+          return (
+            <div key={u.id} className="usr-row">
+              <div>
+                <div className="usr-name">{u.nombre}</div>
+                <div className="usr-email">{u.reportaNombre !== "—" ? `↑ ${u.reportaNombre}` : ""}</div>
+              </div>
+              <div className="usr-email" style={{ fontSize:13 }}>{u.email}</div>
+              <div><RolBadge rol={u.rol} /></div>
+              <div>
+                <span className={"usr-status-badge " + (u.auth_user_id ? "activo" : "pendiente")}>
+                  <span className="usr-status-badge dot" />
+                  {u.auth_user_id ? "Activo" : "Pendiente"}
+                </span>
+              </div>
+              <div style={{ display:"flex", gap:6, justifyContent:"flex-end", alignItems:"center", flexWrap:"wrap" }}>
+                {u.id !== usuarioActual.id && (
+                  <>
+                    {puedeInvitar && (
+                      <button className="btn btn-sm" title="Editar"
+                        onClick={() => { setEditTarget(u); setDrawerOpen(true); }}>
+                        Editar
+                      </button>
+                    )}
+
+                    {/* Reenviar invitación — solo para usuarios aún pendientes */}
+                    {puedeInvitar && !u.auth_user_id && (
+                      <span style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:2 }}>
+                        <button
+                          className="btn btn-sm"
+                          title="Reenviar invitación"
+                          disabled={rsLoading || rsOk}
+                          style={rsOk  ? { color:"#1f9d57", borderColor:"#bbf7d0", background:"#f0fdf4" }
+                               : rsErr ? { color:"#e0492f", borderColor:"#fdd",    background:"#fff8f7" }
+                               : {}}
+                          onClick={() => handleReenviar(u)}>
+                          {rsLoading
+                            ? <><span className="login-spinner" style={{ width:11, height:11, borderWidth:2, display:"inline-block", verticalAlign:"middle", marginRight:4 }} />Enviando…</>
+                            : rsOk
+                            ? "✓ Enviado"
+                            : "Reenviar"}
+                        </button>
+                        {rsErr && (
+                          <span style={{ fontSize:11, color:"#e0492f", maxWidth:160, textAlign:"right", lineHeight:1.3 }}>
+                            {rs.slice(4).slice(0, 80)}
+                          </span>
+                        )}
+                      </span>
+                    )}
+
+                    {puedeEliminar && (
+                      <button className="btn btn-sm" title="Eliminar usuario"
+                        style={{ color:"#e0492f", borderColor:"#fdd", background:"#fff8f7" }}
+                        onClick={() => setConfirmDel(u)}>
+                        Eliminar
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-            <div className="usr-email" style={{ fontSize:13 }}>{u.email}</div>
-            <div><RolBadge rol={u.rol} /></div>
-            <div>
-              <span className={"usr-status-badge " + (u.auth_user_id ? "activo" : "pendiente")}>
-                <span className="usr-status-badge dot" />
-                {u.auth_user_id ? "Activo" : "Pendiente"}
-              </span>
-            </div>
-            <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
-              {u.id !== usuarioActual.id && (
-                <>
-                  {puedeInvitar && (
-                    <button className="btn btn-sm" title="Editar"
-                      onClick={() => { setEditTarget(u); setDrawerOpen(true); }}>
-                      Editar
-                    </button>
-                  )}
-                  {puedeInvitar && !u.auth_user_id && (
-                    <button className="btn btn-sm" title="Reenviar invitación"
-                      onClick={async () => {
-                        try {
-                          const { data: { session } } = await window.DB.client.auth.getSession();
-                          await fetch(`${window.SUPABASE_URL}/functions/v1/invite-user`, {
-                            method:"POST",
-                            headers:{ "Content-Type":"application/json",
-                              "Authorization":`Bearer ${session.access_token}`,
-                              "apikey":window.SUPABASE_ANON },
-                            body: JSON.stringify({ email:u.email, nombre:u.nombre, tel:u.tel,
-                              rol:u.rol, reportaA:u.reportaA,
-                              workspaceId: agencyId,
-                              agencyId: window.AUTOMIND?.agencyParentId || agencyId,
-                              userId:u.id }),
-                          });
-                          alert("Invitación reenviada a " + u.email);
-                        } catch(err) { alert("Error: " + err.message); }
-                      }}>
-                      Reenviar
-                    </button>
-                  )}
-                  {puedeEliminar && (
-                    <button className="btn btn-sm" title="Eliminar usuario"
-                      style={{ color:"#e0492f", borderColor:"#fdd", background:"#fff8f7" }}
-                      onClick={() => setConfirmDel(u)}>
-                      Eliminar
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Modal confirmación eliminar */}
