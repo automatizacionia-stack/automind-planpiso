@@ -68,8 +68,8 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
       if (!res.ok) throw new Error(json.error || "Error al enviar invitación");
       setSuccess(true);
       onSave && onSave(json.user);
-      if (json.action_link && !esEdicion) {
-        // Usuario existente re-invitado: Brevo falló, mostrar link para compartir manualmente
+      // Siempre mostrar link copiable como respaldo al correo
+      if (json.action_link) {
         setActionLink(json.action_link);
       } else {
         setTimeout(() => { setSuccess(false); onClose(); }, 1800);
@@ -180,10 +180,10 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
             )}
             {success && actionLink && (
               <div className="inv-link-box">
-                <div className="inv-link-success">✓ Usuario actualizado</div>
+                <div className="inv-link-success">✓ {esEdicion ? "Cambios guardados" : "Invitación enviada"}</div>
                 <p className="inv-link-msg">
-                  El correo no se pudo enviar automáticamente. Comparte este enlace con
-                  <strong> {form.nombre.split(" ")[0]}</strong> para que active su cuenta:
+                  Se intentó enviar el correo. Comparte también este enlace con
+                  <strong> {form.nombre.split(" ")[0]}</strong> por si no llega:
                 </p>
                 <div className="inv-link-row">
                   <input readOnly className="inv-link-input" value={actionLink} onClick={e => e.target.select()} />
@@ -192,7 +192,7 @@ function InviteDrawer({ usuarios, agencyId, usuarioActual, editTarget, onSave, o
                     {copied ? "✓ Copiado" : "Copiar enlace"}
                   </button>
                 </div>
-                <p className="inv-link-note">Expira en 24 horas · Un solo uso</p>
+                <p className="inv-link-note">Expira en 24 horas · Un solo uso · Comparte por WhatsApp si prefieres</p>
               </div>
             )}
           </form>
@@ -226,8 +226,9 @@ function RegistroUsuarios({ usuarioActual }) {
   const [confirmDel,   setConfirmDel]   = React.useState(null); // usuario a eliminar
   const [deleting,     setDeleting]     = React.useState(false);
   const [delError,     setDelError]     = React.useState("");
-  // resendStates: { [userId]: null | 'loading' | 'ok' | 'err:<msg>' }
+  // resendStates: { [userId]: null | 'loading' | { link: string } | 'err:<msg>' }
   const [resendStates, setResendStates] = React.useState({});
+  const [resendCopied, setResendCopied] = React.useState({});
 
   // Permisos: director ve a todos, gerente solo a su equipo
   const visibles = usuarioActual.rol === "director" || usuarioActual.isAgencyOwner
@@ -265,8 +266,9 @@ function RegistroUsuarios({ usuarioActual }) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Error al reenviar");
-      setResendStates(s => ({ ...s, [u.id]: 'ok' }));
-      setTimeout(() => setResendStates(s => ({ ...s, [u.id]: null })), 3500);
+      setResendStates(s => ({ ...s, [u.id]: { link: json.action_link || '' } }));
+      // El link permanece visible 10 min para que el admin lo copie
+      setTimeout(() => setResendStates(s => ({ ...s, [u.id]: null })), 600000);
     } catch(err) {
       setResendStates(s => ({ ...s, [u.id]: 'err:' + err.message }));
       setTimeout(() => setResendStates(s => ({ ...s, [u.id]: null })), 5000);
@@ -351,9 +353,10 @@ function RegistroUsuarios({ usuarioActual }) {
         )}
         {visibles.map(u => {
           const rs = resendStates[u.id] || null;
-          const rsOk      = rs === 'ok';
-          const rsErr     = rs && rs.startsWith('err:');
+          const rsOk      = rs && typeof rs === 'object';
+          const rsErr     = typeof rs === 'string' && rs.startsWith('err:');
           const rsLoading = rs === 'loading';
+          const rsLink    = rsOk ? rs.link : null;
           return (
             <div key={u.id} className="usr-row">
               <div>
@@ -380,11 +383,11 @@ function RegistroUsuarios({ usuarioActual }) {
 
                     {/* Reenviar invitación — solo para usuarios aún pendientes */}
                     {puedeInvitar && !u.auth_user_id && (
-                      <span style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:2 }}>
+                      <span style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
                         <button
                           className="btn btn-sm"
                           title="Reenviar invitación"
-                          disabled={rsLoading || rsOk}
+                          disabled={rsLoading}
                           style={rsOk  ? { color:"#1f9d57", borderColor:"#bbf7d0", background:"#f0fdf4" }
                                : rsErr ? { color:"#e0492f", borderColor:"#fdd",    background:"#fff8f7" }
                                : {}}
@@ -392,9 +395,26 @@ function RegistroUsuarios({ usuarioActual }) {
                           {rsLoading
                             ? <><span className="login-spinner" style={{ width:11, height:11, borderWidth:2, display:"inline-block", verticalAlign:"middle", marginRight:4 }} />Enviando…</>
                             : rsOk
-                            ? "✓ Enviado"
+                            ? "↻ Reenviar"
                             : "Reenviar"}
                         </button>
+                        {rsOk && rsLink && (
+                          <div style={{ display:"flex", flexDirection:"column", gap:3, alignItems:"flex-end", padding:"6px 8px", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:6, maxWidth:220 }}>
+                            <span style={{ fontSize:11, color:"#1f9d57", fontWeight:600 }}>✓ Enviado · Copia el link:</span>
+                            <div style={{ display:"flex", gap:4, width:"100%" }}>
+                              <input readOnly style={{ fontSize:10, flex:1, border:"1px solid #e2e8f0", borderRadius:4, padding:"2px 5px", minWidth:0 }}
+                                value={rsLink} onClick={e => e.target.select()} />
+                              <button className="btn btn-sm" style={{ fontSize:10, padding:"2px 8px", whiteSpace:"nowrap" }}
+                                onClick={() => {
+                                  navigator.clipboard.writeText(rsLink);
+                                  setResendCopied(c => ({ ...c, [u.id]: true }));
+                                  setTimeout(() => setResendCopied(c => ({ ...c, [u.id]: false })), 2500);
+                                }}>
+                                {resendCopied[u.id] ? "✓" : "Copiar"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         {rsErr && (
                           <span style={{ fontSize:11, color:"#e0492f", maxWidth:160, textAlign:"right", lineHeight:1.3 }}>
                             {rs.slice(4).slice(0, 80)}
