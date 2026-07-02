@@ -1,6 +1,6 @@
 // Automind · Edge Function: telegram-link
 // Genera un deep link de un solo uso para vincular Telegram con la cuenta del usuario.
-// El usuario hace clic → abre el bot → envía /start <token> → el webhook lo vincula.
+// Soporta tanto usuarios de workspace (tabla users) como agency owners (tabla agencies).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -40,54 +40,92 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // ── Obtener el user.id de la tabla users (≠ auth.uid) ────────────
-    const { data: userRow, error: userErr } = await adminClient
+    // ── 1. Intentar con tabla users (usuarios de workspace) ──────────
+    const { data: userRow } = await adminClient
       .from("users")
       .select("id, nombre, telegram_chat_id")
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
-    if (userErr || !userRow) {
+    if (userRow) {
+      // Si ya tiene Telegram vinculado, retornar ese estado
+      if (userRow.telegram_chat_id) {
+        return new Response(JSON.stringify({
+          already_linked: true,
+          chat_id: userRow.telegram_chat_id,
+          nombre: userRow.nombre,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Invalidar tokens previos
+      await adminClient
+        .from("telegram_link_tokens")
+        .update({ used_at: new Date().toISOString() })
+        .eq("user_id", userRow.id)
+        .is("used_at", null);
+
+      // Crear nuevo token para workspace user
+      const { data: tokenRow, error: tokenErr } = await adminClient
+        .from("telegram_link_tokens")
+        .insert({ user_id: userRow.id, auth_user_id: user.id, entity_type: "workspace_user" })
+        .select("token")
+        .single();
+
+      if (tokenErr || !tokenRow) {
+        throw new Error("No se pudo generar el token: " + tokenErr?.message);
+      }
+
+      const botUsername = Deno.env.get("TELEGRAM_BOT_USERNAME") || "AutomindPlanPisoBot";
+      return new Response(
+        JSON.stringify({ link: `https://t.me/${botUsername}?start=${tokenRow.token}`, token: tokenRow.token, expires_in_minutes: 30 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── 2. Fallback: agency owner (no tiene fila en users) ───────────
+    const { data: agencyMembership } = await adminClient
+      .from("agency_memberships")
+      .select("agency_id, agencies(name, telegram_chat_id)")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!agencyMembership) {
       return new Response(JSON.stringify({ error: "Usuario no encontrado en la plataforma" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Si ya tiene Telegram vinculado, retornar ese estado
-    if (userRow.telegram_chat_id) {
+    const agency = agencyMembership.agencies as any;
+
+    // Si la agencia ya tiene Telegram vinculado
+    if (agency?.telegram_chat_id) {
       return new Response(JSON.stringify({
         already_linked: true,
-        chat_id: userRow.telegram_chat_id,
-        nombre: userRow.nombre,
+        chat_id: agency.telegram_chat_id,
+        nombre: agency.name + " (Admin)",
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── Invalidar tokens previos del usuario (evitar tokens fantasma) ─
+    // Invalidar tokens previos del agency owner
     await adminClient
       .from("telegram_link_tokens")
       .update({ used_at: new Date().toISOString() })
-      .eq("user_id", userRow.id)
+      .eq("auth_user_id", user.id)
       .is("used_at", null);
 
-    // ── Crear nuevo token ─────────────────────────────────────────────
+    // Crear token para agency owner (sin user_id, con entity_type)
     const { data: tokenRow, error: tokenErr } = await adminClient
       .from("telegram_link_tokens")
-      .insert({ user_id: userRow.id })
+      .insert({ auth_user_id: user.id, entity_type: "agency_owner" })
       .select("token")
       .single();
 
     if (tokenErr || !tokenRow) {
-      throw new Error("No se pudo generar el token: " + tokenErr?.message);
+      throw new Error("No se pudo generar el token (agency): " + tokenErr?.message);
     }
 
     const botUsername = Deno.env.get("TELEGRAM_BOT_USERNAME") || "AutomindPlanPisoBot";
-    const deepLink    = `https://t.me/${botUsername}?start=${tokenRow.token}`;
-
     return new Response(
-      JSON.stringify({
-        link:  deepLink,
-        token: tokenRow.token,
-        expires_in_minutes: 30,
-      }),
+      JSON.stringify({ link: `https://t.me/${botUsername}?start=${tokenRow.token}`, token: tokenRow.token, expires_in_minutes: 30 }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

@@ -174,17 +174,30 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
     checkMyTelegram();
   }, []);
 
+  const isAgencyOwner = usuarioActual?.id === "agency-owner";
+
   async function checkMyTelegram() {
     setTgStatus("loading");
     try {
       const { data: { user } } = await window.DB.client.auth.getUser();
       if (!user) { setTgStatus("not_linked"); return; }
-      const { data } = await window.DB.client
-        .from("users")
-        .select("telegram_chat_id, telegram_username")
-        .eq("auth_user_id", user.id)
-        .maybeSingle();
-      setTgStatus(data?.telegram_chat_id ? { chat_id: data.telegram_chat_id, username: data.telegram_username } : "not_linked");
+      if (isAgencyOwner) {
+        // Agency owner: leer telegram_chat_id de agencies
+        const { data: membership } = await window.DB.client
+          .from("agency_memberships")
+          .select("agency_id, agencies(telegram_chat_id, telegram_username)")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        const ag = membership?.agencies;
+        setTgStatus(ag?.telegram_chat_id ? { chat_id: ag.telegram_chat_id, username: ag.telegram_username } : "not_linked");
+      } else {
+        const { data } = await window.DB.client
+          .from("users")
+          .select("telegram_chat_id, telegram_username")
+          .eq("auth_user_id", user.id)
+          .maybeSingle();
+        setTgStatus(data?.telegram_chat_id ? { chat_id: data.telegram_chat_id, username: data.telegram_username } : "not_linked");
+      }
     } catch { setTgStatus("not_linked"); }
   }
 
@@ -211,12 +224,21 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
         const interval = setInterval(async () => {
           const { data: { user } } = await window.DB.client.auth.getUser();
           if (!user) { clearInterval(interval); return; }
-          const { data } = await window.DB.client
-            .from("users").select("telegram_chat_id").eq("auth_user_id", user.id).maybeSingle();
-          if (data?.telegram_chat_id) {
-            setTgStatus({ chat_id: data.telegram_chat_id });
-            setLinkState(null);
-            clearInterval(interval);
+          if (isAgencyOwner) {
+            const { data: m } = await window.DB.client
+              .from("agency_memberships")
+              .select("agency_id, agencies(telegram_chat_id)")
+              .eq("user_id", user.id).maybeSingle();
+            const chatId = m?.agencies?.telegram_chat_id;
+            if (chatId) { setTgStatus({ chat_id: chatId }); setLinkState(null); clearInterval(interval); }
+          } else {
+            const { data } = await window.DB.client
+              .from("users").select("telegram_chat_id").eq("auth_user_id", user.id).maybeSingle();
+            if (data?.telegram_chat_id) {
+              setTgStatus({ chat_id: data.telegram_chat_id });
+              setLinkState(null);
+              clearInterval(interval);
+            }
           }
         }, 5000);
         setTimeout(() => clearInterval(interval), 30 * 60 * 1000); // max 30 min
@@ -230,9 +252,19 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
     if (!confirm("¿Seguro que deseas desvincular tu Telegram?")) return;
     try {
       const { data: { user } } = await window.DB.client.auth.getUser();
-      await window.DB.client.from("users")
-        .update({ telegram_chat_id: null, telegram_username: null })
-        .eq("auth_user_id", user.id);
+      if (isAgencyOwner) {
+        const { data: m } = await window.DB.client
+          .from("agency_memberships").select("agency_id").eq("user_id", user.id).maybeSingle();
+        if (m) {
+          await window.DB.client.from("agencies")
+            .update({ telegram_chat_id: null, telegram_username: null })
+            .eq("id", m.agency_id);
+        }
+      } else {
+        await window.DB.client.from("users")
+          .update({ telegram_chat_id: null, telegram_username: null })
+          .eq("auth_user_id", user.id);
+      }
       setTgStatus("not_linked");
       setLinkState(null);
     } catch(e) { alert("Error al desvincular: " + e.message); }
