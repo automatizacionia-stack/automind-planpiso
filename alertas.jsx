@@ -356,7 +356,7 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
                     Generando enlace…
                   </div>
                 )}
-                {linkState && typeof linkState === "object" && (
+                {linkState?.link && (
                   <div style={{ background:"#f0f7ff", border:"1px solid #bfdbfe",
                     borderRadius:12, padding:"16px 18px" }}>
                     <div style={{ fontSize:12, fontWeight:700, color:"#1d4ed8",
