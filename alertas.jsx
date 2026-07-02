@@ -243,9 +243,9 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
         }, 5000);
         setTimeout(() => clearInterval(interval), 30 * 60 * 1000); // max 30 min
       } else {
-        setLinkState("error");
+        setLinkState({ errorMsg: json.error || JSON.stringify(json) });
       }
-    } catch { setLinkState("error"); }
+    } catch(e) { setLinkState({ errorMsg: "Error de red: " + e.message }); }
   }
 
   async function disconnect() {
@@ -389,8 +389,8 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
                     </div>
                   </div>
                 )}
-                {linkState === "error" && (
-                  <div className="fb-err">Error al generar el enlace. Verifica que TELEGRAM_BOT_TOKEN esté configurado en Supabase.</div>
+                {linkState?.errorMsg && (
+                  <div className="fb-err">Error: {linkState.errorMsg}</div>
                 )}
               </div>
             )}
