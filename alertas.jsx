@@ -442,22 +442,6 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
         </div>
       </div>
 
-      {/* ── Cómo configurar ────────────────────────────────────────── */}
-      <div style={{ padding:"16px 20px", background:"var(--bg)", border:"1px solid var(--line)",
-        borderRadius:10, fontSize:12, color:"var(--muted)", lineHeight:1.7 }}>
-        <div style={{ fontWeight:700, color:"var(--ink-2)", marginBottom:6 }}>
-          🔧 Pasos de configuración (hacer una sola vez)
-        </div>
-        <ol style={{ margin:0, paddingLeft:18 }}>
-          <li>Crear un bot con <strong>@BotFather</strong> en Telegram → copiar el token</li>
-          <li>En Supabase → Edge Functions → <strong>Secrets</strong>, agregar:
-            <br /><code>TELEGRAM_BOT_TOKEN</code> · <code>TELEGRAM_BOT_USERNAME</code> · <code>TELEGRAM_WEBHOOK_SECRET</code>
-          </li>
-          <li>Desplegar las Edge Functions: <code>telegram-link</code> · <code>send-telegram</code> · <code>telegram-webhook</code></li>
-          <li>Registrar el webhook con Telegram corriendo el comando en <code>supabase_add_telegram.sql</code></li>
-          <li>Correr la migración SQL <code>supabase_add_telegram.sql</code> en el SQL Editor</li>
-        </ol>
-      </div>
     </div>
   );
 }
