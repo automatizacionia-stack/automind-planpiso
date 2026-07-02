@@ -182,14 +182,9 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
       const { data: { user } } = await window.DB.client.auth.getUser();
       if (!user) { setTgStatus("not_linked"); return; }
       if (isAgencyOwner) {
-        // Agency owner: leer telegram_chat_id de agencies
-        const { data: membership } = await window.DB.client
-          .from("agency_memberships")
-          .select("agency_id, agencies(telegram_chat_id, telegram_username)")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        const ag = membership?.agencies;
-        setTgStatus(ag?.telegram_chat_id ? { chat_id: ag.telegram_chat_id, username: ag.telegram_username } : "not_linked");
+        // Agency owner: leer de auth app_metadata (universal, no depende de agency_memberships)
+        const chatId = user.app_metadata?.telegram_chat_id;
+        setTgStatus(chatId ? { chat_id: chatId, username: user.app_metadata?.telegram_username } : "not_linked");
       } else {
         const { data } = await window.DB.client
           .from("users")
@@ -225,11 +220,9 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
           const { data: { user } } = await window.DB.client.auth.getUser();
           if (!user) { clearInterval(interval); return; }
           if (isAgencyOwner) {
-            const { data: m } = await window.DB.client
-              .from("agency_memberships")
-              .select("agency_id, agencies(telegram_chat_id)")
-              .eq("user_id", user.id).maybeSingle();
-            const chatId = m?.agencies?.telegram_chat_id;
+            // Re-fetch user para obtener app_metadata actualizado
+            const { data: { user: freshUser } } = await window.DB.client.auth.getUser();
+            const chatId = freshUser?.app_metadata?.telegram_chat_id;
             if (chatId) { setTgStatus({ chat_id: chatId }); setLinkState(null); clearInterval(interval); }
           } else {
             const { data } = await window.DB.client
@@ -253,13 +246,9 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
     try {
       const { data: { user } } = await window.DB.client.auth.getUser();
       if (isAgencyOwner) {
-        const { data: m } = await window.DB.client
-          .from("agency_memberships").select("agency_id").eq("user_id", user.id).maybeSingle();
-        if (m) {
-          await window.DB.client.from("agencies")
-            .update({ telegram_chat_id: null, telegram_username: null })
-            .eq("id", m.agency_id);
-        }
+        // app_metadata solo se puede limpiar desde el bot — usar /desconectar en Telegram
+        alert("Para desvincular como Admin: envía /desconectar al bot de Telegram.");
+        return;
       } else {
         await window.DB.client.from("users")
           .update({ telegram_chat_id: null, telegram_username: null })

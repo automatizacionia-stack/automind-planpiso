@@ -99,8 +99,9 @@ Deno.serve(async (req) => {
 
     const entityType = tokenRow.entity_type || "workspace_user";
 
-    // ─ AGENCY OWNER: guardar en agencies ──────────────────────────
-    if (entityType === "agency_owner") {
+    // ─ AGENCY OWNER / ADMIN: guardar en auth metadata ────────────
+    if (entityType === "agency_owner" || entityType === "admin") {
+      // Guardar en agency si existe membresía, además de en auth metadata
       const { data: agencyMembership } = await adminClient
         .from("agency_memberships")
         .select("agency_id, agencies(name)")
@@ -117,17 +118,25 @@ Deno.serve(async (req) => {
           .eq("id", agencyMembership.agency_id);
       }
 
+      // Siempre guardar en auth app_metadata (funciona sin agency_memberships)
+      await adminClient.auth.admin.updateUserById(tokenRow.auth_user_id, {
+        app_metadata: {
+          telegram_chat_id: parseInt(chatId),
+          telegram_username: fromUser?.username || null,
+        },
+      });
+
       await adminClient
         .from("telegram_link_tokens")
         .update({ used_at: new Date().toISOString() })
         .eq("id", tokenRow.id);
 
-      const agencyName = (agencyMembership?.agencies as any)?.name || "la agencia";
+      const agencyName = (agencyMembership?.agencies as any)?.name || "Automind Plan Piso";
 
       await reply(
         `✅ <b>¡Cuenta vinculada exitosamente!</b>\n\n` +
         `A partir de ahora recibirás aquí las alertas de semáforo de ` +
-        `<b>Automind Plan Piso · ${agencyName}</b>.\n\n` +
+        `<b>${agencyName}</b>.\n\n` +
         `Envía <b>/status</b> para ver tu estado de vinculación.\n` +
         `Envía <b>/desconectar</b> para desvincular.`
       );
@@ -181,96 +190,71 @@ Deno.serve(async (req) => {
     return new Response("ok");
   }
 
+  /** Busca en auth.users el que tenga este chat_id en app_metadata */
+  async function findAdminByChat(cid: number) {
+    const { data } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+    return data?.users?.find((u: any) => u.app_metadata?.telegram_chat_id === cid) || null;
+  }
+
   // ── /status ──────────────────────────────────────────────────────
   if (text === "/status") {
-    // Buscar en users primero
+    // 1. Buscar en users
     const { data: userRow } = await adminClient
-      .from("users")
-      .select("nombre, email")
-      .eq("telegram_chat_id", parseInt(chatId))
-      .maybeSingle();
-
+      .from("users").select("nombre, email")
+      .eq("telegram_chat_id", parseInt(chatId)).maybeSingle();
     if (userRow) {
-      await reply(
-        `✅ <b>Cuenta vinculada</b>\n\n` +
-        `👤 ${userRow.nombre}\n` +
-        `📧 ${userRow.email}\n\n` +
-        `Estás recibiendo alertas de Automind Plan Piso en este chat.\n\n` +
-        `Envía <b>/desconectar</b> para desvincular.`
-      );
+      await reply(`✅ <b>Cuenta vinculada</b>\n\n👤 ${userRow.nombre}\n📧 ${userRow.email}\n\nEstás recibiendo alertas de Automind Plan Piso.\n\nEnvía <b>/desconectar</b> para desvincular.`);
       return new Response("ok");
     }
-
-    // Buscar en agencies (agency owner)
+    // 2. Buscar en agencies
     const { data: agencyRow } = await adminClient
-      .from("agencies")
-      .select("name, telegram_username")
-      .eq("telegram_chat_id", parseInt(chatId))
-      .maybeSingle();
-
+      .from("agencies").select("name, telegram_username")
+      .eq("telegram_chat_id", parseInt(chatId)).maybeSingle();
     if (agencyRow) {
-      await reply(
-        `✅ <b>Cuenta vinculada (Admin)</b>\n\n` +
-        `🏢 ${agencyRow.name}\n` +
-        `${agencyRow.telegram_username ? "@" + agencyRow.telegram_username + "\n" : ""}` +
-        `\nEstás recibiendo alertas de Automind Plan Piso en este chat.\n\n` +
-        `Envía <b>/desconectar</b> para desvincular.`
-      );
+      await reply(`✅ <b>Cuenta vinculada (Admin)</b>\n\n🏢 ${agencyRow.name}\n\nEstás recibiendo alertas de Automind Plan Piso.\n\nEnvía <b>/desconectar</b> para desvincular.`);
       return new Response("ok");
     }
-
-    await reply(
-      `❌ <b>Sin cuenta vinculada</b>\n\n` +
-      `Este Telegram no está conectado a ningún usuario de Automind.\n\n` +
-      `Entra a la plataforma → <b>Alertas → Telegram</b> para vincularlo.`
-    );
+    // 3. Buscar en auth metadata (admin sin agency_memberships)
+    const adminUser = await findAdminByChat(parseInt(chatId));
+    if (adminUser) {
+      await reply(`✅ <b>Cuenta vinculada (Admin)</b>\n\n📧 ${adminUser.email}\n\nEstás recibiendo alertas de Automind Plan Piso.\n\nEnvía <b>/desconectar</b> para desvincular.`);
+      return new Response("ok");
+    }
+    await reply(`❌ <b>Sin cuenta vinculada</b>\n\nEste Telegram no está conectado a ningún usuario de Automind.\n\nEntra a la plataforma → <b>Alertas → Telegram</b> para vincularlo.`);
     return new Response("ok");
   }
 
   // ── /desconectar ─────────────────────────────────────────────────
   if (text === "/desconectar" || text === "/disconnect") {
-    // Buscar en users
+    // 1. Buscar en users
     const { data: userRow } = await adminClient
-      .from("users")
-      .select("id, nombre")
-      .eq("telegram_chat_id", parseInt(chatId))
-      .maybeSingle();
-
+      .from("users").select("id, nombre")
+      .eq("telegram_chat_id", parseInt(chatId)).maybeSingle();
     if (userRow) {
-      await adminClient
-        .from("users")
-        .update({ telegram_chat_id: null, telegram_username: null })
-        .eq("id", userRow.id);
-
-      await reply(
-        `✅ <b>Cuenta desvinculada</b>\n\n` +
-        `${userRow.nombre}, ya no recibirás alertas en este chat.\n\n` +
-        `Para volver a vincular, entra a la plataforma → <b>Alertas → Telegram</b>.`
-      );
+      await adminClient.from("users")
+        .update({ telegram_chat_id: null, telegram_username: null }).eq("id", userRow.id);
+      await reply(`✅ <b>Cuenta desvinculada</b>\n\n${userRow.nombre}, ya no recibirás alertas.\n\nPara volver a vincular, entra a la plataforma → <b>Alertas → Telegram</b>.`);
       return new Response("ok");
     }
-
-    // Buscar en agencies
+    // 2. Buscar en agencies
     const { data: agencyRow } = await adminClient
-      .from("agencies")
-      .select("id, name")
-      .eq("telegram_chat_id", parseInt(chatId))
-      .maybeSingle();
-
+      .from("agencies").select("id, name")
+      .eq("telegram_chat_id", parseInt(chatId)).maybeSingle();
     if (agencyRow) {
-      await adminClient
-        .from("agencies")
-        .update({ telegram_chat_id: null, telegram_username: null })
-        .eq("id", agencyRow.id);
-
-      await reply(
-        `✅ <b>Cuenta desvinculada</b>\n\n` +
-        `${agencyRow.name}, ya no recibirás alertas en este chat.\n\n` +
-        `Para volver a vincular, entra a la plataforma → <b>Alertas → Telegram</b>.`
-      );
+      await adminClient.from("agencies")
+        .update({ telegram_chat_id: null, telegram_username: null }).eq("id", agencyRow.id);
+      await reply(`✅ <b>Cuenta desvinculada</b>\n\n${agencyRow.name}, ya no recibirás alertas.\n\nPara volver a vincular, entra a la plataforma → <b>Alertas → Telegram</b>.`);
       return new Response("ok");
     }
-
+    // 3. Buscar en auth metadata (admin)
+    const adminUser = await findAdminByChat(parseInt(chatId));
+    if (adminUser) {
+      await adminClient.auth.admin.updateUserById(adminUser.id, {
+        app_metadata: { telegram_chat_id: null, telegram_username: null }
+      });
+      await reply(`✅ <b>Cuenta desvinculada</b>\n\n${adminUser.email}, ya no recibirás alertas.\n\nPara volver a vincular, entra a la plataforma → <b>Alertas → Telegram</b>.`);
+      return new Response("ok");
+    }
     await reply("ℹ️ No hay ninguna cuenta vinculada a este Telegram.");
     return new Response("ok");
   }
