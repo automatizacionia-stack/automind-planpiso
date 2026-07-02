@@ -134,6 +134,12 @@ const I = {
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
     </svg>
   ),
+  contacts: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="12" cy="10" r="2.8"/>
+      <path d="M6 19.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/>
+    </svg>
+  ),
 };
 
 /* ---------- Sidebar ---------- */
@@ -200,6 +206,7 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
         {/* ── Ventas ── */}
         <div className="nav-section">Ventas</div>
         <Item id="ventas" icon={I.sale({ width: 19, height: 19 })} label="Proceso de venta" />
+        <Item id="crm" icon={I.contacts({ width: 19, height: 19 })} label="Clientes" />
 
         <hr className="nav-divider" />
 

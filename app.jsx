@@ -599,6 +599,7 @@ function App() {
     : view === "importar"      ? "Admin · Importar inventario"
     : view === "config"        ? "Admin · Configuración"
     : view === "ventas"        ? "Proceso de Venta"
+    : view === "crm"           ? "Ventas · CRM de Clientes"
     : "Plan Piso · Dashboard — Semáforo";
 
   return (
@@ -631,6 +632,7 @@ function App() {
             usuarioActual={tenant.usuarioActual}
             onRowsChange={() => setRowsVersion(v => v + 1)} />}
           {view === "ventas" && <ProcesoVenta rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} />}
+          {view === "crm"    && <CRMClientes  rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} />}
           {view === "config" && (
             <div className="page">
               <div className="page-head">
