@@ -124,6 +124,11 @@ const I = {
       <path d="M11 6l-6 6 6 6M5 12h14" />
     </svg>
   ),
+  person: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <circle cx="12" cy="8" r="3.8"/><path d="M4 20c0-4.4 3.6-7.5 8-7.5s8 3.1 8 7.5"/>
+    </svg>
+  ),
   upload: (p) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
@@ -180,62 +185,35 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
       <nav className="nav">
 
         {/* ── Plan Piso ── */}
-        <div className="nav-group">
-          <button className={"nav-item" + (["dashboard","database","inventario"].includes(view) ? " active" : "")}
-            onClick={() => setView("dashboard")}>
-            <span className="nav-ico">{I.chart({ width: 19, height: 19 })}</span>
-            <span className="nav-lbl">Plan Piso</span>
-          </button>
-          <div className="nav-children">
-            <button className={"nav-child" + (view === "dashboard" ? " active" : "")} onClick={() => setView("dashboard")}>
-              Dashboard — Semáforo
-            </button>
-            {/* Base de datos — oculto del nav pero la ruta sigue activa */}
-            <button className={"nav-child" + (view === "inventario" ? " active" : "")} onClick={() => setView("inventario")}>
-              Registro de Inventario
-            </button>
-          </div>
-        </div>
+        <div className="nav-section">Plan Piso</div>
+        <button className={"nav-item" + (view === "dashboard" ? " active" : "")} onClick={() => setView("dashboard")}>
+          <span className="nav-ico">{I.chart({ width: 19, height: 19 })}</span>
+          <span className="nav-lbl">Dashboard</span>
+        </button>
+        <button className={"nav-item" + (["inventario","database"].includes(view) ? " active" : "")} onClick={() => setView("inventario")}>
+          <span className="nav-ico">{I.truck({ width: 19, height: 19 })}</span>
+          <span className="nav-lbl">Inventario</span>
+        </button>
 
-        {/* ── Proceso de Venta ── */}
-        <Item id="ventas" icon={I.sale({ width: 19, height: 19 })} label="Proceso de Venta" />
+        <hr className="nav-divider" />
+
+        {/* ── Ventas ── */}
+        <div className="nav-section">Ventas</div>
+        <Item id="ventas" icon={I.sale({ width: 19, height: 19 })} label="Proceso de venta" />
+
+        <hr className="nav-divider" />
 
         {/* ── Equipo ── */}
-        <div className="nav-group">
-          <button className={"nav-item" + (["colaboradores","usuarios"].includes(view) ? " active" : "")}
-            onClick={() => setView("colaboradores")}>
-            <span className="nav-ico">{I.users({ width: 19, height: 19 })}</span>
-            <span className="nav-lbl">Equipo</span>
-          </button>
-          <div className="nav-children">
-            <button className={"nav-child" + (view === "colaboradores" ? " active" : "")} onClick={() => setView("colaboradores")}>
-              Colaboradores
-            </button>
-            <button className={"nav-child" + (view === "usuarios" ? " active" : "")} onClick={() => setView("usuarios")}>
-              Registro de usuarios
-            </button>
-          </div>
-        </div>
+        <div className="nav-section">Equipo</div>
+        <Item id="colaboradores" icon={I.users({ width: 19, height: 19 })} label="Colaboradores" />
+        <Item id="usuarios" icon={I.person({ width: 19, height: 19 })} label="Registro de usuarios" />
+
+        <hr className="nav-divider" />
 
         {/* ── Admin ── */}
-        <div className="nav-group">
-          <button className={"nav-item" + (["importar","config"].includes(view) ? " active" : "")}
-            onClick={() => setView("importar")}>
-            <span className="nav-ico">{I.gear({ width: 19, height: 19 })}</span>
-            <span className="nav-lbl">Admin</span>
-          </button>
-          <div className="nav-children">
-            <button className={"nav-child" + (view === "importar" ? " active" : "")} onClick={() => setView("importar")}>
-              Importar inventario
-            </button>
-            <button className={"nav-child" + (view === "alertas" ? " active" : "")} onClick={() => setView("alertas")}>
-              Alertas
-            </button>
-            <button className={"nav-child" + (view === "config" ? " active" : "")} onClick={() => setView("config")}>
-              Configuración
-            </button>
-          </div>
-        </div>
+        <div className="nav-section">Admin</div>
+        <Item id="importar" icon={I.upload({ width: 19, height: 19 })} label="Importar inventario" />
+        <Item id="alertas" icon={I.bell({ width: 19, height: 19 })} label="Alertas" />
 
       </nav>
 
