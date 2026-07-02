@@ -182,9 +182,13 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
       const { data: { user } } = await window.DB.client.auth.getUser();
       if (!user) { setTgStatus("not_linked"); return; }
       if (isAgencyOwner) {
-        // Agency owner: leer de auth app_metadata (universal, no depende de agency_memberships)
-        const chatId = user.app_metadata?.telegram_chat_id;
-        setTgStatus(chatId ? { chat_id: chatId, username: user.app_metadata?.telegram_username } : "not_linked");
+        // Admin: leer de admin_telegram table
+        const { data } = await window.DB.client
+          .from("admin_telegram")
+          .select("telegram_chat_id, telegram_username")
+          .eq("auth_user_id", user.id)
+          .maybeSingle();
+        setTgStatus(data?.telegram_chat_id ? { chat_id: data.telegram_chat_id, username: data.telegram_username } : "not_linked");
       } else {
         const { data } = await window.DB.client
           .from("users")
@@ -199,46 +203,33 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
   async function generateLink() {
     setLinkState("loading");
     try {
-      const { data: { session } } = await window.DB.client.auth.getSession();
-      const res = await fetch(`${window.SUPABASE_URL}/functions/v1/telegram-link`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
-          "apikey": window.SUPABASE_ANON,
-        },
-        body: JSON.stringify({}),
-      });
-      const json = await res.json();
-      if (json.already_linked) {
+      // Usar RPC (Postgres function) en vez de Edge Function — más confiable
+      const { data: json, error } = await window.DB.client.rpc("generate_telegram_token");
+      if (error) { setLinkState({ errorMsg: error.message }); return; }
+      if (json?.already_linked) {
         await checkMyTelegram();
         setLinkState(null);
-      } else if (json.link) {
+      } else if (json?.link) {
         setLinkState({ link: json.link, token: json.token });
         // Refrescar estado cada 5 seg mientras el link está abierto
         const interval = setInterval(async () => {
           const { data: { user } } = await window.DB.client.auth.getUser();
           if (!user) { clearInterval(interval); return; }
-          if (isAgencyOwner) {
-            // Re-fetch user para obtener app_metadata actualizado
-            const { data: { user: freshUser } } = await window.DB.client.auth.getUser();
-            const chatId = freshUser?.app_metadata?.telegram_chat_id;
-            if (chatId) { setTgStatus({ chat_id: chatId }); setLinkState(null); clearInterval(interval); }
-          } else {
-            const { data } = await window.DB.client
-              .from("users").select("telegram_chat_id").eq("auth_user_id", user.id).maybeSingle();
-            if (data?.telegram_chat_id) {
-              setTgStatus({ chat_id: data.telegram_chat_id });
-              setLinkState(null);
-              clearInterval(interval);
-            }
+          const tableName = isAgencyOwner ? "admin_telegram" : "users";
+          const col = isAgencyOwner ? "auth_user_id" : "auth_user_id";
+          const { data } = await window.DB.client
+            .from(tableName).select("telegram_chat_id").eq(col, user.id).maybeSingle();
+          if (data?.telegram_chat_id) {
+            setTgStatus({ chat_id: data.telegram_chat_id });
+            setLinkState(null);
+            clearInterval(interval);
           }
         }, 5000);
-        setTimeout(() => clearInterval(interval), 30 * 60 * 1000); // max 30 min
+        setTimeout(() => clearInterval(interval), 30 * 60 * 1000);
       } else {
-        setLinkState({ errorMsg: json.error || JSON.stringify(json) });
+        setLinkState({ errorMsg: JSON.stringify(json) });
       }
-    } catch(e) { setLinkState({ errorMsg: "Error de red: " + e.message }); }
+    } catch(e) { setLinkState({ errorMsg: "Error: " + e.message }); }
   }
 
   async function disconnect() {
@@ -246,9 +237,9 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
     try {
       const { data: { user } } = await window.DB.client.auth.getUser();
       if (isAgencyOwner) {
-        // app_metadata solo se puede limpiar desde el bot — usar /desconectar en Telegram
-        alert("Para desvincular como Admin: envía /desconectar al bot de Telegram.");
-        return;
+        // Admin: usar RPC para limpiar admin_telegram
+        await window.DB.client.rpc("unlink_telegram");
+        setTgStatus("not_linked"); setLinkState(null); return;
       } else {
         await window.DB.client.from("users")
           .update({ telegram_chat_id: null, telegram_username: null })
