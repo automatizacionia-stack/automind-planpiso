@@ -630,8 +630,7 @@ function App() {
             rows={A.ROWS} usuarios={A.USUARIOS || []}
             usuarioActual={tenant.usuarioActual}
             onRowsChange={() => setRowsVersion(v => v + 1)} />}
-          {view === "ventas" && <Placeholder title="Proceso de Venta" icon={I.sale({ width: 30, height: 30 })}
-            desc="Aquí se gestionará el flujo de venta de cada unidad: cotización, aprobación y liquidación del plan piso." />}
+          {view === "ventas" && <ProcesoVenta rows={rows} kpis={kpis} usuarios={window.AUTOMIND?.USUARIOS || []} />}
           {view === "config" && (
             <div className="page">
               <div className="page-head">
