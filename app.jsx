@@ -630,7 +630,7 @@ function App() {
             rows={A.ROWS} usuarios={A.USUARIOS || []}
             usuarioActual={tenant.usuarioActual}
             onRowsChange={() => setRowsVersion(v => v + 1)} />}
-          {view === "ventas" && <ProcesoVenta rows={rows} kpis={kpis} usuarios={window.AUTOMIND?.USUARIOS || []} />}
+          {view === "ventas" && <ProcesoVenta rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} />}
           {view === "config" && (
             <div className="page">
               <div className="page-head">
