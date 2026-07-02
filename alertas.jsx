@@ -108,6 +108,360 @@ function LogRow({ entry }) {
   );
 }
 
+/* ── Fila de alerta con toggle de Telegram ──────────────────────────── */
+function AlertRuleRowWithTg({ rule, onUpdate, onUpdateTg, saving }) {
+  const sem = SEM_CONFIG.find(s => s.key === rule.semaforo);
+  if (!sem) return null;
+
+  return (
+    <div className="alert-rule-row" style={{
+      display:"flex", alignItems:"center", gap:0,
+      padding:"16px 24px", borderBottom:"1px solid var(--line-2)",
+      opacity: rule.activa ? 1 : .55,
+    }}>
+      <div style={{ flex:"0 0 220px" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ fontSize:18 }}>{sem.emoji}</span>
+          <div>
+            <div style={{ fontWeight:700, fontSize:14, color:"var(--ink)" }}>{sem.label}</div>
+            <div style={{ fontSize:12, color:"var(--muted)" }}>{sem.desc}</div>
+          </div>
+        </div>
+      </div>
+      <div className="alert-col" style={{ flex:"0 0 120px" }}>
+        <Toggle checked={rule.activa} onChange={v => onUpdate(rule.semaforo, "activa", v)} />
+        <span style={{ fontSize:11, color:"var(--muted)" }}>{rule.activa ? "Activa" : "Inactiva"}</span>
+      </div>
+      <div className="alert-col">
+        <Toggle checked={rule.notify_vendedor} onChange={v => onUpdate(rule.semaforo, "notify_vendedor", v)} disabled={!rule.activa} />
+        <span style={{ fontSize:11, color:"var(--muted)" }}>Vendedor</span>
+      </div>
+      <div className="alert-col">
+        <Toggle checked={rule.notify_gerente} onChange={v => onUpdate(rule.semaforo, "notify_gerente", v)} disabled={!rule.activa} />
+        <span style={{ fontSize:11, color:"var(--muted)" }}>Gerente</span>
+      </div>
+      <div className="alert-col">
+        <Toggle checked={rule.notify_director} onChange={v => onUpdate(rule.semaforo, "notify_director", v)} disabled={!rule.activa} />
+        <span style={{ fontSize:11, color:"var(--muted)" }}>Director</span>
+      </div>
+      {/* Columna Telegram */}
+      <div className="alert-col">
+        <Toggle checked={!!rule.telegram_enabled} onChange={v => onUpdateTg(rule.semaforo, v)} disabled={!rule.activa} />
+        <span style={{ fontSize:11, display:"flex", alignItems:"center", gap:3, color:"var(--muted)" }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="11" height="11"><path d="M21.2 2L2 10.4l7.4 2.3L20 6.4l-8.9 8.1v5.5l3.3-3.3"/></svg>
+          Telegram
+        </span>
+      </div>
+      <div style={{ flex:"0 0 40px", textAlign:"center" }}>
+        {saving === rule.semaforo && (
+          <span className="login-spinner" style={{ width:14, height:14, borderWidth:2 }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Tab Telegram ────────────────────────────────────────────────────── */
+function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) {
+  const [tgStatus,    setTgStatus]    = React.useState(null); // null | 'loading' | { chat_id } | 'not_linked'
+  const [linkState,   setLinkState]   = React.useState(null); // null | 'loading' | { link, token } | 'error'
+  const [copied,      setCopied]      = React.useState(false);
+  const [testChatId,  setTestChatId]  = React.useState("");
+  const [testTg,      setTestTg]      = React.useState(null); // null | 'loading' | 'ok' | 'error'
+
+  // Comprobar si el usuario actual tiene Telegram vinculado
+  React.useEffect(() => {
+    checkMyTelegram();
+  }, []);
+
+  async function checkMyTelegram() {
+    setTgStatus("loading");
+    try {
+      const { data: { user } } = await window.DB.client.auth.getUser();
+      if (!user) { setTgStatus("not_linked"); return; }
+      const { data } = await window.DB.client
+        .from("users")
+        .select("telegram_chat_id, telegram_username")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+      setTgStatus(data?.telegram_chat_id ? { chat_id: data.telegram_chat_id, username: data.telegram_username } : "not_linked");
+    } catch { setTgStatus("not_linked"); }
+  }
+
+  async function generateLink() {
+    setLinkState("loading");
+    try {
+      const { data: { session } } = await window.DB.client.auth.getSession();
+      const res = await fetch(`${window.SUPABASE_URL}/functions/v1/telegram-link`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+          "apikey": window.SUPABASE_ANON,
+        },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json();
+      if (json.already_linked) {
+        await checkMyTelegram();
+        setLinkState(null);
+      } else if (json.link) {
+        setLinkState({ link: json.link, token: json.token });
+        // Refrescar estado cada 5 seg mientras el link está abierto
+        const interval = setInterval(async () => {
+          const { data: { user } } = await window.DB.client.auth.getUser();
+          if (!user) { clearInterval(interval); return; }
+          const { data } = await window.DB.client
+            .from("users").select("telegram_chat_id").eq("auth_user_id", user.id).maybeSingle();
+          if (data?.telegram_chat_id) {
+            setTgStatus({ chat_id: data.telegram_chat_id });
+            setLinkState(null);
+            clearInterval(interval);
+          }
+        }, 5000);
+        setTimeout(() => clearInterval(interval), 30 * 60 * 1000); // max 30 min
+      } else {
+        setLinkState("error");
+      }
+    } catch { setLinkState("error"); }
+  }
+
+  async function disconnect() {
+    if (!confirm("¿Seguro que deseas desvincular tu Telegram?")) return;
+    try {
+      const { data: { user } } = await window.DB.client.auth.getUser();
+      await window.DB.client.from("users")
+        .update({ telegram_chat_id: null, telegram_username: null })
+        .eq("auth_user_id", user.id);
+      setTgStatus("not_linked");
+      setLinkState(null);
+    } catch(e) { alert("Error al desvincular: " + e.message); }
+  }
+
+  async function sendTestTg() {
+    if (!testChatId) return;
+    setTestTg("loading");
+    try {
+      const { data: { session } } = await window.DB.client.auth.getSession();
+      const res = await fetch(`${window.SUPABASE_URL}/functions/v1/send-telegram`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+          "apikey": window.SUPABASE_ANON,
+        },
+        body: JSON.stringify({
+          chat_id: testChatId,
+          message: "⚫ <b>CRÍTICO · En intereses — PRUEBA</b>\n━━━━━━━━━━━━━━━━━━━━\n🚗 <b>Jetta Trendline 2026 · TEST-001</b>\n\n📅 Día <b>95</b> en piso\n📊 Plan consumido: <b>110%</b> 🔴 → ⚫\n💸 Interés acumulado: <b>$1,250.00</b>\n\nEste es un mensaje de prueba de Automind Plan Piso.",
+        }),
+      });
+      const json = await res.json();
+      setTestTg(json.ok || json.result?.ok ? "ok" : "error");
+    } catch { setTestTg("error"); }
+    setTimeout(() => setTestTg(null), 4000);
+  }
+
+  const isLinked = tgStatus && tgStatus !== "loading" && tgStatus !== "not_linked";
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+
+      {/* ── Mi cuenta ──────────────────────────────────────────────── */}
+      <div className="dcard" style={{ padding:"24px" }}>
+        <div style={{ display:"flex", alignItems:"flex-start", gap:16 }}>
+          {/* Icono Telegram */}
+          <div style={{ width:48, height:48, borderRadius:14, background:"#229ED9",
+            display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.75"
+              strokeLinecap="round" strokeLinejoin="round" width="26" height="26">
+              <path d="M21.2 2L2 10.4l7.4 2.3L20 6.4l-8.9 8.1v5.5l3.3-3.3"/>
+            </svg>
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:16, fontWeight:800, color:"var(--ink)", marginBottom:3 }}>
+              Mi cuenta de Telegram
+            </div>
+            {tgStatus === "loading" ? (
+              <span className="login-spinner" style={{ width:14, height:14, borderWidth:2 }} />
+            ) : isLinked ? (
+              <div>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                  <span style={{ background:"#dcfce7", color:"#166534", fontSize:12, fontWeight:700,
+                    padding:"3px 10px", borderRadius:20, display:"flex", alignItems:"center", gap:5 }}>
+                    <span style={{ width:6, height:6, borderRadius:"50%", background:"#22c55e", display:"inline-block" }} />
+                    Vinculado
+                  </span>
+                  {tgStatus.username && (
+                    <span style={{ fontSize:13, color:"var(--muted)" }}>@{tgStatus.username}</span>
+                  )}
+                  <span style={{ fontSize:12, color:"var(--muted)" }}>
+                    · Chat ID: <code style={{ background:"var(--bg)", padding:"1px 5px", borderRadius:4, fontSize:11 }}>
+                      {tgStatus.chat_id}
+                    </code>
+                  </span>
+                </div>
+                <p style={{ margin:"0 0 12px", fontSize:13, color:"var(--muted)", lineHeight:1.6 }}>
+                  Recibirás alertas en tu Telegram cuando las reglas de la derecha tengan el canal Telegram activado.
+                </p>
+                <button className="btn" style={{ fontSize:13, color:"#e0492f" }} onClick={disconnect}>
+                  Desvincular mi Telegram
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p style={{ margin:"0 0 14px", fontSize:13, color:"var(--muted)", lineHeight:1.6 }}>
+                  Vincula tu cuenta para recibir alertas de semáforo directamente en Telegram.
+                  El proceso tarda menos de 30 segundos.
+                </p>
+                {!linkState && (
+                  <button className="btn primary" onClick={generateLink}>
+                    Conectar mi Telegram
+                  </button>
+                )}
+                {linkState === "loading" && (
+                  <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"var(--muted)" }}>
+                    <span className="login-spinner" style={{ width:14, height:14, borderWidth:2 }} />
+                    Generando enlace…
+                  </div>
+                )}
+                {linkState && typeof linkState === "object" && (
+                  <div style={{ background:"#f0f7ff", border:"1px solid #bfdbfe",
+                    borderRadius:12, padding:"16px 18px" }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#1d4ed8",
+                      textTransform:"uppercase", letterSpacing:".06em", marginBottom:10 }}>
+                      Paso a paso
+                    </div>
+                    <ol style={{ margin:"0 0 14px", paddingLeft:18, fontSize:13,
+                      color:"var(--ink-2)", lineHeight:1.8, display:"flex", flexDirection:"column", gap:2 }}>
+                      <li>Abre el enlace de abajo en tu dispositivo con Telegram</li>
+                      <li>El bot se abrirá — presiona <strong>Iniciar</strong></li>
+                      <li>Esta pantalla se actualizará automáticamente ✓</li>
+                    </ol>
+                    <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                      <a href={linkState.link} target="_blank" rel="noopener noreferrer"
+                        className="btn primary" style={{ textDecoration:"none", fontSize:13 }}>
+                        Abrir bot de Telegram
+                      </a>
+                      <button className="btn" style={{ fontSize:13 }} onClick={() => {
+                        navigator.clipboard.writeText(linkState.link);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}>
+                        {copied ? "✓ Copiado" : "Copiar enlace"}
+                      </button>
+                    </div>
+                    <div style={{ marginTop:10, fontSize:11, color:"var(--muted)" }}>
+                      ⏰ El enlace expira en 30 minutos · Esperando confirmación…
+                      <span className="login-spinner" style={{ width:10, height:10, borderWidth:2,
+                        marginLeft:6, display:"inline-block", verticalAlign:"middle" }} />
+                    </div>
+                  </div>
+                )}
+                {linkState === "error" && (
+                  <div className="fb-err">Error al generar el enlace. Verifica que TELEGRAM_BOT_TOKEN esté configurado en Supabase.</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Reglas con Telegram ────────────────────────────────────── */}
+      <div className="dcard">
+        <div style={{ padding:"16px 24px", borderBottom:"1px solid var(--line-2)" }}>
+          <div style={{ fontSize:14, fontWeight:700, color:"var(--ink)", marginBottom:3 }}>
+            ¿Cuándo enviar alertas por Telegram?
+          </div>
+          <div style={{ fontSize:12, color:"var(--muted)" }}>
+            Los estados con Telegram activado envían el mensaje al canal además del email — solo a usuarios que tengan su Telegram vinculado.
+          </div>
+        </div>
+        <div className="alert-hd" style={{ display:"flex", padding:"10px 24px", gap:0 }}>
+          <div style={{ flex:"0 0 220px" }}>Estado</div>
+          <div style={{ flex:1, textAlign:"center" }}>Activa en email</div>
+          <div style={{ flex:1, textAlign:"center", color:"#229ED9" }}>Telegram</div>
+          <div style={{ flex:"0 0 40px" }}></div>
+        </div>
+        {rules.map(rule => {
+          const sem = SEM_CONFIG.find(s => s.key === rule.semaforo);
+          if (!sem) return null;
+          return (
+            <div key={rule.semaforo} style={{
+              display:"flex", alignItems:"center", padding:"14px 24px",
+              borderBottom:"1px solid var(--line-2)", opacity: rule.activa ? 1 : .55,
+            }}>
+              <div style={{ flex:"0 0 220px", display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:16 }}>{sem.emoji}</span>
+                <span style={{ fontSize:13, fontWeight:700, color:"var(--ink)" }}>{sem.label}</span>
+              </div>
+              <div style={{ flex:1, textAlign:"center" }}>
+                <span style={{ fontSize:11, color: rule.activa ? "#1f9d57" : "var(--muted)",
+                  fontWeight:600 }}>{rule.activa ? "✓ Activa" : "Inactiva"}</span>
+              </div>
+              <div className="alert-col" style={{ flex:1, justifyContent:"center" }}>
+                <Toggle checked={!!rule.telegram_enabled} onChange={v => onUpdateTg(rule.semaforo, v)}
+                  disabled={!rule.activa} />
+                <span style={{ fontSize:11, color: rule.telegram_enabled ? "#229ED9" : "var(--muted)" }}>
+                  {rule.telegram_enabled ? "Activo" : "Inactivo"}
+                </span>
+              </div>
+              <div style={{ flex:"0 0 40px", textAlign:"center" }}>
+                {saving === rule.semaforo && (
+                  <span className="login-spinner" style={{ width:12, height:12, borderWidth:2 }} />
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Prueba directa ─────────────────────────────────────────── */}
+      <div className="dcard" style={{ padding:"20px 24px" }}>
+        <div style={{ fontSize:14, fontWeight:700, color:"var(--ink)", marginBottom:4 }}>
+          📱 Prueba de mensaje Telegram
+        </div>
+        <div style={{ fontSize:12, color:"var(--muted)", marginBottom:14 }}>
+          Ingresa un Chat ID para enviar un mensaje de prueba directamente.
+          Puedes obtener tu Chat ID enviando <code style={{ background:"var(--bg)", padding:"1px 5px", borderRadius:4 }}>
+            /status</code> al bot después de vincularte.
+        </div>
+        <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+          <input type="text" value={testChatId} onChange={e => setTestChatId(e.target.value)}
+            placeholder="Ej: 123456789"
+            style={{ flex:1, minWidth:180, height:38, border:"1.5px solid var(--line)", borderRadius:9,
+              padding:"0 12px", fontSize:14, fontFamily:"inherit", color:"var(--ink)", background:"var(--bg)" }} />
+          <button className="btn primary" onClick={sendTestTg}
+            disabled={testTg === "loading" || !testChatId} style={{ flexShrink:0 }}>
+            {testTg === "loading"
+              ? <span className="login-spinner" style={{ width:14, height:14, borderWidth:2 }} />
+              : null}
+            {testTg === "loading" ? " Enviando…" : "Enviar mensaje de prueba"}
+          </button>
+          {testTg === "ok"    && <span className="fb-ok" style={{ width:"100%" }}>✓ Mensaje enviado</span>}
+          {testTg === "error" && <span className="fb-err" style={{ width:"100%" }}>Error al enviar. Verifica el chat_id y TELEGRAM_BOT_TOKEN.</span>}
+        </div>
+      </div>
+
+      {/* ── Cómo configurar ────────────────────────────────────────── */}
+      <div style={{ padding:"16px 20px", background:"var(--bg)", border:"1px solid var(--line)",
+        borderRadius:10, fontSize:12, color:"var(--muted)", lineHeight:1.7 }}>
+        <div style={{ fontWeight:700, color:"var(--ink-2)", marginBottom:6 }}>
+          🔧 Pasos de configuración (hacer una sola vez)
+        </div>
+        <ol style={{ margin:0, paddingLeft:18 }}>
+          <li>Crear un bot con <strong>@BotFather</strong> en Telegram → copiar el token</li>
+          <li>En Supabase → Edge Functions → <strong>Secrets</strong>, agregar:
+            <br /><code>TELEGRAM_BOT_TOKEN</code> · <code>TELEGRAM_BOT_USERNAME</code> · <code>TELEGRAM_WEBHOOK_SECRET</code>
+          </li>
+          <li>Desplegar las Edge Functions: <code>telegram-link</code> · <code>send-telegram</code> · <code>telegram-webhook</code></li>
+          <li>Registrar el webhook con Telegram corriendo el comando en <code>supabase_add_telegram.sql</code></li>
+          <li>Correr la migración SQL <code>supabase_add_telegram.sql</code> en el SQL Editor</li>
+        </ol>
+      </div>
+    </div>
+  );
+}
+
 function ConfigAlertas({ usuarioActual }) {
   const workspaceId = window.AUTOMIND?.agencyId;
   const [rules,       setRules]       = React.useState([]);
@@ -187,6 +541,23 @@ function ConfigAlertas({ usuarioActual }) {
     }
   }
 
+  async function handleUpdateTg(semaforo, value) {
+    setRules(prev => prev.map(r => r.semaforo === semaforo ? {...r, telegram_enabled: value} : r));
+    setSaving(semaforo);
+    try {
+      const rule = rules.find(r => r.semaforo === semaforo);
+      await window.DB.client
+        .from("alert_rules")
+        .upsert({ ...rule, telegram_enabled: value, workspace_id: workspaceId },
+          { onConflict: "workspace_id,semaforo" });
+    } catch(e) {
+      console.error(e);
+      setRules(prev => prev.map(r => r.semaforo === semaforo ? {...r, telegram_enabled: !value} : r));
+    } finally {
+      setTimeout(() => setSaving(null), 600);
+    }
+  }
+
   async function sendTestEmail() {
     if (!testEmail) return;
     setTestSending(true); setTestResult(null);
@@ -237,8 +608,16 @@ function ConfigAlertas({ usuarioActual }) {
           </p>
         </div>
         <div style={{ display:"flex", gap:8 }}>
-          <button className={"btn" + (tab==="reglas"?" primary":"")} onClick={() => setTab("reglas")}>
+          <button className={"btn" + (tab==="reglas"?"   primary":"")} onClick={() => setTab("reglas")}>
             Reglas
+          </button>
+          <button className={"btn" + (tab==="telegram"?" primary":"")} onClick={() => setTab("telegram")}
+            style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+              strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+              <path d="M21.2 2L2 10.4l7.4 2.3L20 6.4l-8.9 8.1v5.5l3.3-3.3"/>
+            </svg>
+            Telegram
           </button>
           <button className={"btn" + (tab==="historial"?" primary":"")} onClick={() => { setTab("historial"); loadData(); }}>
             Historial
@@ -275,6 +654,14 @@ function ConfigAlertas({ usuarioActual }) {
         <div style={{ display:"flex", justifyContent:"center", padding:48 }}>
           <span className="login-spinner" style={{ width:28, height:28, borderWidth:3 }} />
         </div>
+      ) : tab === "telegram" ? (
+        <TabTelegram
+          usuarioActual={usuarioActual}
+          workspaceId={workspaceId}
+          rules={rules}
+          onUpdateTg={handleUpdateTg}
+          saving={saving}
+        />
       ) : tab === "reglas" ? (
         <div className="dcard">
           {/* Header tabla */}
@@ -284,14 +671,24 @@ function ConfigAlertas({ usuarioActual }) {
             <div style={{ flex:1, textAlign:"center" }}>Vendedor</div>
             <div style={{ flex:1, textAlign:"center" }}>Gerente</div>
             <div style={{ flex:1, textAlign:"center" }}>Director</div>
-            <div style={{ flex:"0 0 60px" }}></div>
+            <div style={{ flex:1, textAlign:"center" }}>
+              <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:4, color:"#229ED9" }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+                  strokeLinecap="round" strokeLinejoin="round" width="12" height="12">
+                  <path d="M21.2 2L2 10.4l7.4 2.3L20 6.4l-8.9 8.1v5.5l3.3-3.3"/>
+                </svg>
+                Telegram
+              </span>
+            </div>
+            <div style={{ flex:"0 0 40px" }}></div>
           </div>
           {rules.map(rule => (
-            <AlertRuleRow key={rule.semaforo} rule={rule} onUpdate={handleUpdate} saving={saving} />
+            <AlertRuleRowWithTg key={rule.semaforo} rule={rule}
+              onUpdate={handleUpdate} onUpdateTg={handleUpdateTg} saving={saving} />
           ))}
           <div style={{ padding:"14px 24px", fontSize:12.5, color:"var(--muted)", borderTop:"1px solid var(--line-2)" }}>
-            💡 Los emails se envían cuando un vehículo cambia de estado al guardar cambios o importar inventario.
-            Requiere Resend configurado en las Edge Functions.
+            💡 Los emails y mensajes Telegram se envían cuando un vehículo cambia de estado.
+            El canal Telegram requiere que el usuario tenga su cuenta vinculada en la pestaña Telegram.
           </div>
         </div>
       ) : (

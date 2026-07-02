@@ -230,8 +230,43 @@ Deno.serve(async (req) => {
       sent_to:       uniqueRecipients,
     });
 
+    // ── Canal Telegram (si está habilitado en la regla) ────────────
+    let telegramResult: any = null;
+    if (rule.telegram_enabled) {
+      try {
+        // Buscar telegram_chat_id de los destinatarios en el workspace
+        const { data: tgUsers } = await adminClient
+          .from("users")
+          .select("email, telegram_chat_id")
+          .eq("workspace_id", workspaceId)
+          .in("email", uniqueRecipients)
+          .not("telegram_chat_id", "is", null);
+
+        const chatIds = (tgUsers || []).map((u: any) => String(u.telegram_chat_id));
+
+        if (chatIds.length > 0) {
+          const siteUrl = Deno.env.get("SITE_URL") || "https://automatizacionia-stack.github.io/automind-planpiso";
+          const tgMessage = buildTelegramMessage({ vehicleDesc, vin, semaforoFrom, semaforoTo,
+            diasEnPiso, interesAcum, pctPlanConsumido, siteUrl });
+
+          const tgSends = await Promise.allSettled(
+            chatIds.map(chatId => sendTelegramMessage(chatId, tgMessage))
+          );
+          const tgSent   = tgSends.filter(r => r.status === "fulfilled").length;
+          const tgFailed = tgSends.filter(r => r.status === "rejected").length;
+          telegramResult = { sent: tgSent, failed: tgFailed };
+        } else {
+          telegramResult = { skipped: true, reason: "No recipients with Telegram linked" };
+        }
+      } catch (tgErr: any) {
+        // Telegram falla silenciosamente — el email ya se envió
+        telegramResult = { error: tgErr.message };
+        console.error("Telegram send error:", tgErr.message);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, sent_to: uniqueRecipients }),
+      JSON.stringify({ success: true, sent_to: uniqueRecipients, telegram: telegramResult }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
@@ -242,3 +277,58 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+/* ─── Helpers de Telegram ────────────────────────────────────────────── */
+
+function buildTelegramMessage(params: {
+  vehicleDesc: string; vin: string; semaforoFrom: string; semaforoTo: string;
+  diasEnPiso: number; interesAcum: number; pctPlanConsumido: number; siteUrl: string;
+}): string {
+  const sem: Record<string, { emoji: string; label: string; urgencia: string }> = {
+    saludable:    { emoji: "🟢", label: "Margen saludable",    urgencia: "Informativo"  },
+    rotacion:     { emoji: "🟡", label: "Rotación media",      urgencia: "Atención"     },
+    comprometido: { emoji: "🟠", label: "Margen comprometido", urgencia: "Importante"   },
+    vencer:       { emoji: "🔴", label: "Próximo a vencer",    urgencia: "Urgente"      },
+    intereses:    { emoji: "⚫", label: "En intereses",        urgencia: "Crítico ‼️"  },
+  };
+  const from = sem[params.semaforoFrom] || { emoji: "—", label: params.semaforoFrom, urgencia: "" };
+  const to   = sem[params.semaforoTo]   || { emoji: "🔴", label: params.semaforoTo,   urgencia: "Alerta" };
+
+  const interesStr = params.interesAcum > 0
+    ? `\n💸 Interés acumulado: <b>$${params.interesAcum.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</b>`
+    : "";
+
+  return (
+    `${to.emoji} <b>${to.urgencia.toUpperCase()} · ${to.label}</b>\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `🚗 <b>${params.vehicleDesc}</b>\n` +
+    (params.vin ? `🔖 VIN: <code>${params.vin}</code>\n` : "") +
+    `\n` +
+    `📅 Día <b>${params.diasEnPiso}</b> en piso\n` +
+    `📊 Plan consumido: <b>${params.pctPlanConsumido}%</b> ` +
+    `${from.emoji} → ${to.emoji}${interesStr}\n` +
+    `\n` +
+    `<a href="${params.siteUrl}">Ver en Automind →</a>`
+  );
+}
+
+async function sendTelegramMessage(chatId: string, text: string): Promise<void> {
+  const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
+  if (!token) throw new Error("TELEGRAM_BOT_TOKEN no configurado");
+
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(`Telegram error (chat ${chatId}): ${JSON.stringify(err)}`);
+  }
+}
