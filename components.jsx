@@ -200,6 +200,8 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
           <span className="nav-ico">{I.truck({ width: 19, height: 19 })}</span>
           <span className="nav-lbl">Inventario</span>
         </button>
+        <Item id="importar" icon={I.upload({ width: 19, height: 19 })} label="Importar inventario" />
+        <Item id="alertas" icon={I.bell({ width: 19, height: 19 })} label="Alertas" />
 
         <hr className="nav-divider" />
 
@@ -214,13 +216,6 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
         <div className="nav-section">Equipo</div>
         <Item id="colaboradores" icon={I.users({ width: 19, height: 19 })} label="Colaboradores" />
         <Item id="usuarios" icon={I.person({ width: 19, height: 19 })} label="Registro de usuarios" />
-
-        <hr className="nav-divider" />
-
-        {/* ── Admin ── */}
-        <div className="nav-section">Admin</div>
-        <Item id="importar" icon={I.upload({ width: 19, height: 19 })} label="Importar inventario" />
-        <Item id="alertas" icon={I.bell({ width: 19, height: 19 })} label="Alertas" />
 
       </nav>
 
