@@ -10,6 +10,35 @@ const SEM_CONFIG = [
   { key:"saludable",    emoji:"🟢", label:"Margen saludable",    desc:"Menos del 61% del plan consumido",          color:"#1f9d57" },
 ];
 
+/* ── Variables disponibles para templates ───────────────────────────── */
+const VARS_TEMPLATE = [
+  { v:"[DESTINATARIO]",    desc:"Nombre del destinatario del mensaje" },
+  { v:"[VEHICULO]",        desc:"Descripción del vehículo (marca, modelo, año)" },
+  { v:"[VIN]",             desc:"VIN del vehículo" },
+  { v:"[DIAS_EN_PISO]",    desc:"Días que lleva el vehículo en piso" },
+  { v:"[PCT_PLAN]",        desc:"Porcentaje del plan de gracia consumido" },
+  { v:"[INTERES_ACUM]",    desc:"Interés acumulado en pesos (ej: $1,250.00)" },
+  { v:"[ESTADO_NUEVO]",    desc:"Nombre del nuevo estado del semáforo" },
+  { v:"[ESTADO_ANTERIOR]", desc:"Nombre del estado anterior" },
+  { v:"[VENDEDOR]",        desc:"Nombre del vendedor asignado al vehículo" },
+  { v:"[FECHA]",           desc:"Fecha del evento (ej: 3 de julio de 2026)" },
+];
+
+/* ── Templates predeterminados ──────────────────────────────────────── */
+const DEF_ASUNTO = "[ESTADO_NUEVO]: [VEHICULO]";
+
+const DEF_EMAIL = {
+  director: "Estimado [DESTINATARIO],\n\nLa unidad [VEHICULO] (VIN: [VIN]) cambió al estado «[ESTADO_NUEVO]». Lleva [DIAS_EN_PISO] días en piso con [PCT_PLAN]% del plan consumido.\n\nInterés acumulado: [INTERES_ACUM].",
+  gerente:  "Hola [DESTINATARIO],\n\nLa unidad [VEHICULO] (VIN: [VIN]) de tu equipo cambió a «[ESTADO_NUEVO]». Día [DIAS_EN_PISO] en piso · [PCT_PLAN]% consumido · Interés: [INTERES_ACUM].\n\nVendedor asignado: [VENDEDOR].",
+  vendedor: "Hola [DESTINATARIO],\n\nTu unidad [VEHICULO] cambió a «[ESTADO_NUEVO]». Lleva [DIAS_EN_PISO] días en piso. Comunícate con tu gerente para coordinar acciones.",
+};
+
+const DEF_TELEGRAM = {
+  director: "<b>[ESTADO_NUEVO] · [VEHICULO]</b>\n━━━━━━━━━━━━━━━━\n🔖 VIN: <code>[VIN]</code>\n\n📅 Día <b>[DIAS_EN_PISO]</b> en piso\n📊 Plan: <b>[PCT_PLAN]%</b>\n💸 Interés: <b>[INTERES_ACUM]</b>\n\nEstimado [DESTINATARIO], se requiere atención inmediata.",
+  gerente:  "<b>[ESTADO_NUEVO] · [VEHICULO]</b>\n━━━━━━━━━━━━━━━━\n🔖 VIN: <code>[VIN]</code>\n\n📅 Día <b>[DIAS_EN_PISO]</b> en piso\n📊 Plan: <b>[PCT_PLAN]%</b>\n💸 Interés: <b>[INTERES_ACUM]</b>\n\nHola [DESTINATARIO], unidad de [VENDEDOR].",
+  vendedor: "<b>[ESTADO_NUEVO] · [VEHICULO]</b>\n\nHola [DESTINATARIO], tu unidad cambió de estado.\n📅 Día <b>[DIAS_EN_PISO]</b> en piso. Comunícate con tu gerente.",
+};
+
 function Toggle({ checked, onChange, disabled }) {
   return (
     <button
@@ -482,6 +511,287 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
   );
 }
 
+/* ── Tab: Editor de plantillas de mensajes ───────────────────────────── */
+function TabMensajes({ rules, workspaceId }) {
+  const [expandido, setExpandido] = React.useState(null);
+  const [canal,     setCanal]     = React.useState("email");
+  const [rolTab,    setRolTab]    = React.useState("director");
+  const [drafts,    setDrafts]    = React.useState({});
+  const [savingMsj, setSavingMsj] = React.useState(null);
+  const [savedMsj,  setSavedMsj]  = React.useState(null);
+  const [clipMsg,   setClipMsg]   = React.useState(null);
+
+  // Inicializar drafts desde mensajes guardados en cada regla
+  React.useEffect(() => {
+    const init = {};
+    rules.forEach(r => { init[r.semaforo] = r.mensajes || {}; });
+    setDrafts(init);
+  }, [rules]);
+
+  // Obtener el valor actual del draft (o el predeterminado si no hay customización)
+  function getDraft(sem, canalKey, rolKey) {
+    const c = (drafts[sem] || {})[canalKey] || {};
+    if (rolKey in c) return c[rolKey];
+    if (canalKey === "email") return rolKey === "asunto" ? DEF_ASUNTO : (DEF_EMAIL[rolKey] || "");
+    return DEF_TELEGRAM[rolKey] || "";
+  }
+
+  function setDraft(sem, canalKey, rolKey, val) {
+    setDrafts(prev => ({
+      ...prev,
+      [sem]: {
+        ...(prev[sem] || {}),
+        [canalKey]: { ...((prev[sem] || {})[canalKey] || {}), [rolKey]: val },
+      },
+    }));
+  }
+
+  async function handleSave(sem) {
+    setSavingMsj(sem);
+    try {
+      const { error } = await window.DB.client
+        .from("alert_rules")
+        .update({ mensajes: drafts[sem] || {} })
+        .eq("workspace_id", workspaceId)
+        .eq("semaforo", sem);
+      if (error) throw error;
+      setSavedMsj(sem);
+      setTimeout(() => setSavedMsj(s => s === sem ? null : s), 2500);
+    } catch(e) {
+      alert("Error al guardar mensajes: " + e.message);
+    } finally {
+      setSavingMsj(null);
+    }
+  }
+
+  function handleRestaurar(sem, canalKey, rolKey) {
+    if (!confirm("¿Restaurar al mensaje predeterminado?")) return;
+    setDrafts(prev => {
+      const d = { ...(prev[sem] || {}) };
+      const c = { ...(d[canalKey] || {}) };
+      delete c[rolKey];
+      d[canalKey] = c;
+      return { ...prev, [sem]: d };
+    });
+  }
+
+  function copyVar(v) {
+    navigator.clipboard.writeText(v).catch(() => {});
+    setClipMsg(v);
+    setTimeout(() => setClipMsg(c => c === v ? null : c), 1500);
+  }
+
+  const ROLES = ["director","gerente","vendedor"];
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+
+      {/* ── Panel de variables ── */}
+      <div className="dcard" style={{ padding:"16px 20px" }}>
+        <div style={{ fontSize:12, fontWeight:700, color:"var(--ink-2)", marginBottom:10,
+          textTransform:"uppercase", letterSpacing:".06em" }}>
+          Variables disponibles — clic para copiar
+        </div>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+          {VARS_TEMPLATE.map(({ v, desc }) => (
+            <button key={v} onClick={() => copyVar(v)} title={desc}
+              style={{
+                background: clipMsg === v ? "#dcfce7" : "var(--bg)",
+                border:"1.5px solid " + (clipMsg === v ? "#22c55e" : "var(--line)"),
+                borderRadius:6, padding:"3px 10px", fontSize:12,
+                fontFamily:"'Cascadia Code','Cascadia Mono',monospace",
+                cursor:"pointer",
+                color: clipMsg === v ? "#166534" : "var(--accent)",
+                fontWeight:600, transition:"all .15s",
+              }}>
+              {clipMsg === v ? "✓ copiado" : v}
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize:11, color:"var(--muted)", marginTop:8 }}>
+          Úsalas en tus mensajes exactamente como aparecen, entre corchetes. Se sustituyen automáticamente al enviar.
+        </div>
+      </div>
+
+      {/* ── Semáforos expandibles ── */}
+      {SEM_CONFIG.map(sem => {
+        const open = expandido === sem.key;
+        return (
+          <div key={sem.key} className="dcard" style={{ overflow:"hidden" }}>
+
+            {/* Header del semáforo */}
+            <button onClick={() => setExpandido(open ? null : sem.key)}
+              style={{ width:"100%", display:"flex", alignItems:"center", gap:12,
+                padding:"16px 20px", background:"none", border:"none",
+                cursor:"pointer", textAlign:"left" }}>
+              <span style={{ fontSize:20, flexShrink:0 }}>{sem.emoji}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:14, color:"var(--ink)" }}>{sem.label}</div>
+                <div style={{ fontSize:12, color:"var(--muted)" }}>{sem.desc}</div>
+              </div>
+              {savedMsj === sem.key && (
+                <span style={{ fontSize:12, color:"#1f9d57", fontWeight:700, flexShrink:0 }}>
+                  ✓ Guardado
+                </span>
+              )}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round" width="16" height="16"
+                style={{ transform: open ? "rotate(90deg)" : "none",
+                  transition:"transform .2s", color:"var(--muted)", flexShrink:0 }}>
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </button>
+
+            {/* Editor (expandido) */}
+            {open && (
+              <div style={{ borderTop:"1px solid var(--line-2)", padding:"0 20px 20px" }}>
+
+                {/* Canal tabs */}
+                <div style={{ display:"flex", gap:0, marginTop:14, marginBottom:14,
+                  borderBottom:"2px solid var(--line-2)" }}>
+                  {[["email","✉ Email"],["telegram","✈ Telegram"]].map(([k, lbl]) => (
+                    <button key={k} onClick={() => setCanal(k)}
+                      style={{ padding:"8px 18px", border:"none", background:"none",
+                        cursor:"pointer", fontSize:13,
+                        fontWeight: canal === k ? 700 : 400,
+                        color: canal === k ? "var(--accent)" : "var(--muted)",
+                        borderBottom: canal === k
+                          ? "2px solid var(--accent)" : "2px solid transparent",
+                        marginBottom:"-2px" }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Rol tabs */}
+                <div style={{ display:"flex", gap:6, marginBottom:16 }}>
+                  {ROLES.map(r => (
+                    <button key={r} onClick={() => setRolTab(r)}
+                      style={{ padding:"5px 16px", borderRadius:20, border:"1.5px solid",
+                        cursor:"pointer", fontSize:12,
+                        fontWeight: rolTab === r ? 700 : 400,
+                        borderColor: rolTab === r ? "var(--accent)" : "var(--line)",
+                        background: rolTab === r ? "#e8f0fe" : "transparent",
+                        color: rolTab === r ? "var(--accent)" : "var(--muted)" }}>
+                      {r.charAt(0).toUpperCase() + r.slice(1)}
+                    </button>
+                  ))}
+                </div>
+
+                {canal === "email" ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                    {/* Asunto — solo en pestaña Director para no repetirlo */}
+                    {rolTab === "director" && (
+                      <div>
+                        <div style={{ display:"flex", justifyContent:"space-between",
+                          alignItems:"center", marginBottom:5 }}>
+                          <label style={{ fontSize:12, fontWeight:700, color:"var(--ink-2)" }}>
+                            Asunto del correo
+                            <span style={{ fontWeight:400, color:"var(--muted)", marginLeft:6 }}>
+                              (aplica a todos los roles)
+                            </span>
+                          </label>
+                          <button onClick={() => handleRestaurar(sem.key, "email", "asunto")}
+                            style={{ fontSize:11, color:"var(--muted)", background:"none",
+                              border:"none", cursor:"pointer", padding:0,
+                              textDecoration:"underline" }}>
+                            Restaurar
+                          </button>
+                        </div>
+                        <input
+                          value={getDraft(sem.key, "email", "asunto")}
+                          onChange={e => setDraft(sem.key, "email", "asunto", e.target.value)}
+                          style={{ width:"100%", border:"1.5px solid var(--line)", borderRadius:8,
+                            padding:"8px 12px", fontSize:13, fontFamily:"inherit",
+                            boxSizing:"border-box", color:"var(--ink)", background:"var(--bg)" }}
+                        />
+                      </div>
+                    )}
+                    {/* Cuerpo por rol */}
+                    <div>
+                      <div style={{ display:"flex", justifyContent:"space-between",
+                        alignItems:"center", marginBottom:5 }}>
+                        <label style={{ fontSize:12, fontWeight:700, color:"var(--ink-2)" }}>
+                          Mensaje para {rolTab.charAt(0).toUpperCase() + rolTab.slice(1)}
+                        </label>
+                        <button onClick={() => handleRestaurar(sem.key, "email", rolTab)}
+                          style={{ fontSize:11, color:"var(--muted)", background:"none",
+                            border:"none", cursor:"pointer", padding:0,
+                            textDecoration:"underline" }}>
+                          Restaurar
+                        </button>
+                      </div>
+                      <textarea rows={6}
+                        value={getDraft(sem.key, "email", rolTab)}
+                        onChange={e => setDraft(sem.key, "email", rolTab, e.target.value)}
+                        style={{ width:"100%", border:"1.5px solid var(--line)", borderRadius:8,
+                          padding:"10px 12px", fontSize:13, fontFamily:"inherit", resize:"vertical",
+                          boxSizing:"border-box", lineHeight:1.7,
+                          color:"var(--ink)", background:"var(--bg)" }}
+                      />
+                      <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
+                        Este texto aparece como bloque introductorio en el correo.
+                        Las métricas (días en piso, % plan, interés) se agregan automáticamente.
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Telegram */
+                  <div>
+                    <div style={{ display:"flex", justifyContent:"space-between",
+                      alignItems:"center", marginBottom:5 }}>
+                      <label style={{ fontSize:12, fontWeight:700, color:"var(--ink-2)" }}>
+                        Mensaje Telegram para {rolTab.charAt(0).toUpperCase() + rolTab.slice(1)}
+                        <span style={{ fontWeight:400, color:"var(--muted)", marginLeft:6 }}>
+                          · HTML: &lt;b&gt;, &lt;i&gt;, &lt;code&gt;
+                        </span>
+                      </label>
+                      <button onClick={() => handleRestaurar(sem.key, "telegram", rolTab)}
+                        style={{ fontSize:11, color:"var(--muted)", background:"none",
+                          border:"none", cursor:"pointer", padding:0,
+                          textDecoration:"underline" }}>
+                        Restaurar
+                      </button>
+                    </div>
+                    <textarea rows={8}
+                      value={getDraft(sem.key, "telegram", rolTab)}
+                      onChange={e => setDraft(sem.key, "telegram", rolTab, e.target.value)}
+                      style={{ width:"100%", border:"1.5px solid var(--line)", borderRadius:8,
+                        padding:"10px 12px", fontSize:13,
+                        fontFamily:"'Cascadia Code','Cascadia Mono',monospace",
+                        resize:"vertical", boxSizing:"border-box", lineHeight:1.7,
+                        color:"var(--ink)", background:"var(--bg)" }}
+                    />
+                    <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
+                      Reemplaza completamente el mensaje automático de Telegram para este rol.
+                      Soporta etiquetas HTML de Telegram: &lt;b&gt;negrita&lt;/b&gt;,
+                      &lt;i&gt;cursiva&lt;/i&gt;, &lt;code&gt;código&lt;/code&gt;.
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display:"flex", justifyContent:"flex-end",
+                  marginTop:16, gap:8 }}>
+                  <button className="btn" onClick={() => setExpandido(null)}>Cerrar</button>
+                  <button className="btn primary"
+                    onClick={() => handleSave(sem.key)}
+                    disabled={savingMsj === sem.key}>
+                    {savingMsj === sem.key && (
+                      <span className="login-spinner"
+                        style={{ width:12, height:12, borderWidth:2, marginRight:6 }} />
+                    )}
+                    {savingMsj === sem.key ? "Guardando…" : "Guardar mensajes"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ConfigAlertas({ usuarioActual }) {
   const workspaceId = window.AUTOMIND?.agencyId;
   const [rules,       setRules]       = React.useState([]);
@@ -631,6 +941,9 @@ function ConfigAlertas({ usuarioActual }) {
           <button className={"btn" + (tab==="reglas"?"   primary":"")} onClick={() => setTab("reglas")}>
             Reglas
           </button>
+          <button className={"btn" + (tab==="mensajes"?"  primary":"")} onClick={() => setTab("mensajes")}>
+            Mensajes
+          </button>
           <button className={"btn" + (tab==="telegram"?" primary":"")} onClick={() => setTab("telegram")}
             style={{ display:"flex", alignItems:"center", gap:6 }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
@@ -682,6 +995,8 @@ function ConfigAlertas({ usuarioActual }) {
           onUpdateTg={handleUpdateTg}
           saving={saving}
         />
+      ) : tab === "mensajes" ? (
+        <TabMensajes rules={rules} workspaceId={workspaceId} />
       ) : tab === "reglas" ? (
         <div className="dcard">
           {/* Header tabla */}

@@ -1,6 +1,7 @@
 // Automind · Edge Function: send-alert
 // Envía email de alerta cuando un vehículo cambia de estado de semáforo.
 // Consulta alert_rules del workspace para saber a quién notificar.
+// Soporta templates por rol/canal configurados en alert_rules.mensajes.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -17,9 +18,18 @@ const SEM_INFO: Record<string, { emoji: string; label: string; color: string; ur
   intereses:   { emoji: "⚫", label: "En intereses",        color: "#2d3142", urgencia: "Crítico" },
 };
 
+/** Sustituye variables [CLAVE] en un template con los valores del mapa. */
+function applyTemplate(tpl: string, vars: Record<string, string>): string {
+  return Object.entries(vars).reduce(
+    (s, [k, v]) => s.replaceAll(`[${k}]`, v),
+    tpl
+  );
+}
+
 function emailHtml(params: {
   vehicleDesc: string; vin: string; semFrom: string; semTo: string;
   diasEnPiso: number; interesAcum: number; pctPlan: number; siteUrl: string;
+  destinatario?: string; mensajePersonalizado?: string | null;
 }) {
   const from = SEM_INFO[params.semFrom] || { emoji: "—", label: params.semFrom, color: "#666", urgencia: "" };
   const to   = SEM_INFO[params.semTo]   || { emoji: "🔴", label: params.semTo,   color: "#e0492f", urgencia: "Alerta" };
@@ -44,6 +54,12 @@ function emailHtml(params: {
         <div style="padding:28px">
           <h2 style="margin:0 0 4px;font-size:17px;color:#1a1a2e">${params.vehicleDesc}</h2>
           <div style="font-size:13px;color:#888;margin-bottom:20px">VIN: ${params.vin || "—"}</div>
+
+          ${params.mensajePersonalizado ? `
+          <!-- Mensaje personalizado -->
+          <div style="margin-bottom:20px;padding:14px 16px;background:#f0f7ff;border-left:3px solid ${to.color};border-radius:0 8px 8px 0;font-size:14px;color:#1a1a2e;line-height:1.7">
+            ${params.mensajePersonalizado.replace(/\n/g, "<br>")}
+          </div>` : ""}
 
           <!-- Cambio de estado -->
           <div style="background:#f4f6fb;border-radius:10px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
@@ -103,8 +119,6 @@ Deno.serve(async (req) => {
 
   try {
     // ── Autenticación obligatoria ──────────────────────────────────
-    // Antes esta función no validaba el JWT: cualquiera con la anon key
-    // (pública en config.js) podía usarla como relay de correo abierto.
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "No autorizado" }),
@@ -147,7 +161,6 @@ Deno.serve(async (req) => {
       .maybeSingle();
     let autorizado = !!memberRow;
     if (!autorizado) {
-      // ¿Agency owner de la agencia dueña del workspace?
       const { data: wsRow } = await adminClient
         .from("workspaces").select("agency_id").eq("id", workspaceId).maybeSingle();
       const agId = wsRow?.agency_id || workspaceId;
@@ -161,7 +174,7 @@ Deno.serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── Consultar regla de alerta para este workspace y semáforo ───
+    // ── Consultar regla de alerta (incluye mensajes personalizados) ─
     const { data: rule } = await adminClient
       .from("alert_rules")
       .select("*")
@@ -180,17 +193,23 @@ Deno.serve(async (req) => {
     if (rule.notify_gerente   && gerenteEmail)   recipients.push(gerenteEmail);
     if (rule.notify_director  && directorEmail)  recipients.push(directorEmail);
 
-    // Solo se permite enviar a correos registrados en el workspace (o al
-    // propio usuario autenticado) — evita usar la función para spam/phishing
+    // Mapa de email → rol según quién fue pasado como param
+    // (evita lookup innecesario: ya sabemos qué rol tiene cada destinatario)
+    const emailToRole: Record<string, string> = {};
+    if (vendedorEmail) emailToRole[String(vendedorEmail).toLowerCase()] = "vendedor";
+    if (gerenteEmail)  emailToRole[String(gerenteEmail).toLowerCase()]  = "gerente";
+    if (directorEmail) emailToRole[String(directorEmail).toLowerCase()] = "director";
+
+    // Obtener usuarios del workspace (para nombres y validación)
     const { data: wsUsers } = await adminClient
-      .from("users").select("email")
+      .from("users").select("email, nombre, rol")
       .eq("workspace_id", workspaceId);
+
     const permitidos = new Set(
       (wsUsers || []).map((u: any) => String(u.email || "").toLowerCase()).filter(Boolean)
     );
     if (user.email) permitidos.add(user.email.toLowerCase());
 
-    // Deduplicar y filtrar contra la lista permitida
     const uniqueRecipients = [...new Set(recipients.filter(Boolean))]
       .filter(e => permitidos.has(String(e).toLowerCase()));
 
@@ -199,26 +218,89 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const siteUrl = Deno.env.get("SITE_URL") || "https://automatizacionia-stack.github.io/automind-planpiso";
-    const brevoKey = Deno.env.get("BREVO_API_KEY")!;
-    const semToInfo = SEM_INFO[semaforoTo] || { label: semaforoTo, urgencia: "Alerta" };
-    const html = emailHtml({ vehicleDesc, vin, semFrom: semaforoFrom, semTo: semaforoTo,
-      diasEnPiso, interesAcum, pctPlan: pctPlanConsumido, siteUrl });
+    const siteUrl   = Deno.env.get("SITE_URL") || "https://automatizacionia-stack.github.io/automind-planpiso";
+    const brevoKey  = Deno.env.get("BREVO_API_KEY")!;
+    const semToInfo = SEM_INFO[semaforoTo] || { label: semaforoTo, urgencia: "Alerta", emoji: "🔴", color: "#e0492f" };
 
-    // ── Enviar via Brevo ───────────────────────────────────────────
-    const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": brevoKey },
-      body: JSON.stringify({
-        sender: { name: "Automind Plan Piso", email: "automatizacion.ia@coperva.com" },
-        to: uniqueRecipients.map(e => ({ email: e })),
-        subject: `${semToInfo.emoji} ${semToInfo.urgencia}: ${vehicleDesc || vin || vehicleId}`,
-        htmlContent: html,
-      }),
-    });
+    // ── Preparar variables base para templates ─────────────────────
+    const vendedorNombre = (wsUsers || []).find(
+      (u: any) => u.email?.toLowerCase() === String(vendedorEmail || "").toLowerCase()
+    )?.nombre || vendedorEmail || "";
+    const interesStr = interesAcum != null
+      ? `$${Number(interesAcum).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
+      : "$0.00";
+    const fecha = new Date().toLocaleDateString("es-MX",
+      { day: "2-digit", month: "long", year: "numeric" });
 
-    const brevoJson = await brevoRes.json();
-    if (!brevoRes.ok) throw new Error("Brevo error: " + JSON.stringify(brevoJson));
+    function makeVars(destinatario: string): Record<string, string> {
+      return {
+        DESTINATARIO:    destinatario,
+        VEHICULO:        vehicleDesc || vin || vehicleId || "",
+        VIN:             vin || "",
+        DIAS_EN_PISO:    String(diasEnPiso || 0),
+        PCT_PLAN:        String(pctPlanConsumido || 0),
+        INTERES_ACUM:    interesStr,
+        ESTADO_NUEVO:    semToInfo.label,
+        ESTADO_ANTERIOR: SEM_INFO[semaforoFrom]?.label || semaforoFrom || "",
+        VENDEDOR:        vendedorNombre,
+        FECHA:           fecha,
+      };
+    }
+
+    const mensajesEmail    = (rule.mensajes as any)?.email    || {};
+    const mensajesTelegram = (rule.mensajes as any)?.telegram || {};
+
+    // ── Enviar un email por destinatario (template personalizado por rol) ──
+    let emailsSent = 0;
+    const emailErrors: string[] = [];
+
+    for (const recipEmail of uniqueRecipients) {
+      const rolKey = emailToRole[recipEmail.toLowerCase()] || "vendedor";
+      const userInfo = (wsUsers || []).find(
+        (u: any) => u.email?.toLowerCase() === recipEmail.toLowerCase()
+      );
+      const nombre = userInfo?.nombre || recipEmail;
+
+      const customAsunto = mensajesEmail.asunto as string | undefined;
+      const customCuerpo = mensajesEmail[rolKey] as string | undefined;
+
+      const vars = makeVars(nombre);
+      const asunto = customAsunto
+        ? applyTemplate(customAsunto, vars)
+        : `${semToInfo.emoji} ${semToInfo.urgencia}: ${vehicleDesc || vin || vehicleId}`;
+      const mensajePersonalizado = customCuerpo
+        ? applyTemplate(customCuerpo, vars)
+        : null;
+
+      const html = emailHtml({
+        vehicleDesc, vin, semFrom: semaforoFrom, semTo: semaforoTo,
+        diasEnPiso, interesAcum, pctPlan: pctPlanConsumido, siteUrl,
+        destinatario: nombre, mensajePersonalizado,
+      });
+
+      const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "api-key": brevoKey },
+        body: JSON.stringify({
+          sender: { name: "Automind Plan Piso", email: "automatizacion.ia@coperva.com" },
+          to: [{ email: recipEmail, name: nombre }],
+          subject: asunto,
+          htmlContent: html,
+        }),
+      });
+
+      if (!brevoRes.ok) {
+        const err = await brevoRes.json();
+        emailErrors.push(`${recipEmail}: ${JSON.stringify(err)}`);
+        console.error("Brevo error for", recipEmail, JSON.stringify(err));
+      } else {
+        emailsSent++;
+      }
+    }
+
+    if (emailsSent === 0 && emailErrors.length > 0) {
+      throw new Error("Todos los emails fallaron: " + emailErrors.join("; "));
+    }
 
     // ── Registrar en alert_log ─────────────────────────────────────
     await adminClient.from("alert_log").insert({
@@ -234,23 +316,31 @@ Deno.serve(async (req) => {
     let telegramResult: any = null;
     if (rule.telegram_enabled) {
       try {
-        // Buscar telegram_chat_id de los destinatarios (sin filtrar por workspace:
-        // un director puede estar en un workspace distinto al del vehículo)
+        // Buscar telegram_chat_id de los destinatarios (+ nombre y rol para templates)
         const { data: tgUsers } = await adminClient
           .from("users")
-          .select("email, telegram_chat_id")
+          .select("email, nombre, rol, telegram_chat_id")
           .in("email", uniqueRecipients)
           .not("telegram_chat_id", "is", null);
 
-        const chatIds = (tgUsers || []).map((u: any) => String(u.telegram_chat_id));
-
-        if (chatIds.length > 0) {
-          const siteUrl = Deno.env.get("SITE_URL") || "https://automatizacionia-stack.github.io/automind-planpiso";
-          const tgMessage = buildTelegramMessage({ vehicleDesc, vin, semaforoFrom, semaforoTo,
-            diasEnPiso, interesAcum, pctPlanConsumido, siteUrl });
-
+        if ((tgUsers || []).length > 0) {
           const tgSends = await Promise.allSettled(
-            chatIds.map(chatId => sendTelegramMessage(chatId, tgMessage))
+            (tgUsers || []).map(async (tgUser: any) => {
+              const rolKey = emailToRole[tgUser.email?.toLowerCase()] || tgUser.rol || "vendedor";
+              const customTg = mensajesTelegram[rolKey] as string | undefined;
+
+              let tgMsg: string;
+              if (customTg) {
+                const vars = makeVars(tgUser.nombre || tgUser.email || "");
+                tgMsg = applyTemplate(customTg, vars);
+              } else {
+                tgMsg = buildTelegramMessage({
+                  vehicleDesc, vin, semaforoFrom, semaforoTo,
+                  diasEnPiso, interesAcum, pctPlanConsumido, siteUrl,
+                });
+              }
+              return sendTelegramMessage(String(tgUser.telegram_chat_id), tgMsg);
+            })
           );
           const tgSent   = tgSends.filter(r => r.status === "fulfilled").length;
           const tgFailed = tgSends.filter(r => r.status === "rejected").length;
@@ -259,14 +349,13 @@ Deno.serve(async (req) => {
           telegramResult = { skipped: true, reason: "No recipients with Telegram linked" };
         }
       } catch (tgErr: any) {
-        // Telegram falla silenciosamente — el email ya se envió
         telegramResult = { error: tgErr.message };
         console.error("Telegram send error:", tgErr.message);
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, sent_to: uniqueRecipients, telegram: telegramResult }),
+      JSON.stringify({ success: true, sent_to: uniqueRecipients, emailsSent, telegram: telegramResult }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
