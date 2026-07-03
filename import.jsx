@@ -24,6 +24,37 @@ const CAMPOS_DESTINO = [
 
 const CAMPOS_MAP = Object.fromEntries(CAMPOS_DESTINO.map(c => [c.key, c]));
 
+// ── Descarga de plantilla Excel ──────────────────────────────────────────────
+function descargarPlantilla() {
+  const headers = CAMPOS_DESTINO.map(c => c.req ? c.label + " *" : c.label);
+  const ejemplo = {
+    "VIN *":              "3VVJP6RM3TM118651",
+    "Estatus":            "NUEVOS",
+    "INV":                "8099",
+    "Descripción":        "SUBURBAN 4X4 2026",
+    "Marca *":            "Chevrolet",
+    "Modelo *":           "Suburban",
+    "Año *":              2026,
+    "Tipo":               "SUV",
+    "Color Exterior":     "Blanco",
+    "Color Interior":     "Negro",
+    "Fecha Factura":      "2026-01-15",
+    "Fecha Llegada *":    "2026-01-20",
+    "Monto Financiado *": 850000,
+    "Días Gracia Base":   90,
+    "Días Gracia Extra":  0,
+    "% Interés Anual *":  18,
+    "Plazo (días) *":     365,
+    "Observaciones":      "",
+  };
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet([ejemplo], { header: headers });
+  // Ancho de columnas
+  ws["!cols"] = headers.map(h => ({ wch: Math.max(h.length + 4, 18) }));
+  XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
+  XLSX.writeFile(wb, "plantilla_inventario_automind.xlsx");
+}
+
 // ── Utilidades ──────────────────────────────────────────────────────────────
 
 function normalize(s) {
@@ -510,12 +541,29 @@ function ImportarInventario({ onIrInventario, onImportDone }) {
       <div className="card">
         {paso === 1 && (
           <div className="imp-step">
-            <div className="imp-step-head">
-              <h2>Subir archivo</h2>
-              <p className="imp-step-sub">
-                Asegúrate de que el archivo tenga encabezados en la primera fila.
-                Formatos soportados: CSV con delimitador coma, punto y coma o tabulación.
-              </p>
+            <div className="imp-step-head" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+              <div>
+                <h2>Subir archivo</h2>
+                <p className="imp-step-sub">
+                  Asegúrate de que el archivo tenga encabezados en la primera fila.
+                  Formatos soportados: CSV con delimitador coma, punto y coma o tabulación.
+                </p>
+              </div>
+              <button
+                onClick={descargarPlantilla}
+                style={{
+                  flexShrink: 0,
+                  display: "inline-flex", alignItems: "center", gap: 7,
+                  padding: "9px 16px", borderRadius: 8, border: "1.5px solid var(--accent)",
+                  background: "transparent", color: "var(--accent)",
+                  fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 17h14M10 3v10M6 9l4 4 4-4"/>
+                </svg>
+                Descargar plantilla
+              </button>
             </div>
             <DropZone onFile={handleFile} />
           </div>
