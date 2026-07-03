@@ -182,17 +182,27 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
       const { data: { user } } = await window.DB.client.auth.getUser();
       if (!user) { setTgStatus("not_linked"); return; }
       if (isAgencyOwner) {
-        // Admin: checar admin_telegram Y app_metadata (webhook puede haber guardado en cualquiera)
-        const { data } = await window.DB.client
+        // Admin: checar admin_telegram primero
+        const { data: adminTg } = await window.DB.client
           .from("admin_telegram")
           .select("telegram_chat_id, telegram_username")
           .eq("auth_user_id", user.id)
           .maybeSingle();
-        if (data?.telegram_chat_id) {
-          setTgStatus({ chat_id: data.telegram_chat_id, username: data.telegram_username });
+        if (adminTg?.telegram_chat_id) {
+          setTgStatus({ chat_id: adminTg.telegram_chat_id, username: adminTg.telegram_username });
           return;
         }
-        // Fallback: app_metadata (requiere refresh del token para ver el cambio)
+        // Fallback: tabla users (agency owner también puede ser workspace user)
+        const { data: userRow } = await window.DB.client
+          .from("users")
+          .select("telegram_chat_id, telegram_username")
+          .eq("auth_user_id", user.id)
+          .maybeSingle();
+        if (userRow?.telegram_chat_id) {
+          setTgStatus({ chat_id: userRow.telegram_chat_id, username: userRow.telegram_username });
+          return;
+        }
+        // Fallback: app_metadata
         const { data: { user: freshUser } } = await window.DB.client.auth.getUser();
         const chatId = freshUser?.app_metadata?.telegram_chat_id;
         setTgStatus(chatId ? { chat_id: chatId, username: freshUser.app_metadata?.telegram_username } : "not_linked");
@@ -222,15 +232,22 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
         const interval = setInterval(async () => {
           const { data: { user } } = await window.DB.client.auth.getUser();
           if (!user) { clearInterval(interval); return; }
-          const tableName = isAgencyOwner ? "admin_telegram" : "users";
-          const col = isAgencyOwner ? "auth_user_id" : "auth_user_id";
-          const { data } = await window.DB.client
-            .from(tableName).select("telegram_chat_id").eq(col, user.id).maybeSingle();
-          if (data?.telegram_chat_id) {
-            setTgStatus({ chat_id: data.telegram_chat_id });
-            setLinkState(null);
-            clearInterval(interval);
+          let linked = false;
+          if (isAgencyOwner) {
+            const { data: at } = await window.DB.client.from("admin_telegram")
+              .select("telegram_chat_id").eq("auth_user_id", user.id).maybeSingle();
+            if (at?.telegram_chat_id) { setTgStatus({ chat_id: at.telegram_chat_id }); linked = true; }
+            if (!linked) {
+              const { data: ur } = await window.DB.client.from("users")
+                .select("telegram_chat_id").eq("auth_user_id", user.id).maybeSingle();
+              if (ur?.telegram_chat_id) { setTgStatus({ chat_id: ur.telegram_chat_id }); linked = true; }
+            }
+          } else {
+            const { data } = await window.DB.client.from("users")
+              .select("telegram_chat_id").eq("auth_user_id", user.id).maybeSingle();
+            if (data?.telegram_chat_id) { setTgStatus({ chat_id: data.telegram_chat_id }); linked = true; }
           }
+          if (linked) { setLinkState(null); clearInterval(interval); }
         }, 5000);
         setTimeout(() => clearInterval(interval), 30 * 60 * 1000);
       } else {
