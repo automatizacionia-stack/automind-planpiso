@@ -99,30 +99,6 @@ function VehicleDrawer({ v, onClose, usuarioActual }) {
           <div className="dr-stat"><span>Fecha llegada</span><b>{v.fechaLlegadaTxt}</b></div>
         </div>
 
-        <div className="dr-section">Desglose de fórmulas</div>
-        <FormulaRow label="Días en piso"
-          formula="= DATETIME_DIFF(TODAY(), Fecha_Factura, 'days') − 1"
-          result={v.diasEnPiso + " días"} />
-        <FormulaRow label="Días libres restantes"
-          formula={`= ${v.diasGraciaTotal} (gracia total) − ${v.diasEnPiso} (en piso)`}
-          result={v.diasLibresRestantes + " días"}
-          neg={v.diasLibresRestantes < 0} />
-        <FormulaRow label="Días vencidos"
-          formula={`= IF(Dias_Libres_Restantes < 0, ABS(${v.diasLibresRestantes}), 0)`}
-          result={v.diasVencidos + " días"}
-          neg={v.diasVencidos > 0} />
-        <FormulaRow label="Interés diario"
-          formula={`= ${fmtMoney(v.montoFinanciado)} × ${fmtPct(v.pctInteres, 2)} / 365`}
-          result={fmtMoney(v.interesDiario, 2) + " / día"} />
-        <FormulaRow label="Interés acumulado"
-          formula={`= ${v.diasVencidos} días × ${fmtMoney(v.interesDiario, 2)}/día`}
-          result={fmtMoney(v.interesAcum, 2)}
-          neg={v.interesAcum > 0} />
-        <FormulaRow label="% Plan consumido"
-          formula={`= ROUND((${v.diasEnPiso} / ${v.diasGraciaTotal}) × 100, 0)`}
-          result={v.pctPlanConsumido + "%"}
-          neg={v.pctPlanConsumido > 100} />
-
         <div className="dr-section">Asignación de jerarquía</div>
         {vendedor ? (
           <div className="dr-jerarquia">
