@@ -182,13 +182,20 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
       const { data: { user } } = await window.DB.client.auth.getUser();
       if (!user) { setTgStatus("not_linked"); return; }
       if (isAgencyOwner) {
-        // Admin: leer de admin_telegram table
+        // Admin: checar admin_telegram Y app_metadata (webhook puede haber guardado en cualquiera)
         const { data } = await window.DB.client
           .from("admin_telegram")
           .select("telegram_chat_id, telegram_username")
           .eq("auth_user_id", user.id)
           .maybeSingle();
-        setTgStatus(data?.telegram_chat_id ? { chat_id: data.telegram_chat_id, username: data.telegram_username } : "not_linked");
+        if (data?.telegram_chat_id) {
+          setTgStatus({ chat_id: data.telegram_chat_id, username: data.telegram_username });
+          return;
+        }
+        // Fallback: app_metadata (requiere refresh del token para ver el cambio)
+        const { data: { user: freshUser } } = await window.DB.client.auth.getUser();
+        const chatId = freshUser?.app_metadata?.telegram_chat_id;
+        setTgStatus(chatId ? { chat_id: chatId, username: freshUser.app_metadata?.telegram_username } : "not_linked");
       } else {
         const { data } = await window.DB.client
           .from("users")
