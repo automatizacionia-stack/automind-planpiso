@@ -234,11 +234,11 @@ Deno.serve(async (req) => {
     let telegramResult: any = null;
     if (rule.telegram_enabled) {
       try {
-        // Buscar telegram_chat_id de los destinatarios en el workspace
+        // Buscar telegram_chat_id de los destinatarios (sin filtrar por workspace:
+        // un director puede estar en un workspace distinto al del vehículo)
         const { data: tgUsers } = await adminClient
           .from("users")
           .select("email, telegram_chat_id")
-          .eq("workspace_id", workspaceId)
           .in("email", uniqueRecipients)
           .not("telegram_chat_id", "is", null);
 
