@@ -182,10 +182,12 @@ function JerarquiaSection({ vendedorIds, usuarios, onChange }) {
 }
 
 /* ── Editor principal ───────────────────────────────────────────────────── */
-function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChange }) {
+function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChange, initialSelId }) {
   const esVendedor = usuarioActual?.rol === "vendedor";
   const [rows,      setRows]      = React.useState(rowsInit || []);
-  const [selId,     setSelId]     = React.useState(rowsInit && rowsInit[0] ? rowsInit[0].id : null);
+  const [selId,     setSelId]     = React.useState(
+    initialSelId || (rowsInit && rowsInit[0] ? rowsInit[0].id : null)
+  );
   const [form,      setForm]      = React.useState(null);
   const [dirty,     setDirty]     = React.useState(false);
   const [q,         setQ]         = React.useState("");

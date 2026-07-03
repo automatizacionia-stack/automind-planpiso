@@ -14,7 +14,7 @@ function FormulaRow({ label, formula, result, neg }) {
   );
 }
 
-function VehicleDrawer({ v, onClose, usuarioActual }) {
+function VehicleDrawer({ v, onClose, onEdit, usuarioActual }) {
   // ── Todos los hooks ANTES de cualquier return condicional ──────────────────
   const [vendedorId, setVendedorId] = React.useState(v ? v.vendedorId : null);
 
@@ -92,11 +92,42 @@ function VehicleDrawer({ v, onClose, usuarioActual }) {
           </div>
         </div>
 
+        {/* Métricas clave */}
         <div className="dr-grid">
+          <div className="dr-stat"><span>Días en piso</span><b>{v.diasEnPiso}</b></div>
+          <div className="dr-stat"><span>Días libres restantes</span>
+            <b style={{ color: v.diasLibresRestantes <= 0 ? SEM.intereses.sol : v.diasLibresRestantes <= 15 ? SEM.vencer.sol : "inherit" }}>
+              {v.diasLibresRestantes <= 0 ? "Vencido" : v.diasLibresRestantes + " días"}
+            </b>
+          </div>
+          <div className="dr-stat"><span>Interés acumulado</span>
+            <b style={{ color: v.interesAcum > 0 ? SEM.intereses.sol : "inherit" }}>{fmtMoney(v.interesAcum, 2)}</b>
+          </div>
+          <div className="dr-stat"><span>% Plan consumido</span>
+            <b style={{ color: v.pctPlanConsumido > 100 ? SEM.intereses.sol : v.pctPlanConsumido > 86 ? SEM.vencer.sol : "inherit" }}>
+              {v.pctPlanConsumido}%
+            </b>
+          </div>
+        </div>
+
+        {/* Ficha completa del vehículo */}
+        <div className="dr-section">Ficha del vehículo</div>
+        <div className="dr-grid">
+          <div className="dr-stat"><span>VIN</span><b style={{fontSize:11,letterSpacing:".03em"}}>{v.vin || "—"}</b></div>
+          <div className="dr-stat"><span>INV</span><b>{v.inv || "—"}</b></div>
+          <div className="dr-stat"><span>Estatus</span><b>{v.estatus || "—"}</b></div>
+          <div className="dr-stat"><span>Tipo</span><b>{v.tipo || "—"}</b></div>
+          <div className="dr-stat"><span>Color exterior</span><b>{v.colorExterior || "—"}</b></div>
+          <div className="dr-stat"><span>Color interior</span><b>{v.colorInterior || "—"}</b></div>
+          <div className="dr-stat"><span>Fecha factura</span><b>{v.fechaFacturaTxt || "—"}</b></div>
+          <div className="dr-stat"><span>Fecha llegada</span><b>{v.fechaLlegadaTxt || "—"}</b></div>
           <div className="dr-stat"><span>Monto financiado</span><b>{fmtMoney(v.montoFinanciado, 2)}</b></div>
           <div className="dr-stat"><span>Tasa anual</span><b>{fmtPct(v.pctInteres, 2)}</b></div>
           <div className="dr-stat"><span>Días de gracia</span><b>{v.diasGraciaTotal} días</b></div>
-          <div className="dr-stat"><span>Fecha llegada</span><b>{v.fechaLlegadaTxt}</b></div>
+          <div className="dr-stat"><span>Plazo</span><b>{v.plazoDias} días</b></div>
+          {v.observaciones && (
+            <div className="dr-stat" style={{gridColumn:"1/-1"}}><span>Observaciones</span><b>{v.observaciones}</b></div>
+          )}
         </div>
 
         <div className="dr-section">Asignación de jerarquía</div>
@@ -162,8 +193,12 @@ function VehicleDrawer({ v, onClose, usuarioActual }) {
         )}
 
         <div className="dr-actions">
-          <button className="btn primary">Iniciar proceso de venta</button>
-          <button className="btn">Ver historial</button>
+          {onEdit && (
+            <button className="btn primary" onClick={() => { onClose(); onEdit(v.id); }}>
+              Editar unidad
+            </button>
+          )}
+          <button className="btn">Iniciar proceso de venta</button>
         </div>
       </aside>
     </>
@@ -272,6 +307,7 @@ function App() {
   const [tablaId, setTablaId]       = React.useState("inventario");
   const [filters, setFilters]       = React.useState({ sem: null, fin: null, gerente: null, urgente: false });
   const [vehicle, setVehicle]       = React.useState(null);
+  const [editVehicleId, setEditVehicleId] = React.useState(null);
   const [colabAutoOpen, setColabAutoOpen] = React.useState(false);
   const [rowsVersion,   setRowsVersion]   = React.useState(0);
   const [authLoading, setAuthLoading]     = React.useState(true);
@@ -606,6 +642,7 @@ function App() {
           {view === "inventario" && <InventarioEditor
             rows={A.ROWS} usuarios={A.USUARIOS || []}
             usuarioActual={tenant.usuarioActual}
+            initialSelId={editVehicleId}
             onRowsChange={() => setRowsVersion(v => v + 1)} />}
           {view === "ventas" && <ProcesoVenta rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} />}
           {view === "crm"    && <CRMClientes  rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} />}
@@ -630,7 +667,8 @@ function App() {
           {view === "usuarios" && <RegistroUsuarios usuarioActual={tenant.usuarioActual} />}
         </div>
       </main>
-      <VehicleDrawer v={vehicle} onClose={() => setVehicle(null)} usuarioActual={tenant.usuarioActual} />
+      <VehicleDrawer v={vehicle} onClose={() => setVehicle(null)} usuarioActual={tenant.usuarioActual}
+        onEdit={(id) => { setEditVehicleId(id); setView("inventario"); }} />
 
       <TweaksPanel>
         <TweakSection label="Marca" />
