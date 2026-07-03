@@ -566,6 +566,33 @@ function ImportarInventario({ onIrInventario, onImportDone }) {
               </button>
             </div>
             <DropZone onFile={handleFile} />
+
+            {/* Leyenda de campos */}
+            <div style={{ marginTop: 24, padding: "18px 20px", background: "var(--surface, #f4f6fb)", borderRadius: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 12 }}>
+                Campos reconocidos — <span style={{ color: "var(--accent)" }}>azul = obligatorio</span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 12px" }}>
+                {CAMPOS_DESTINO.map(c => (
+                  <span key={c.key} style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 500,
+                    background: c.req ? "var(--accent-light, #e8f0fd)" : "#fff",
+                    color: c.req ? "var(--accent)" : "var(--ink)",
+                    border: "1px solid " + (c.req ? "var(--accent)" : "var(--border, #e5e7eb)"),
+                  }}>
+                    {c.req && <span style={{ fontWeight: 800 }}>*</span>}
+                    {c.label}
+                    <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 400 }}>
+                      {c.tipo === "date" ? "fecha" : c.tipo === "money" ? "$" : c.tipo === "pct" ? "%" : c.tipo === "num" ? "num" : "texto"}
+                    </span>
+                  </span>
+                ))}
+              </div>
+              <div style={{ marginTop: 10, fontSize: 11, color: "var(--muted)" }}>
+                Los encabezados de tu archivo no necesitan coincidir exactamente — el sistema detecta automáticamente columnas similares.
+              </div>
+            </div>
           </div>
         )}
 
