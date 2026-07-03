@@ -212,10 +212,11 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
 
         <hr className="nav-divider" />
 
-        {/* ── Equipo ── */}
-        <div className="nav-section">Equipo</div>
-        <Item id="colaboradores" icon={I.users({ width: 19, height: 19 })} label="Colaboradores" />
-        <Item id="usuarios" icon={I.person({ width: 19, height: 19 })} label="Registro de usuarios" />
+        {/* ── Configuración ── */}
+        <div className="nav-section" style={{ display:"flex", alignItems:"center", gap:5 }}>
+          {I.gear({ width:12, height:12 })} Configuración
+        </div>
+        <Item id="colaboradores" icon={I.users({ width: 19, height: 19 })} label="Equipo" />
 
       </nav>
 

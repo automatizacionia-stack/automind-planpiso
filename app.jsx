@@ -605,10 +605,9 @@ function App() {
   const tablaNombre = (A.TABLAS.find((b) => b.id === tablaId) || A.TABLAS[0]).nombre;
   const crumb = view === "database"     ? "Datos · " + tablaNombre
     : view === "inventario"    ? "Plan Piso · Registro de Inventario"
-    : view === "colaboradores" ? "Equipo · Colaboradores"
-    : view === "usuarios"      ? "Equipo · Registro de usuarios"
-    : view === "alertas"       ? "Admin · Alertas"
-    : view === "importar"      ? "Admin · Importar inventario"
+    : view === "colaboradores" ? "Configuración · Equipo"
+    : view === "alertas"       ? "Plan Piso · Alertas"
+    : view === "importar"      ? "Plan Piso · Importar inventario"
     : view === "config"        ? "Admin · Configuración"
     : view === "ventas"        ? "Proceso de Venta"
     : view === "crm"           ? "Ventas · CRM de Clientes"
@@ -664,7 +663,7 @@ function App() {
               )}
             </div>
           )}
-          {view === "usuarios" && <RegistroUsuarios usuarioActual={tenant.usuarioActual} />}
+          {view === "usuarios" && <Colaboradores usuarios={A.USUARIOS || []} rows={A.ROWS} usuarioActual={tenant.usuarioActual} />}
         </div>
       </main>
       <VehicleDrawer v={vehicle} onClose={() => setVehicle(null)} usuarioActual={tenant.usuarioActual}
