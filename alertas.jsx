@@ -857,14 +857,14 @@ function ConfigAlertas({ usuarioActual }) {
     setRules(prev => prev.map(r => r.semaforo === semaforo ? {...r, [field]: value} : r));
     setSaving(semaforo);
     try {
-      const rule = rules.find(r => r.semaforo === semaforo);
-      const updated = { ...rule, [field]: value, workspace_id: workspaceId };
+      // update() en lugar de upsert() para no pisar la columna mensajes
       await window.DB.client
         .from("alert_rules")
-        .upsert(updated, { onConflict: "workspace_id,semaforo" });
+        .update({ [field]: value })
+        .eq("workspace_id", workspaceId)
+        .eq("semaforo", semaforo);
     } catch(e) {
       console.error(e);
-      // Revertir en caso de error
       setRules(prev => prev.map(r => r.semaforo === semaforo ? {...r, [field]: !value} : r));
     } finally {
       setTimeout(() => setSaving(null), 600);
@@ -875,11 +875,11 @@ function ConfigAlertas({ usuarioActual }) {
     setRules(prev => prev.map(r => r.semaforo === semaforo ? {...r, telegram_enabled: value} : r));
     setSaving(semaforo);
     try {
-      const rule = rules.find(r => r.semaforo === semaforo);
       await window.DB.client
         .from("alert_rules")
-        .upsert({ ...rule, telegram_enabled: value, workspace_id: workspaceId },
-          { onConflict: "workspace_id,semaforo" });
+        .update({ telegram_enabled: value })
+        .eq("workspace_id", workspaceId)
+        .eq("semaforo", semaforo);
     } catch(e) {
       console.error(e);
       setRules(prev => prev.map(r => r.semaforo === semaforo ? {...r, telegram_enabled: !value} : r));
