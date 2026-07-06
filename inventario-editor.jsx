@@ -198,8 +198,8 @@ function JerarquiaSection({ vendedorIds, usuarios, onChange }) {
 
       {/* Cadena jerárquica por cada vendedor asignado */}
       {asignados.map(vend => {
-        const ger = usuarios.find(u => u.id === vend.reportaA) || null;
-        const dir = ger ? (usuarios.find(u => u.id === ger.reportaA) || null) : null;
+        const ger = usuarios.find(u => u.id === vend.reportaA && u.rol === "gerente") || null;
+        const dir = ger ? (usuarios.find(u => u.id === ger.reportaA && u.rol === "director") || null) : null;
         return (
           <div key={vend.id} className="jq-chain" style={{ marginBottom:8 }}>
             <NivelChip u={vend} color="#d99613" lbl="Vendedor" />
