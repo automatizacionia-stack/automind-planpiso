@@ -111,6 +111,8 @@ function JerarquiaSection({ vendedorIds, usuarios, onChange }) {
   const vendedorIds_ = Array.isArray(vendedorIds) ? vendedorIds : [];
   const vendedores   = usuarios.filter(u => u.rol === "vendedor");
   const asignados    = vendedorIds_.map(id => usuarios.find(u => u.id === id)).filter(Boolean);
+  const todosIds     = vendedores.map(v => v.id);
+  const todosActivo  = vendedores.length > 0 && vendedores.every(v => vendedorIds_.includes(v.id));
 
   function toggle(vid) {
     if (vendedorIds_.includes(vid)) {
@@ -118,6 +120,10 @@ function JerarquiaSection({ vendedorIds, usuarios, onChange }) {
     } else {
       onChange([...vendedorIds_, vid]);
     }
+  }
+
+  function toggleTodos() {
+    onChange(todosActivo ? [] : todosIds);
   }
 
   const NivelChip = ({ u, color, lbl }) => u ? (
@@ -137,9 +143,16 @@ function JerarquiaSection({ vendedorIds, usuarios, onChange }) {
 
   return (
     <div className="ef-seccion jq-wrap">
-      <div className="ef-sec-head">
-        <span>{I.users({ width:15, height:15 })}</span>
-        Asignación de vendedores
+      <div className="ef-sec-head" style={{ display:"flex", alignItems:"center" }}>
+        <span style={{ display:"flex", alignItems:"center" }}>{I.users({ width:15, height:15 })}</span>
+        <span style={{ marginLeft:6 }}>Asignación de vendedores</span>
+        {asignados.length > 0 && (
+          <span style={{ marginLeft:"auto", fontSize:11, fontWeight:600,
+            color:"var(--accent)", background:"#e8f0fe",
+            padding:"2px 8px", borderRadius:10 }}>
+            {asignados.length} asignado{asignados.length !== 1 ? "s" : ""}
+          </span>
+        )}
       </div>
 
       {/* Chips de selección múltiple */}
@@ -147,6 +160,24 @@ function JerarquiaSection({ vendedorIds, usuarios, onChange }) {
         {vendedores.length === 0 && (
           <span style={{ color:"var(--muted)", fontSize:12 }}>Sin vendedores registrados en este workspace.</span>
         )}
+
+        {/* Chip "Todos" — solo si hay más de un vendedor */}
+        {vendedores.length > 1 && (
+          <button type="button" onClick={toggleTodos}
+            title={todosActivo ? "Deseleccionar todos" : "Asignar a todos los vendedores"}
+            style={{ padding:"5px 14px", borderRadius:20, border:"2px solid",
+              borderColor: todosActivo ? "#7c3aed" : "var(--line)",
+              background:  todosActivo ? "#f3eeff" : "var(--card)",
+              color:       todosActivo ? "#7c3aed" : "var(--ink-2)",
+              fontSize:12, fontWeight: todosActivo ? 700 : 500, cursor:"pointer",
+              transition:"all .12s", display:"flex", alignItems:"center", gap:5 }}>
+            {todosActivo
+              ? <><span style={{ fontSize:10 }}>✓</span> Todos ({vendedores.length})</>
+              : <>Todos ({vendedores.length})</>}
+          </button>
+        )}
+
+        {/* Chips individuales */}
         {vendedores.map(v => {
           const sel = vendedorIds_.includes(v.id);
           return (
