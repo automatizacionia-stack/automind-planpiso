@@ -2,12 +2,14 @@
 name: Automind · Plan Piso
 description: Tablero financiero de inventario en piso para agencias automotrices, gobernado por un semáforo de riesgo.
 colors:
-  accent: "#2f6fed"
-  sidebar: "#1b2a57"
+  accent: "#3b82f6"
+  sidebar: "#0f172a"
+  nav-active: "#1e3a8a"
+  purple: "#7c3aed"
   ink: "#161b2e"
   ink-2: "#3c4257"
-  muted: "#6b7488"
-  bg: "#f3f5fb"
+  muted: "#64748b"
+  bg: "#f5f7fa"
   card: "#ffffff"
   line: "#e6e9f1"
   line-2: "#eef1f6"
