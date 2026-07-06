@@ -1,4 +1,4 @@
-/* Automind · Dashboard rediseñado — layout operativo/denso */
+/* Automind · Dashboard — layout operativo con estilo profesional */
 
 const SEM_ORDEN = ["intereses", "vencer", "comprometido", "rotacion", "saludable"];
 
@@ -8,19 +8,20 @@ function avg(arr) {
   return Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
 }
 
-/* ── KPI card superior ──────────────────────────────────────── */
-function TopKpi({ label, value, sub, tone }) {
-  const colors = {
-    danger:  "#e0492f",
-    warn:    "#d99613",
-    ok:      "#1f9d57",
-    neutral: "var(--ink)",
-  };
+/* ── KPI card superior — estilo mini-kpi con icono ─────────── */
+function TopKpi({ label, value, sub, icon, icoColor, icoBg }) {
   return (
-    <div className="dkpi">
-      <div className="dkpi-label">{label}</div>
-      <div className="dkpi-value" style={{ color: colors[tone] || colors.neutral }}>{value}</div>
-      {sub && <div className="dkpi-sub">{sub}</div>}
+    <div className="mini-kpi">
+      <div className="mk-ico" style={{ background: icoBg, color: icoColor }}>
+        {icon}
+      </div>
+      <div className="mk-body">
+        <div className="mk-label">{label}</div>
+        <div className="mk-value" style={{ color: icoColor !== "var(--accent)" ? icoColor : "var(--ink)" }}>
+          {value}
+        </div>
+        {sub && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{sub}</div>}
+      </div>
     </div>
   );
 }
@@ -39,22 +40,22 @@ function CardHead({ title, badge }) {
   );
 }
 
-/* ── Barra apilada ──────────────────────────────────────────── */
+/* ── Barra apilada (distribución semáforo) ──────────────────── */
 function StackedBar({ rows }) {
   const total = rows.length || 1;
   return (
-    <div style={{ padding: "10px 16px 6px" }}>
-      <div style={{ height: 10, display: "flex", borderRadius: 5, overflow: "hidden", gap: 1 }}>
+    <div style={{ padding: "12px 16px 10px" }}>
+      <div style={{ height: 14, display: "flex", borderRadius: 7, overflow: "hidden", gap: 1.5 }}>
         {SEM_ORDEN.map(k => {
           const pct = (rows.filter(r => r.semaforo === k).length / total) * 100;
           if (!pct) return null;
           return <div key={k} style={{ width: pct + "%", background: SEM[k].sol, height: "100%" }} />;
         })}
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "5px 14px", marginTop: 7 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "5px 14px", marginTop: 9 }}>
         {SEM_ORDEN.map(k => (
           <span key={k} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--muted)" }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: SEM[k].sol, display: "inline-block", flexShrink: 0 }} />
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: SEM[k].sol, display: "inline-block", flexShrink: 0 }} />
             {SEM[k].label}
           </span>
         ))}
@@ -76,43 +77,44 @@ function TablaSemaforo({ rows, kpis, filters, setFilters }) {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
-            {["Estado", "Unidades", "% inventario", "Distribución", "Interés acum."].map((h, i) => (
+            {["Estado", "Unidades", "% Inventario", "Distribución", "Interés acum."].map((h, i) => (
               <th key={h} style={{
-                padding: "6px 16px", fontSize: 10, color: "var(--muted)",
-                textTransform: "uppercase", letterSpacing: ".04em", fontWeight: 500,
-                textAlign: i === 0 ? "left" : "right",
-                borderBottom: "1px solid var(--line)",
+                padding: "6px 16px 8px", fontSize: 10, color: "var(--muted)",
+                textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 700,
+                textAlign: i === 0 ? "left" : i === 3 ? "left" : "right",
+                borderBottom: "1.5px solid var(--line)",
               }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {SEM_ORDEN.map(k => {
-            const count   = kpis[k] || 0;
-            const pct     = Math.round((count / total) * 100);
-            const isAct   = sem === k;
+            const count    = kpis[k] || 0;
+            const pct      = Math.round((count / total) * 100);
+            const isAct    = sem === k;
             const interesK = k === "intereses" ? (kpis.interesTotal || 0) : null;
             return (
               <tr key={k} onClick={() => setSem(k)}
                 style={{ cursor: "pointer", background: isAct ? SEM[k].bg : "transparent", transition: "background .12s" }}>
-                <td style={{ padding: "9px 16px", borderBottom: "1px solid var(--line-2)" }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: SEM[k].sol, flexShrink: 0 }} />
+                <td style={{ padding: "10px 16px", borderBottom: "1px solid var(--line-2)" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: SEM[k].sol, flexShrink: 0,
+                      boxShadow: `0 0 0 2.5px color-mix(in srgb, ${SEM[k].sol} 22%, transparent)` }} />
                     {SEM[k].label}
                   </span>
                 </td>
-                <td style={{ padding: "9px 16px", textAlign: "right", borderBottom: "1px solid var(--line-2)" }}>
-                  <b style={{ fontSize: 14, color: (k === "intereses" || k === "vencer") ? "#e0492f" : "var(--ink)" }}>{count}</b>
+                <td style={{ padding: "10px 16px", textAlign: "right", borderBottom: "1px solid var(--line-2)" }}>
+                  <b style={{ fontSize: 15, fontWeight: 700, color: (k === "intereses" || k === "vencer") ? "#e0492f" : "var(--ink)" }}>{count}</b>
                 </td>
-                <td style={{ padding: "9px 16px", textAlign: "right", fontSize: 12, color: "var(--muted)", borderBottom: "1px solid var(--line-2)" }}>
+                <td style={{ padding: "10px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, color: "var(--muted)", borderBottom: "1px solid var(--line-2)" }}>
                   {pct}%
                 </td>
-                <td style={{ padding: "9px 16px", borderBottom: "1px solid var(--line-2)" }}>
-                  <div style={{ flex: 1, height: 5, background: "var(--bg)", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ width: pct + "%", height: "100%", background: SEM[k].sol, borderRadius: 3 }} />
+                <td style={{ padding: "10px 16px", borderBottom: "1px solid var(--line-2)", minWidth: 120 }}>
+                  <div style={{ height: 8, background: "var(--line-2)", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ width: pct + "%", height: "100%", background: SEM[k].sol, borderRadius: 4, transition: "width .35s" }} />
                   </div>
                 </td>
-                <td style={{ padding: "9px 16px", textAlign: "right", fontSize: 12, borderBottom: "1px solid var(--line-2)", color: interesK ? "#e0492f" : "var(--muted)" }}>
+                <td style={{ padding: "10px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, borderBottom: "1px solid var(--line-2)", color: interesK ? "#e0492f" : "var(--muted)" }}>
                   {interesK ? fmtMoney(interesK, 0) : "—"}
                 </td>
               </tr>
@@ -137,14 +139,14 @@ function DiasPorSemaforo({ rows }) {
           const pct   = maxDias ? (dias / maxDias) * 100 : 0;
           return (
             <div key={k} className="drow">
-              <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: "var(--ink)", width: 118, flexShrink: 0 }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: SEM[k].sol, flexShrink: 0 }} />
+              <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: "var(--ink)", width: 124, flexShrink: 0 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: SEM[k].sol, flexShrink: 0 }} />
                 {SEM[k].label}
               </span>
-              <div className="dbar" style={{ height: 7 }}>
-                <div className="dbar-fill" style={{ width: pct + "%", background: SEM[k].sol }} />
+              <div className="dbar" style={{ height: 7, borderRadius: 4 }}>
+                <div className="dbar-fill" style={{ width: pct + "%", background: SEM[k].sol, borderRadius: 4 }} />
               </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", minWidth: 54 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", minWidth: 62 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{dias} días</span>
                 <span style={{ fontSize: 10, color: "var(--muted)" }}>{group.length} uds.</span>
               </div>
@@ -165,7 +167,9 @@ function PorModelo({ rows, filters, setFilters }) {
     modelos[m].total++;
     if (r.semaforo === "intereses" || r.semaforo === "vencer") modelos[m].alertas++;
   });
-  const list = Object.entries(modelos).sort((a, b) => b[1].total - a[1].total).slice(0, 7);
+  const list    = Object.entries(modelos).sort((a, b) => b[1].total - a[1].total).slice(0, 7);
+  const maxUnits = list[0]?.[1]?.total || 1;
+
   return (
     <Card>
       <CardHead title="Por modelo" />
@@ -173,9 +177,16 @@ function PorModelo({ rows, filters, setFilters }) {
         <div key={modelo}
           onClick={() => setFilters(f => ({ ...f, modelo: f.modelo === modelo ? null : modelo }))}
           className="drow"
-          style={{ justifyContent: "space-between", cursor: "pointer", fontSize: 12, background: filters.modelo === modelo ? "var(--bg)" : "transparent" }}>
-          <span style={{ fontWeight: 600, color: "var(--ink)" }}>{modelo}</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--muted)" }}>
+          style={{ cursor: "pointer", background: filters.modelo === modelo ? "var(--bg)" : "transparent",
+            transition: "background .12s", gap: 10 }}>
+          <span style={{ flex: 1, fontWeight: 600, color: "var(--ink)", fontSize: 12,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {modelo}
+          </span>
+          <div style={{ width: 52, height: 5, background: "var(--line-2)", borderRadius: 3, overflow: "hidden", flexShrink: 0 }}>
+            <div style={{ width: ((d.total / maxUnits) * 100) + "%", height: "100%", background: "var(--accent)", borderRadius: 3 }} />
+          </div>
+          <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--muted)", flexShrink: 0 }}>
             {d.total} uds.
             {d.alertas > 0 && (
               <span style={{ background: "#fcebe7", color: "#e0492f", fontWeight: 700, fontSize: 10, padding: "1px 7px", borderRadius: 20 }}>
@@ -186,6 +197,15 @@ function PorModelo({ rows, filters, setFilters }) {
         </div>
       ))}
       {!list.length && <div style={{ padding: "20px 16px", color: "var(--muted)", fontSize: 12 }}>Sin datos</div>}
+      {list.length > 0 && (
+        <div style={{ padding: "8px 16px 10px", borderTop: "1px solid var(--line-2)", marginTop: 2 }}>
+          <button onClick={() => setFilters(f => ({ ...f, modelo: null }))}
+            style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", background: "none", border: "none",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+            Ver todos los modelos {I.chevron({ width: 13, height: 13 })}
+          </button>
+        </div>
+      )}
     </Card>
   );
 }
@@ -193,10 +213,10 @@ function PorModelo({ rows, filters, setFilters }) {
 /* ── Antigüedad ─────────────────────────────────────────────── */
 function Antiguedad({ rows }) {
   const tramos = [
-    { label: "0 – 30 días",  fn: r => r.diasEnPiso <= 30,                       color: "#1f9d57" },
-    { label: "31 – 60 días", fn: r => r.diasEnPiso > 30 && r.diasEnPiso <= 60,  color: "#d99613" },
-    { label: "61 – 90 días", fn: r => r.diasEnPiso > 60 && r.diasEnPiso <= 90,  color: "#e07a20" },
-    { label: "91+ días",     fn: r => r.diasEnPiso > 90,                         color: "#e0492f" },
+    { label: "0 – 30 días",  fn: r => r.diasEnPiso <= 30,                      color: "#1f9d57" },
+    { label: "31 – 60 días", fn: r => r.diasEnPiso > 30 && r.diasEnPiso <= 60, color: "#d99613" },
+    { label: "61 – 90 días", fn: r => r.diasEnPiso > 60 && r.diasEnPiso <= 90, color: "#e07a20" },
+    { label: "+ 90 días",    fn: r => r.diasEnPiso > 90,                        color: "#e0492f" },
   ];
   const max = Math.max(...tramos.map(t => rows.filter(t.fn).length), 1);
   return (
@@ -205,12 +225,12 @@ function Antiguedad({ rows }) {
       {tramos.map(t => {
         const count = rows.filter(t.fn).length;
         return (
-          <div key={t.label} className="drow">
-            <span style={{ fontSize: 12, color: "var(--muted)", width: 90, flexShrink: 0 }}>{t.label}</span>
-            <div className="dbar" style={{ height: 6 }}>
-              <div className="dbar-fill" style={{ width: ((count / max) * 100) + "%", background: t.color }} />
+          <div key={t.label} className="drow" style={{ gap: 10 }}>
+            <span style={{ fontSize: 12, color: "var(--muted)", width: 86, flexShrink: 0 }}>{t.label}</span>
+            <div className="dbar" style={{ height: 7, borderRadius: 4 }}>
+              <div className="dbar-fill" style={{ width: ((count / max) * 100) + "%", background: t.color, borderRadius: 4 }} />
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: t.color, minWidth: 28, textAlign: "right" }}>{count}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: count > 0 ? t.color : "var(--muted)", minWidth: 22, textAlign: "right" }}>{count}</span>
           </div>
         );
       })}
@@ -220,7 +240,14 @@ function Antiguedad({ rows }) {
 
 /* ── Carga por vendedor ─────────────────────────────────────── */
 function CargaVendedor({ rows, usuarios }) {
-  const AVCOLORS = ["#e6f1fb:#185fa5","#eaf3de:#3b6d11","#faeeda:#854f0b","#fbeaf0:#993556","#f1efe8:#5f5e5a","#fcebe7:#a32d2d"];
+  const AVCOLORS = [
+    { bg: "#e6f1fb", txt: "#185fa5" },
+    { bg: "#eaf3de", txt: "#3b6d11" },
+    { bg: "#faeeda", txt: "#854f0b" },
+    { bg: "#fbeaf0", txt: "#993556" },
+    { bg: "#f1efe8", txt: "#5f5e5a" },
+    { bg: "#fcebe7", txt: "#a32d2d" },
+  ];
   const vendedores = (usuarios || [])
     .map(v => ({
       ...v,
@@ -235,26 +262,29 @@ function CargaVendedor({ rows, usuarios }) {
     const ids = r.vendedorIds || (r.vendedorId ? [r.vendedorId] : []);
     return ids.length === 0;
   }).length;
-  const maxUnits   = Math.max(...vendedores.map(v => v.total), sinAsignar, 1);
+  const maxUnits = Math.max(...vendedores.map(v => v.total), sinAsignar, 1);
 
   return (
     <Card>
       <CardHead title="Carga por vendedor" />
       {vendedores.map((v, i) => {
-        const [bg, txt] = (AVCOLORS[i] || AVCOLORS[0]).split(":");
-        const initials  = v.nombre.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+        const { bg, txt } = AVCOLORS[i] || AVCOLORS[0];
+        const initials    = v.nombre.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
         return (
-          <div key={v.id} className="drow">
-            <div style={{ width: 26, height: 26, borderRadius: "50%", background: bg, color: txt, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+          <div key={v.id} className="drow" style={{ gap: 9 }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: bg, color: txt,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
               {initials}
             </div>
-            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "var(--ink)",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {v.nombre.split(" ").slice(0, 2).join(" ")}
             </span>
-            <div style={{ width: 60, height: 5, background: "var(--bg)", borderRadius: 3, overflow: "hidden" }}>
-              <div style={{ width: ((v.total / maxUnits) * 100) + "%", height: "100%", background: "#2f6fed", borderRadius: 3 }} />
+            <div style={{ width: 70, height: 6, background: "var(--line-2)", borderRadius: 3, overflow: "hidden", flexShrink: 0 }}>
+              <div style={{ width: ((v.total / maxUnits) * 100) + "%", height: "100%", background: "var(--accent)", borderRadius: 3 }} />
             </div>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", minWidth: 20, textAlign: "right" }}>{v.total}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", minWidth: 20, textAlign: "right" }}>{v.total}</span>
             {v.alertas > 0 && (
               <span style={{ fontSize: 10, color: "#e0492f", fontWeight: 700, minWidth: 18 }}>⚠{v.alertas}</span>
             )}
@@ -262,13 +292,16 @@ function CargaVendedor({ rows, usuarios }) {
         );
       })}
       {sinAsignar > 0 && (
-        <div className="drow" style={{ borderBottom: "none" }}>
-          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--bg)", color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0 }}>—</div>
+        <div className="drow" style={{ borderBottom: "none", gap: 9 }}>
+          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--line-2)", color: "var(--muted)",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+            {I.person({ width: 15, height: 15 })}
+          </div>
           <span style={{ flex: 1, fontSize: 12, color: "var(--muted)" }}>Sin asignar</span>
-          <div style={{ width: 60, height: 5, background: "var(--bg)", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{ width: 70, height: 6, background: "var(--line-2)", borderRadius: 3, overflow: "hidden", flexShrink: 0 }}>
             <div style={{ width: ((sinAsignar / maxUnits) * 100) + "%", height: "100%", background: "#e0492f", borderRadius: 3 }} />
           </div>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#e0492f", minWidth: 20, textAlign: "right" }}>{sinAsignar}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#e0492f", minWidth: 20, textAlign: "right" }}>{sinAsignar}</span>
         </div>
       )}
       {!vendedores.length && !sinAsignar && (
@@ -415,7 +448,7 @@ function VendidosMes({ rows }) {
 
   const vendidos = rows.filter(r => {
     if (r.estadoVenta !== "VENDIDO") return false;
-    if (!r.fechaVenta) return true; // sin fecha → mostrar igual
+    if (!r.fechaVenta) return true;
     const fv = r.fechaVenta instanceof Date ? r.fechaVenta : new Date(r.fechaVenta);
     return fv.getFullYear() * 100 + fv.getMonth() === mesActual;
   });
@@ -424,27 +457,27 @@ function VendidosMes({ rows }) {
     <Card>
       <CardHead title={"Vendidos · " + MESES[HOY.getMonth()]} badge={vendidos.length} />
       {vendidos.length === 0 ? (
-        <div style={{ padding:"20px 16px", color:"var(--muted)", fontSize:12 }}>Sin ventas registradas este mes.</div>
+        <div style={{ padding: "20px 16px", color: "var(--muted)", fontSize: 12 }}>Sin ventas registradas este mes.</div>
       ) : (
-        <div style={{ padding:"0 0 4px" }}>
+        <div style={{ padding: "0 0 4px" }}>
           {vendidos.map(r => {
             const fv = r.fechaVenta ? (r.fechaVenta instanceof Date ? r.fechaVenta : new Date(r.fechaVenta)) : null;
             return (
-              <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 16px",
-                borderBottom:"1px solid var(--line-2)", fontSize:12 }}>
-                <span style={{ width:8, height:8, borderRadius:"50%", background:"#7c3aed", flexShrink:0 }} />
-                <span style={{ flex:1 }}>
-                  <b style={{ color:"var(--ink)", fontSize:13 }}>
+              <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px",
+                borderBottom: "1px solid var(--line-2)", fontSize: 12 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--purple)", flexShrink: 0 }} />
+                <span style={{ flex: 1 }}>
+                  <b style={{ color: "var(--ink)", fontSize: 13 }}>
                     {r.descripcion || [r.marca, r.modelo].filter(Boolean).join(" ") || "Sin descripción"}
                   </b>
                   <br />
-                  <span style={{ color:"var(--muted)" }}>
+                  <span style={{ color: "var(--muted)" }}>
                     {[r.inv ? "INV " + r.inv : null, r.anio, r.colorExterior].filter(Boolean).join(" · ")}
                   </span>
                 </span>
                 {fv && (
-                  <span style={{ color:"#7c3aed", fontSize:11, fontWeight:700, whiteSpace:"nowrap" }}>
-                    {fv.getDate()}/{fv.getMonth()+1}
+                  <span style={{ color: "var(--purple)", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
+                    {fv.getDate()}/{fv.getMonth() + 1}
                   </span>
                 )}
               </div>
@@ -458,9 +491,9 @@ function VendidosMes({ rows }) {
 
 /* ── Dashboard principal ────────────────────────────────────── */
 function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuarioActual }) {
-  // Separar inventario activo de vendidos del mes
-  const HOY = new Date();
-  const mesActual = HOY.getFullYear() * 100 + HOY.getMonth();
+  const HOY        = new Date();
+  const MESES      = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const mesActual  = HOY.getFullYear() * 100 + HOY.getMonth();
 
   const rowsActivos = rows.filter(r => r.estadoVenta !== "VENDIDO");
   const rowsVendidosMes = rows.filter(r => {
@@ -470,7 +503,6 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
     return fv.getFullYear() * 100 + fv.getMonth() === mesActual;
   });
 
-  // Recomputar KPIs solo sobre activos
   const kpisActivos = {
     ...kpis,
     total:        rowsActivos.length,
@@ -483,34 +515,80 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
   };
 
   const criticas   = (kpisActivos.intereses || 0) + (kpisActivos.vencer || 0);
-  const sinAsignar = rowsActivos.filter(r => {
-    const ids = r.vendedorIds || (r.vendedorId ? [r.vendedorId] : []);
-    return ids.length === 0;
-  }).length;
   const usuarios   = window.AUTOMIND ? window.AUTOMIND.USUARIOS || [] : [];
 
   return (
     <div className="page">
-      <div className="page-head">
-        <h1>Dashboard</h1>
-        <p className="page-sub">Estado general del inventario. Haz clic en cualquier fila del semáforo para filtrar la lista.</p>
+
+      {/* ── Encabezado con selector de período ── */}
+      <div className="page-head" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div>
+          <h1 style={{ margin: "0 0 6px" }}>Dashboard</h1>
+          <p className="page-sub">Estado general de tus agentes y procesos</p>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px",
+            background: "var(--card)", border: "1px solid var(--line)", borderRadius: 9,
+            fontSize: 13, fontWeight: 600, color: "var(--ink)", userSelect: "none" }}>
+            {I.clock({ width: 14, height: 14 })}
+            <span>{MESES[HOY.getMonth()]}</span>
+            {I.chevron({ width: 13, height: 13 })}
+          </div>
+          <button onClick={() => setFilters({ sem: null, fin: null, gerente: null, modelo: null, urgente: false })}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px",
+              background: "var(--card)", border: "1px solid var(--line)", borderRadius: 9,
+              fontSize: 13, fontWeight: 600, color: "var(--ink-2)", cursor: "pointer",
+              transition: "background .12s" }}
+            onMouseOver={e => e.currentTarget.style.background = "var(--bg)"}
+            onMouseOut={e => e.currentTarget.style.background = "var(--card)"}>
+            {I.filter({ width: 14, height: 14 })} Filtros
+          </button>
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div className="dkpi-grid">
-        <TopKpi label="Total inventario"             value={rowsActivos.length}                    sub="unidades en piso"                                                        tone="neutral" />
-        <TopKpi label="Críticas (intereses + vencer)" value={criticas}                               sub={rowsActivos.length ? Math.round((criticas / rowsActivos.length) * 100) + "% del inventario" : "—"} tone={criticas > 0 ? "danger" : "ok"} />
-        <TopKpi label="Interés acumulado"             value={fmtMoney(kpisActivos.interesTotal || 0, 0)} sub={(kpisActivos.intereses || 0) + " unidades generando interés"}         tone={kpisActivos.interesTotal > 0 ? "warn" : "ok"} />
-        <TopKpi label="Vendidos este mes"             value={rowsVendidosMes.length}                sub="unidades cerradas"                                                       tone={rowsVendidosMes.length > 0 ? "ok" : "neutral"} />
+      {/* ── KPIs ── */}
+      <div className="mini-grid">
+        <TopKpi
+          label="Total inventario"
+          value={rowsActivos.length}
+          sub="unidades en piso"
+          icon={I.truck({ width: 20, height: 20 })}
+          icoColor="var(--accent)"
+          icoBg={`color-mix(in srgb, var(--accent) 12%, #fff)`}
+        />
+        <TopKpi
+          label="Críticas"
+          value={criticas}
+          sub={rowsActivos.length ? Math.round((criticas / rowsActivos.length) * 100) + "% del inventario" : "—"}
+          icon={I.bell({ width: 20, height: 20 })}
+          icoColor={criticas > 0 ? "#e0492f" : "var(--accent)"}
+          icoBg={criticas > 0 ? "#fcebe7" : `color-mix(in srgb, var(--accent) 12%, #fff)`}
+        />
+        <TopKpi
+          label="Interés acumulado"
+          value={fmtMoney(kpisActivos.interesTotal || 0, 0)}
+          sub={(kpisActivos.intereses || 0) + " unidades generando interés"}
+          icon={I.coins({ width: 20, height: 20 })}
+          icoColor={kpisActivos.interesTotal > 0 ? "#e07a20" : "var(--accent)"}
+          icoBg={kpisActivos.interesTotal > 0 ? "#fdf0e6" : `color-mix(in srgb, var(--accent) 12%, #fff)`}
+        />
+        <TopKpi
+          label="Vendidos este mes"
+          value={rowsVendidosMes.length}
+          sub="unidades cerradas"
+          icon={I.sale({ width: 20, height: 20 })}
+          icoColor={rowsVendidosMes.length > 0 ? "#1f9d57" : "var(--accent)"}
+          icoBg={rowsVendidosMes.length > 0 ? "#e7f5ed" : `color-mix(in srgb, var(--accent) 12%, #fff)`}
+        />
       </div>
 
-      {/* Semáforo + Días promedio */}
+      {/* ── Semáforo + Días promedio ── */}
       <div className="d-grid-2-1">
         <TablaSemaforo rows={rowsActivos} kpis={kpisActivos} filters={filters} setFilters={setFilters} />
         <DiasPorSemaforo rows={rowsActivos} />
       </div>
 
-      {/* Modelo + Antigüedad + Vendedor + Vendidos del mes */}
+      {/* ── Modelo + Antigüedad + Vendedor + Vendidos ── */}
       <div className="d-grid-3">
         <PorModelo rows={rowsActivos} filters={filters} setFilters={setFilters} />
         <Antiguedad rows={rowsActivos} />
@@ -518,8 +596,14 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
         <VendidosMes rows={rows} />
       </div>
 
-      {/* Lista detallada — solo activos */}
-      <ListaDetallada rows={rowsActivos} filters={filters} setFilters={setFilters} openVehicle={openVehicle} usuarioActual={usuarioActual} />
+      {/* ── Lista detallada ── */}
+      <ListaDetallada
+        rows={rowsActivos}
+        filters={filters}
+        setFilters={setFilters}
+        openVehicle={openVehicle}
+        usuarioActual={usuarioActual}
+      />
     </div>
   );
 }
