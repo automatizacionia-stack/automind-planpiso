@@ -201,48 +201,193 @@ function KanbanView({ clientes, onOpen }) {
   );
 }
 
-/* ── Lista ────────────────────────────────────────────────────────────── */
-function ListaView({ clientes, onOpen }) {
-  const cols = ["Nombre","Etapa","Vehículo de interés","Presupuesto","Forma pago","Asesor","Sin contacto","Próxima acción"];
+/* ── Lista (grid estilo inventario) ──────────────────────────────────── */
+const COLS_CRM = [
+  { key:"nombre",      titulo:"Nombre",             w:210 },
+  { key:"etapa",       titulo:"Etapa",              w:130 },
+  { key:"interes",     titulo:"Vehículo",           w:175 },
+  { key:"presupuesto", titulo:"Presupuesto",        w:110, align:"right" },
+  { key:"formaPago",   titulo:"Pago",               w:90  },
+  { key:"prob",        titulo:"Prob.",              w:100, align:"center" },
+  { key:"asesor",      titulo:"Asesor",             w:115 },
+  { key:"uc",          titulo:"Sin contacto",       w:100, align:"center" },
+  { key:"ciudad",      titulo:"Ciudad",             w:100 },
+  { key:"prox",        titulo:"Próxima acción",     w:260 },
+];
+
+function ListaGrid({ clientes, onOpen }) {
+  const [filtroEtapa, setFiltroEtapa] = React.useState("");
+  const [sort, setSort] = React.useState({ key:"uc", dir:1 });
+
+  const toggleSort = (key) =>
+    setSort(prev => prev.key === key ? { key, dir: -prev.dir } : { key, dir: 1 });
+
+  const filtered = filtroEtapa ? clientes.filter(c => c.etapa === filtroEtapa) : clientes;
+
+  const sorted = [...filtered].sort((a, b) => {
+    let va = a[sort.key], vb = b[sort.key];
+    if (sort.key === "uc") { va = _dsc(a.uc); vb = _dsc(b.uc); }
+    if (sort.key === "presupuesto" || sort.key === "prob") { va = Number(va); vb = Number(vb); }
+    if (typeof va === "string") return sort.dir * va.localeCompare(vb, "es");
+    return sort.dir * ((va || 0) - (vb || 0));
+  });
+
+  const thStyle = (col) => ({
+    width: col.w, padding:"6px 11px", textAlign: col.align || "left",
+    fontSize:11, fontWeight:700, color:"var(--muted)", cursor:"pointer",
+    userSelect:"none", whiteSpace:"nowrap", position:"sticky", top:0,
+    background:"var(--bg)", borderBottom:"1px solid var(--line)",
+    borderRight:"1px solid var(--line)",
+  });
+
+  const SortIco = ({ ckey }) => {
+    if (sort.key !== ckey) return <span style={{ color:"var(--line)", marginLeft:3, fontSize:10 }}>⇅</span>;
+    return <span style={{ color:"var(--accent)", marginLeft:3, fontSize:10 }}>{sort.dir > 0 ? "↑" : "↓"}</span>;
+  };
+
   return (
-    <div className="dcard">
-      <div style={{ overflowX:"auto" }}>
-        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+    <div>
+      {/* Toolbar */}
+      <div style={{ display:"flex", gap:8, marginBottom:8, alignItems:"center" }}>
+        <select value={filtroEtapa} onChange={e => setFiltroEtapa(e.target.value)}
+          style={{ padding:"5px 10px", border:"1px solid var(--line)", borderRadius:7,
+            fontSize:12, background:"var(--card)", color:"var(--ink)", fontFamily:"inherit",
+            cursor:"pointer", outline:"none" }}>
+          <option value="">Todas las etapas</option>
+          {ETAPAS_CRM.map(e => <option key={e} value={e}>{e}</option>)}
+        </select>
+        <span style={{ fontSize:12, color:"var(--muted)", marginLeft:4 }}>
+          {sorted.length} cliente{sorted.length !== 1 ? "s" : ""}
+          {filtroEtapa ? ` en ${filtroEtapa}` : ""}
+        </span>
+        <span style={{ fontSize:11, color:"var(--muted)", marginLeft:"auto" }}>
+          Clic en columna para ordenar
+        </span>
+      </div>
+
+      {/* Grid */}
+      <div style={{ overflowX:"auto", borderRadius:8, border:"1px solid var(--line)",
+        background:"var(--card)", maxHeight:"calc(100vh - 320px)", overflowY:"auto" }}>
+        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
           <thead>
-            <tr style={{ background:"var(--bg)" }}>
-              {cols.map(h => (
-                <th key={h} style={{ padding:"8px 13px", textAlign:"left", fontSize:11,
-                  fontWeight:700, color:"var(--muted)", borderBottom:"1px solid var(--line)",
-                  whiteSpace:"nowrap" }}>{h}</th>
+            <tr>
+              {/* columna # */}
+              <th style={{ width:38, padding:"6px 8px", textAlign:"center", fontSize:11,
+                fontWeight:700, color:"var(--muted)", position:"sticky", top:0,
+                background:"var(--bg)", borderBottom:"1px solid var(--line)",
+                borderRight:"2px solid var(--line)" }}>#</th>
+              {COLS_CRM.map(col => (
+                <th key={col.key} style={thStyle(col)} onClick={() => toggleSort(col.key)}>
+                  {col.titulo}<SortIco ckey={col.key} />
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {clientes.map((c, i) => (
-              <tr key={c.id}
-                onClick={() => onOpen(c)}
-                style={{ borderBottom:"1px solid var(--line)", cursor:"pointer",
-                  background: i % 2 === 0 ? "transparent" : "var(--bg)" }}
-                onMouseOver={e => e.currentTarget.style.background = "#f0f4ff"}
-                onMouseOut={e => e.currentTarget.style.background = i % 2 === 0 ? "transparent" : "var(--bg)"}
-              >
-                <td style={{ padding:"9px 13px", fontWeight:700, color:"var(--ink)", whiteSpace:"nowrap" }}>
-                  {c.nombre}
-                </td>
-                <td style={{ padding:"9px 13px" }}><EtapaBadge etapa={c.etapa} /></td>
-                <td style={{ padding:"9px 13px", color:"var(--ink-2)", fontSize:12, whiteSpace:"nowrap" }}>{c.interes}</td>
-                <td style={{ padding:"9px 13px", fontWeight:600, color:"var(--ink)", whiteSpace:"nowrap" }}>
-                  ${(c.presupuesto / 1000).toFixed(0)}k
-                </td>
-                <td style={{ padding:"9px 13px", color:"var(--muted)", whiteSpace:"nowrap" }}>{c.formaPago}</td>
-                <td style={{ padding:"9px 13px", color:"var(--muted)", whiteSpace:"nowrap" }}>{c.asesor.split(" ")[0]}</td>
-                <td style={{ padding:"9px 13px" }}><DiasTag dias={_dsc(c.uc)} /></td>
-                <td style={{ padding:"9px 13px", color:"var(--muted)", fontSize:12, maxWidth:220,
-                  overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                  {c.prox}
-                </td>
-              </tr>
-            ))}
+            {sorted.length === 0 ? (
+              <tr><td colSpan={COLS_CRM.length + 1}
+                style={{ padding:"32px", textAlign:"center", color:"var(--muted)", fontSize:13 }}>
+                Sin resultados
+              </td></tr>
+            ) : sorted.map((c, ri) => {
+              const dias = _dsc(c.uc);
+              const tdB  = { borderRight:"1px solid var(--line)" };
+              return (
+                <tr key={c.id}
+                  onClick={() => onOpen(c)}
+                  style={{ borderBottom:"1px solid var(--line)", cursor:"pointer" }}
+                  onMouseOver={e => e.currentTarget.style.background = "#f0f4ff"}
+                  onMouseOut={e => e.currentTarget.style.background = ""}>
+
+                  {/* # */}
+                  <td style={{ padding:"5px 8px", textAlign:"center", fontSize:11,
+                    color:"var(--muted)", borderRight:"2px solid var(--line)",
+                    fontVariantNumeric:"tabular-nums", background:"var(--bg)", userSelect:"none" }}>
+                    <span style={{ display:"block" }}>{ri + 1}</span>
+                    <span style={{ fontSize:9, color:"var(--accent)", letterSpacing:0 }}>↗</span>
+                  </td>
+
+                  {/* Nombre */}
+                  <td style={{ padding:"5px 11px", fontWeight:700, color:"var(--ink)",
+                    whiteSpace:"nowrap", ...tdB }}>
+                    <span style={{ display:"flex", alignItems:"center", gap:5 }}>
+                      <span style={{ fontSize:9, fontWeight:800, padding:"1px 4px", borderRadius:3, flexShrink:0,
+                        background: c.tipo === "Persona moral" ? "#f3e8ff" : "#eff6ff",
+                        color:      c.tipo === "Persona moral" ? "#7c3aed"  : "#1d4ed8" }}>
+                        {c.tipo === "Persona moral" ? "PM" : "PF"}
+                      </span>
+                      {c.nombre}
+                    </span>
+                  </td>
+
+                  {/* Etapa */}
+                  <td style={{ padding:"5px 11px", ...tdB }}>
+                    <EtapaBadge etapa={c.etapa} />
+                  </td>
+
+                  {/* Vehículo */}
+                  <td style={{ padding:"5px 11px", color:"var(--ink-2)",
+                    maxWidth:175, overflow:"hidden", textOverflow:"ellipsis",
+                    whiteSpace:"nowrap", ...tdB }}>
+                    {c.interes || "—"}
+                  </td>
+
+                  {/* Presupuesto */}
+                  <td style={{ padding:"5px 11px", textAlign:"right", fontWeight:600,
+                    color:"var(--ink)", whiteSpace:"nowrap",
+                    fontVariantNumeric:"tabular-nums", ...tdB }}>
+                    ${(c.presupuesto / 1000).toFixed(0)}k
+                  </td>
+
+                  {/* Pago */}
+                  <td style={{ padding:"5px 11px", color:"var(--muted)", whiteSpace:"nowrap", ...tdB }}>
+                    {c.formaPago}
+                  </td>
+
+                  {/* Prob */}
+                  <td style={{ padding:"5px 11px", ...tdB }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                      <div style={{ flex:1, height:4, background:"var(--line)", borderRadius:3,
+                        overflow:"hidden", minWidth:32 }}>
+                        <div style={{ height:"100%", width: c.prob + "%", borderRadius:3,
+                          background: c.prob >= 70 ? "#22c55e" : c.prob >= 40 ? "#d99613" : "#e0492f" }} />
+                      </div>
+                      <span style={{ fontSize:10, fontWeight:700, minWidth:26, textAlign:"right",
+                        color: c.prob >= 70 ? "#1f9d57" : c.prob >= 40 ? "#d99613" : "#e0492f" }}>
+                        {c.prob}%
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* Asesor */}
+                  <td style={{ padding:"5px 11px", color:"var(--muted)", whiteSpace:"nowrap", ...tdB }}>
+                    {c.asesor.split(" ")[0]}
+                  </td>
+
+                  {/* Sin contacto */}
+                  <td style={{ padding:"5px 11px", textAlign:"center", ...tdB }}>
+                    <DiasTag dias={dias} />
+                  </td>
+
+                  {/* Ciudad */}
+                  <td style={{ padding:"5px 11px", color:"var(--muted)", whiteSpace:"nowrap", ...tdB }}>
+                    {c.ciudad || "—"}
+                  </td>
+
+                  {/* Próxima acción */}
+                  <td style={{ padding:"5px 11px", color:"var(--muted)", fontSize:11,
+                    maxWidth:260, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {c.prox}
+                    {c.fprox && (
+                      <span style={{ marginLeft:5,
+                        color: _dsc(c.fprox) < 0 ? "#e0492f" : "var(--line)" }}>
+                        · {_fmtFechaCRM(c.fprox)}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -700,7 +845,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
 
       {/* Contenido de la vista */}
       {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={setSeleccionado} />}
-      {vista === "lista"    && <ListaView    clientes={clientes} onOpen={setSeleccionado} />}
+      {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
 
       {/* Aviso datos demo */}
