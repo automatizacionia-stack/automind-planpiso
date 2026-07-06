@@ -191,37 +191,42 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
       <nav className="nav">
 
         {/* ── Plan Piso ── */}
-        <div className="nav-section">Plan Piso</div>
-        <button className={"nav-item" + (view === "dashboard" ? " active" : "")} onClick={() => setView("dashboard")}>
-          <span className="nav-ico">{I.chart({ width: 19, height: 19 })}</span>
-          <span className="nav-lbl">Dashboard</span>
-        </button>
-        <button className={"nav-item" + (["inventario","database"].includes(view) ? " active" : "")} onClick={() => setView("inventario")}>
-          <span className="nav-ico">{I.truck({ width: 19, height: 19 })}</span>
-          <span className="nav-lbl">Inventario</span>
-        </button>
-        <Item id="importar" icon={I.upload({ width: 19, height: 19 })} label="Importar inventario" />
-        <Item id="alertas" icon={I.bell({ width: 19, height: 19 })} label="Alertas" />
-
-        <hr className="nav-divider" />
+        <div className="nav-group" data-s="plan">
+          <div className="nav-section">
+            {I.grid({ width: 11, height: 11 })} Plan Piso
+          </div>
+          <button className={"nav-item" + (view === "dashboard" ? " active" : "")} onClick={() => setView("dashboard")}>
+            <span className="nav-ico">{I.chart({ width: 17, height: 17 })}</span>
+            <span className="nav-lbl">Dashboard</span>
+          </button>
+          <button className={"nav-item" + (["inventario","database"].includes(view) ? " active" : "")} onClick={() => setView("inventario")}>
+            <span className="nav-ico">{I.truck({ width: 17, height: 17 })}</span>
+            <span className="nav-lbl">Inventario</span>
+          </button>
+          <Item id="importar" icon={I.upload({ width: 17, height: 17 })} label="Importar inventario" />
+          <Item id="alertas"  icon={I.bell({   width: 17, height: 17 })} label="Alertas" />
+        </div>
 
         {/* ── Ventas ── */}
-        <div className="nav-section">Ventas</div>
-        <Item id="ventas" icon={I.sale({ width: 19, height: 19 })} label="Proceso de venta" />
-        <Item id="crm" icon={I.contacts({ width: 19, height: 19 })} label="Clientes" />
-
-        <hr className="nav-divider" />
+        <div className="nav-group" data-s="ventas">
+          <div className="nav-section">
+            {I.arrowUR({ width: 11, height: 11 })} Ventas
+          </div>
+          <Item id="ventas" icon={I.sale({     width: 17, height: 17 })} label="Proceso de venta" />
+          <Item id="crm"    icon={I.contacts({ width: 17, height: 17 })} label="Clientes" />
+        </div>
 
         {/* ── Configuración ── */}
-        <div className="nav-section" style={{ display:"flex", alignItems:"center", gap:5 }}>
-          {I.gear({ width:12, height:12 })} Configuración
+        <div className="nav-group">
+          <div className="nav-section">
+            {I.gear({ width: 11, height: 11 })} Configuración
+          </div>
+          <Item id="colaboradores" icon={I.users({ width: 17, height: 17 })} label="Equipo" />
         </div>
-        <Item id="colaboradores" icon={I.users({ width: 19, height: 19 })} label="Equipo" />
 
       </nav>
 
       <div className="side-foot">
-        {/* Botón cambiar subcuenta — solo para agency owners */}
         {tenant && tenant.isAgencyOwner && onSwitchWorkspace && (
           <button className="ws-switcher-btn" onClick={onSwitchWorkspace}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
@@ -241,7 +246,7 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
             </div>
             <button className="logout-btn" title="Cerrar sesión" onClick={onLogout}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"
-                strokeLinecap="round" strokeLinejoin="round" width="17" height="17">
+                strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                 <polyline points="16 17 21 12 16 7"/>
                 <line x1="21" y1="12" x2="9" y2="12"/>
