@@ -436,16 +436,165 @@ function ClienteDrawer({ c, onClose }) {
   );
 }
 
+/* ── Modal "Nuevo cliente" ─────────────────────────────────────────────
+   Crea un registro local con los campos del pipeline. Con datos reales
+   esto haría un INSERT contra la tabla `clientes` de Supabase.
+   initialData: objeto opcional con prefill desde Plan Piso (vin, interes…) */
+function NuevoClienteModal({ onClose, onCreate, asesores, initialData }) {
+  const asesorOpciones = asesores.filter(a => a !== "Todos");
+  const ini = initialData || {};
+  const [f, setF] = React.useState({
+    nombre:"", tel:"", email:"", tipo:"Persona física",
+    canal:        ini.canal        || "Digital",
+    fuente:       "",
+    interes:      ini.interes      || "",
+    presupuesto:  ini.presupuesto  || "",
+    formaPago:"No definido", uso:"Personal", ciudad:"", estado:"",
+    asesor: ini.asesor && asesorOpciones.includes(ini.asesor) ? ini.asesor : (asesorOpciones[0] || ""),
+    vinVinculado:  ini.vinVinculado  || "",
+    inventarioId:  ini.inventarioId  || null,
+  });
+  const set = (k) => (e) => setF(prev => ({ ...prev, [k]: e.target.value }));
+  const puedeCrear = f.nombre.trim().length > 0;
+
+  const inputStyle = { width:"100%", padding:"7px 10px", border:"1px solid var(--line)",
+    borderRadius:7, fontSize:13, background:"var(--card)", color:"var(--ink)",
+    outline:"none", fontFamily:"inherit" };
+
+  const Campo = ({ label, full, children }) => (
+    <div style={{ display:"flex", flexDirection:"column", gap:4, gridColumn: full ? "1 / -1" : "auto" }}>
+      <label style={{ fontSize:11, fontWeight:700, color:"var(--muted)", textTransform:"uppercase", letterSpacing:".05em" }}>{label}</label>
+      {children}
+    </div>
+  );
+
+  return (
+    <>
+      <div className="scrim" onClick={onClose} />
+      <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
+        background:"var(--card)", borderRadius:12, width:"min(560px, 92vw)", maxHeight:"88vh",
+        overflowY:"auto", zIndex:1000, boxShadow:"0 20px 60px rgba(0,0,0,.25)" }}>
+
+        <div style={{ padding:"18px 22px", borderBottom:"1px solid var(--line)",
+          display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <h2 style={{ margin:0, fontSize:17 }}>Nuevo cliente</h2>
+          <button className="icon-btn ghost" onClick={onClose}>{I.close({ width:18, height:18 })}</button>
+        </div>
+
+        {/* Banner de contexto cuando llega desde Plan Piso */}
+        {ini.inventarioId && ini._ctx && (
+          <div style={{ margin:"12px 22px 0", padding:"9px 13px", background:"#eff6ff",
+            border:"1px solid #bfdbfe", borderRadius:8, fontSize:12, color:"#1d4ed8",
+            display:"flex", alignItems:"center", gap:10 }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"
+              strokeLinecap="round" strokeLinejoin="round" width="15" height="15" style={{ flexShrink:0 }}>
+              <path d="M3 6.5h11v9H3z"/><path d="M14 9.5h3.5L21 13v2.5h-7"/>
+              <circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>
+            </svg>
+            <span>
+              Desde piso · <b>{ini.interes}</b>
+              {ini._ctx.colorExterior ? ` · ${ini._ctx.colorExterior}` : ""}
+              {ini.vinVinculado ? <span style={{ marginLeft:6, fontFamily:"monospace", fontSize:11,
+                background:"#dbeafe", padding:"1px 5px", borderRadius:4 }}>{ini.vinVinculado}</span> : null}
+              <span style={{ marginLeft:8, fontWeight:700,
+                color: ini._ctx.semaforo === "intereses" ? "#991b1b"
+                     : ini._ctx.semaforo === "vencer"    ? "#c2410c"
+                     : ini._ctx.semaforo === "comprometido" ? "#d97706" : "#166534" }}>
+                · Día {ini._ctx.diasEnPiso} en piso
+              </span>
+            </span>
+          </div>
+        )}
+
+        <div style={{ padding:"18px 22px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <Campo label="Nombre completo *" full>
+            <input style={inputStyle} value={f.nombre} onChange={set("nombre")} placeholder="Nombre y apellidos" autoFocus />
+          </Campo>
+          <Campo label="Teléfono">
+            <input style={inputStyle} value={f.tel} onChange={set("tel")} placeholder="555-000-0000" />
+          </Campo>
+          <Campo label="Email">
+            <input style={inputStyle} value={f.email} onChange={set("email")} placeholder="correo@ejemplo.com" />
+          </Campo>
+          <Campo label="Tipo de cliente">
+            <select style={inputStyle} value={f.tipo} onChange={set("tipo")}>
+              <option>Persona física</option><option>Persona moral</option>
+            </select>
+          </Campo>
+          <Campo label="Canal de origen">
+            <select style={inputStyle} value={f.canal} onChange={set("canal")}>
+              {["Digital","Piso","Referido","Marketplace","Otro"].map(o => <option key={o}>{o}</option>)}
+            </select>
+          </Campo>
+          <Campo label="Fuente específica">
+            <input style={inputStyle} value={f.fuente} onChange={set("fuente")} placeholder="Facebook Ads, visita directa…" />
+          </Campo>
+          <Campo label="Vehículo de interés">
+            <input style={inputStyle} value={f.interes} onChange={set("interes")} placeholder="Marca, modelo, año" />
+          </Campo>
+          <Campo label="Presupuesto estimado">
+            <input type="number" style={inputStyle} value={f.presupuesto} onChange={set("presupuesto")} placeholder="0" />
+          </Campo>
+          <Campo label="Forma de pago">
+            <select style={inputStyle} value={f.formaPago} onChange={set("formaPago")}>
+              {["No definido","Contado","Crédito"].map(o => <option key={o}>{o}</option>)}
+            </select>
+          </Campo>
+          <Campo label="Uso del vehículo">
+            <select style={inputStyle} value={f.uso} onChange={set("uso")}>
+              {["Personal","Trabajo","Familiar"].map(o => <option key={o}>{o}</option>)}
+            </select>
+          </Campo>
+          <Campo label="Ciudad">
+            <input style={inputStyle} value={f.ciudad} onChange={set("ciudad")} />
+          </Campo>
+          <Campo label="Estado">
+            <input style={inputStyle} value={f.estado} onChange={set("estado")} placeholder="Ej. N.L., Jal." />
+          </Campo>
+          <Campo label="Asesor asignado" full>
+            <select style={inputStyle} value={f.asesor} onChange={set("asesor")}>
+              {asesorOpciones.map(o => <option key={o}>{o}</option>)}
+            </select>
+          </Campo>
+        </div>
+
+        <div style={{ padding:"14px 22px", borderTop:"1px solid var(--line)",
+          display:"flex", justifyContent:"flex-end", gap:8 }}>
+          <button className="btn" onClick={onClose}>Cancelar</button>
+          <button className="btn primary" disabled={!puedeCrear}
+            style={{ opacity: puedeCrear ? 1 : .5, cursor: puedeCrear ? "pointer" : "not-allowed" }}
+            onClick={() => puedeCrear && onCreate(f)}>
+            Crear cliente
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ── Componente principal CRMClientes ────────────────────────────────── */
 function CRMClientes({ rows, kpis, usuarios }) {
+  const [clientesData, setClientesData] = React.useState(CLIENTES_DUMMY);
   const [vista, setVista]           = React.useState("kanban");
   const [seleccionado, setSeleccionado] = React.useState(null);
   const [busqueda, setBusqueda]     = React.useState("");
   const [filtroAsesor, setFiltroAsesor] = React.useState("Todos");
+  const [mostrarNuevo, setMostrarNuevo] = React.useState(false);
+  const [pendingData, setPendingData]   = React.useState(null);
 
-  const asesores = ["Todos", ...Array.from(new Set(CLIENTES_DUMMY.map(c => c.asesor)))];
+  /* Detectar prefill desde Plan Piso al montar */
+  React.useEffect(() => {
+    const pending = window.AUTOMIND && window.AUTOMIND._pendingNuevoCliente;
+    if (pending) {
+      window.AUTOMIND._pendingNuevoCliente = null;
+      setPendingData(pending);
+      setMostrarNuevo(true);
+    }
+  }, []);
 
-  const clientes = CLIENTES_DUMMY.filter(c => {
+  const asesores = ["Todos", ...Array.from(new Set(clientesData.map(c => c.asesor)))];
+
+  const clientes = clientesData.filter(c => {
     const q = busqueda.toLowerCase();
     const matchBusq = !q ||
       c.nombre.toLowerCase().includes(q) ||
@@ -455,7 +604,28 @@ function CRMClientes({ rows, kpis, usuarios }) {
     return matchBusq && matchAsesor;
   });
 
-  const urgentesCount = CLIENTES_DUMMY.filter(c => _dsc(c.uc) > 3).length;
+  const urgentesCount = clientesData.filter(c => _dsc(c.uc) > 3).length;
+
+  function crearCliente(datos) {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const nuevo = {
+      id: "c" + Date.now(),
+      nombre: datos.nombre.trim(),
+      tel: datos.tel, email: datos.email, tipo: datos.tipo, canal: datos.canal,
+      fuente: datos.fuente, interes: datos.interes,
+      presupuesto: Number(datos.presupuesto) || 0,
+      formaPago: datos.formaPago, uso: datos.uso,
+      etapa: "Prospección", asesor: datos.asesor || "Sin asignar",
+      prob: 10, uc: hoy, ciudad: datos.ciudad, estado: datos.estado,
+      prox: "Primer contacto", fprox: hoy, notas: "",
+      vinVinculado: datos.vinVinculado || null,
+      inventarioId: datos.inventarioId || null,
+    };
+    setClientesData(prev => [nuevo, ...prev]);
+    setMostrarNuevo(false);
+    setPendingData(null);
+    setSeleccionado(nuevo);
+  }
 
   const TabBtn = ({ id, label, badge }) => (
     <button onClick={() => setVista(id)} style={{
@@ -487,7 +657,8 @@ function CRMClientes({ rows, kpis, usuarios }) {
             Pipeline de ventas · <span style={{ color:"#8b5cf6", fontWeight:600 }}>Datos de ejemplo</span>
           </p>
         </div>
-        <button className="btn primary" style={{ display:"flex", alignItems:"center", gap:7 }}>
+        <button className="btn primary" style={{ display:"flex", alignItems:"center", gap:7 }}
+          onClick={() => setMostrarNuevo(true)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"
             strokeLinejoin="round" width="15" height="15"><path d="M12 5v14M5 12h14"/></svg>
           Nuevo cliente
@@ -495,7 +666,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
       </div>
 
       {/* KPIs */}
-      <StatsBar clientes={CLIENTES_DUMMY} />
+      <StatsBar clientes={clientesData} />
 
       {/* Controles */}
       <div style={{ display:"flex", gap:10, marginBottom:16, alignItems:"center", flexWrap:"wrap" }}>
@@ -544,6 +715,16 @@ function CRMClientes({ rows, kpis, usuarios }) {
 
       {/* Drawer de detalle */}
       <ClienteDrawer c={seleccionado} onClose={() => setSeleccionado(null)} />
+
+      {/* Modal nuevo cliente (con prefill opcional desde Plan Piso) */}
+      {mostrarNuevo && (
+        <NuevoClienteModal
+          asesores={asesores}
+          onClose={() => { setMostrarNuevo(false); setPendingData(null); }}
+          onCreate={crearCliente}
+          initialData={pendingData}
+        />
+      )}
     </div>
   );
 }

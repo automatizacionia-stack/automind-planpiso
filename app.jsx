@@ -14,7 +14,7 @@ function FormulaRow({ label, formula, result, neg }) {
   );
 }
 
-function VehicleDrawer({ v, onClose, onEdit, usuarioActual }) {
+function VehicleDrawer({ v, onClose, onEdit, onNuevoCliente, usuarioActual }) {
   // ── Todos los hooks ANTES de cualquier return condicional ──────────────────
   const [vendedorId, setVendedorId] = React.useState(v ? v.vendedorId : null);
 
@@ -198,7 +198,32 @@ function VehicleDrawer({ v, onClose, onEdit, usuarioActual }) {
               Editar unidad
             </button>
           )}
-          <button className="btn">Iniciar proceso de venta</button>
+          <button
+            className="btn"
+            disabled={v.estadoVenta !== 'DISPONIBLE'}
+            title={v.estadoVenta !== 'DISPONIBLE' ? `Unidad ${v.estadoVenta} — no disponible` : "Iniciar proceso de venta"}
+            style={{ opacity: v.estadoVenta !== 'DISPONIBLE' ? 0.45 : 1,
+                     cursor:  v.estadoVenta !== 'DISPONIBLE' ? 'not-allowed' : 'pointer' }}
+            onClick={() => {
+              if (v.estadoVenta !== 'DISPONIBLE') return;
+              const usuarios  = window.AUTOMIND ? window.AUTOMIND.USUARIOS || [] : [];
+              const asesorId  = (Array.isArray(v.vendedorIds) && v.vendedorIds[0]) || v.vendedorId || null;
+              const asesorObj = usuarios.find(u => u.id === asesorId);
+              if (!window.AUTOMIND) window.AUTOMIND = {};
+              window.AUTOMIND._pendingNuevoCliente = {
+                interes:      [v.marca, v.modelo, v.anio].filter(Boolean).join(" "),
+                canal:        "Piso",
+                asesor:       asesorObj ? asesorObj.nombre : "",
+                presupuesto:  v.montoFinanciado || "",
+                vinVinculado: v.vin  || "",
+                inventarioId: v.id   || null,
+                _ctx: { semaforo: v.semaforo, diasEnPiso: v.diasEnPiso, colorExterior: v.colorExterior },
+              };
+              onClose();
+              if (onNuevoCliente) onNuevoCliente();
+            }}>
+            Nuevo cliente
+          </button>
         </div>
       </aside>
     </>
@@ -667,7 +692,8 @@ function App() {
         </div>
       </main>
       <VehicleDrawer v={vehicle} onClose={() => setVehicle(null)} usuarioActual={tenant.usuarioActual}
-        onEdit={(id) => { setEditVehicleId(id); setView("inventario"); }} />
+        onEdit={(id) => { setEditVehicleId(id); setView("inventario"); }}
+        onNuevoCliente={() => { setVehicle(null); setView("crm"); }} />
 
       <TweaksPanel>
         <TweakSection label="Marca" />
