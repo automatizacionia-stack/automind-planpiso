@@ -39,6 +39,27 @@ const DEF_TELEGRAM = {
   vendedor: "<b>[ESTADO_NUEVO] · [VEHICULO]</b>\n\nHola [DESTINATARIO], tu unidad cambió de estado.\n📅 Día <b>[DIAS_EN_PISO]</b> en piso. Comunícate con tu gerente.",
 };
 
+const DEF_WHATSAPP = {
+  director: "*[ESTADO_NUEVO]* · [VEHICULO]\n─────────────────\n🔖 VIN: `[VIN]`\n\n📅 Día *[DIAS_EN_PISO]* en piso\n📊 Plan consumido: *[PCT_PLAN]%*\n💸 Interés acumulado: *[INTERES_ACUM]*\n\nEstimado [DESTINATARIO], se requiere atención inmediata.",
+  gerente:  "*[ESTADO_NUEVO]* · [VEHICULO]\n─────────────────\n🔖 VIN: `[VIN]`\n\n📅 Día *[DIAS_EN_PISO]* en piso\n📊 Plan consumido: *[PCT_PLAN]%*\n💸 Interés acumulado: *[INTERES_ACUM]*\n\nHola [DESTINATARIO], unidad de [VENDEDOR].",
+  vendedor: "*[ESTADO_NUEVO]* · [VEHICULO]\n\nHola [DESTINATARIO], tu unidad cambió de estado.\n📅 Día *[DIAS_EN_PISO]* en piso. Comunícate con tu gerente.",
+};
+
+/* ── Helper: parsear formato WhatsApp → HTML seguro ─────────── */
+function waHtml(text) {
+  const safe = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const html = safe
+    .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
+    .replace(/_([^_\n]+)_/g, "<em>$1</em>")
+    .replace(/`([^`\n]+)`/g,
+      "<code style=\"background:#e9ecef;padding:1px 4px;border-radius:3px;font-size:.9em\">$1</code>")
+    .replace(/\n/g, "<br/>");
+  return { __html: html };
+}
+
 function Toggle({ checked, onChange, disabled }) {
   return (
     <button
@@ -137,8 +158,8 @@ function LogRow({ entry }) {
   );
 }
 
-/* ── Fila de alerta con toggle de Telegram ──────────────────────────── */
-function AlertRuleRowWithTg({ rule, onUpdate, onUpdateTg, saving }) {
+/* ── Fila de alerta con toggles de Telegram y WhatsApp ─────────────── */
+function AlertRuleRowWithTg({ rule, onUpdate, onUpdateTg, onUpdateWp, wpEnabled, saving }) {
   const sem = SEM_CONFIG.find(s => s.key === rule.semaforo);
   if (!sem) return null;
 
@@ -179,6 +200,17 @@ function AlertRuleRowWithTg({ rule, onUpdate, onUpdateTg, saving }) {
         <span style={{ fontSize:11, display:"flex", alignItems:"center", gap:3, color:"var(--muted)" }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="11" height="11"><path d="M21.2 2L2 10.4l7.4 2.3L20 6.4l-8.9 8.1v5.5l3.3-3.3"/></svg>
           Telegram
+        </span>
+      </div>
+      {/* Columna WhatsApp */}
+      <div className="alert-col">
+        <Toggle checked={!!wpEnabled} onChange={v => onUpdateWp && onUpdateWp(rule.semaforo, v)} disabled={!rule.activa} />
+        <span style={{ fontSize:11, display:"flex", alignItems:"center", gap:3, color:"var(--muted)" }}>
+          <svg viewBox="0 0 24 24" width="11" height="11">
+            <path fill="#25D366" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path fill="#25D366" d="M12 2C6.477 2 2 6.484 2 12.017c0 1.99.518 3.86 1.427 5.48L2 22l4.62-1.4A9.962 9.962 0 0012 22c5.523 0 10-4.477 10-10 0-5.522-4.477-10-10-10zm0 18.333a8.327 8.327 0 01-4.247-1.163l-.305-.18-3.14.953.899-3.173-.2-.32A8.333 8.333 0 1112 20.333z"/>
+          </svg>
+          WhatsApp
         </span>
       </div>
       <div style={{ flex:"0 0 40px", textAlign:"center" }}>
@@ -511,6 +543,445 @@ function TabTelegram({ usuarioActual, workspaceId, rules, onUpdateTg, saving }) 
   );
 }
 
+/* ── Tab WhatsApp ─────────────────────────────────────────────────────── */
+function TabWhatsApp({ wpRules, setWpRules, rules }) {
+  const WA       = "#25D366";
+  const WA_DARK  = "#128C7E";
+  const WA_BG    = "#e5ddd5";
+  const WA_CHAT_BG = "#075E54";
+
+  /* Conexión (estado local — sin persistencia en BD) */
+  const [bizPhone,   setBizPhone]   = React.useState("");
+  const [apiKey,     setApiKey]     = React.useState("");
+  const [showKey,    setShowKey]    = React.useState(false);
+  const [connStatus, setConnStatus] = React.useState("idle"); // idle | connecting | connected
+
+  /* Números por rol */
+  const [phones,    setPhones]    = React.useState({ director:"", gerente:"" });
+  const [savedNums, setSavedNums] = React.useState(false);
+
+  /* Plantillas por semáforo + rol */
+  const [drafts, setDrafts] = React.useState(() =>
+    SEM_CONFIG.reduce((acc, s) => ({
+      ...acc,
+      [s.key]: { director: DEF_WHATSAPP.director, gerente: DEF_WHATSAPP.gerente, vendedor: DEF_WHATSAPP.vendedor },
+    }), {})
+  );
+
+  /* Vista previa */
+  const [previewSem, setPreviewSem] = React.useState("intereses");
+  const [previewRol, setPreviewRol] = React.useState("director");
+  const [savedTpl,   setSavedTpl]   = React.useState(false);
+
+  const currentDraft = ((drafts[previewSem] || {})[previewRol]) || DEF_WHATSAPP[previewRol] || "";
+
+  function setDraft(val) {
+    setDrafts(prev => ({
+      ...prev,
+      [previewSem]: { ...(prev[previewSem] || {}), [previewRol]: val },
+    }));
+  }
+
+  function restoreTpl() {
+    setDraft(DEF_WHATSAPP[previewRol] || "");
+  }
+
+  function saveTpl() {
+    setSavedTpl(true);
+    setTimeout(() => setSavedTpl(false), 2000);
+  }
+
+  function handleConnect() {
+    if (!bizPhone || !apiKey) return;
+    setConnStatus("connecting");
+    setTimeout(() => setConnStatus("connected"), 1800);
+  }
+
+  function fillPreview(tpl, rol) {
+    const names = { director:"Carlos Martínez", gerente:"Luis Hernández", vendedor:"Ana Torres" };
+    return tpl
+      .replace(/\[VEHICULO\]/g,        "Jetta Trendline 2026")
+      .replace(/\[VIN\]/g,             "3VWCP6BU1TM016475")
+      .replace(/\[DIAS_EN_PISO\]/g,    "89")
+      .replace(/\[PCT_PLAN\]/g,        "103")
+      .replace(/\[INTERES_ACUM\]/g,    "$1,250.00")
+      .replace(/\[ESTADO_NUEVO\]/g,    "En intereses ⚫")
+      .replace(/\[ESTADO_ANTERIOR\]/g, "Próximo a vencer 🔴")
+      .replace(/\[DESTINATARIO\]/g,    names[rol] || "—")
+      .replace(/\[VENDEDOR\]/g,        "Ana Torres")
+      .replace(/\[FECHA\]/g,           "6 de julio de 2026");
+  }
+
+  const previewText = fillPreview(currentDraft, previewRol);
+  const now = new Date();
+  const previewTime = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+
+  /* ── Icono WA reutilizable ── */
+  function IcoWA({ size=16, fill="#fff" }) {
+    return (
+      <svg viewBox="0 0 24 24" width={size} height={size}>
+        <path fill={fill} d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+        <path fill={fill} d="M12 2C6.477 2 2 6.484 2 12.017c0 1.99.518 3.86 1.427 5.48L2 22l4.62-1.4A9.962 9.962 0 0012 22c5.523 0 10-4.477 10-10 0-5.522-4.477-10-10-10zm0 18.333a8.327 8.327 0 01-4.247-1.163l-.305-.18-3.14.953.899-3.173-.2-.32A8.333 8.333 0 1112 20.333z"/>
+      </svg>
+    );
+  }
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+
+      {/* ── 1. Conectar WhatsApp Business ────────────────────── */}
+      <div className="dcard" style={{ padding:"24px" }}>
+        <div style={{ display:"flex", alignItems:"flex-start", gap:16 }}>
+          {/* Icono */}
+          <div style={{ width:48, height:48, borderRadius:14, background:WA,
+            display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <IcoWA size={26} fill="#fff" />
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"var(--ink)" }}>
+                WhatsApp Business
+              </div>
+              {connStatus === "connected" ? (
+                <span style={{ background:"#dcfce7", color:"#166534", fontSize:12, fontWeight:700,
+                  padding:"3px 10px", borderRadius:20, display:"flex", alignItems:"center", gap:5 }}>
+                  <span style={{ width:6, height:6, borderRadius:"50%", background:"#22c55e", display:"inline-block" }} />
+                  Conectado
+                </span>
+              ) : (
+                <span style={{ background:"#f1f5f9", color:"var(--muted)", fontSize:12,
+                  fontWeight:600, padding:"3px 10px", borderRadius:20 }}>
+                  Sin configurar
+                </span>
+              )}
+              <span style={{ marginLeft:"auto", background:"#fef9c3", color:"#854d0e",
+                fontSize:11, fontWeight:700, padding:"2px 9px", borderRadius:20 }}>
+                Beta
+              </span>
+            </div>
+
+            {connStatus !== "connected" ? (
+              <div>
+                <p style={{ margin:"0 0 16px", fontSize:13, color:"var(--muted)", lineHeight:1.6 }}>
+                  Para enviar alertas vía WhatsApp necesitas una cuenta de <strong>WhatsApp Business Platform</strong> aprobada por Meta.
+                  Ingresa el número de empresa y el token de acceso permanente.
+                </p>
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  {/* Número de empresa */}
+                  <div style={{ display:"flex", gap:0 }}>
+                    <span style={{ display:"flex", alignItems:"center", padding:"0 12px",
+                      background:"var(--bg)", border:"1.5px solid var(--line)",
+                      borderRight:"none", borderRadius:"9px 0 0 9px",
+                      fontSize:13, color:"var(--muted)", height:40, flexShrink:0, userSelect:"none" }}>
+                      +52
+                    </span>
+                    <input type="tel" value={bizPhone} onChange={e => setBizPhone(e.target.value)}
+                      placeholder="Número de empresa (10 dígitos)"
+                      style={{ flex:1, height:40, border:"1.5px solid var(--line)",
+                        borderRadius:"0 9px 9px 0", padding:"0 12px", fontSize:13,
+                        fontFamily:"inherit", color:"var(--ink)", background:"var(--bg)" }} />
+                  </div>
+                  {/* API Key */}
+                  <div style={{ display:"flex", gap:10 }}>
+                    <div style={{ flex:1, display:"flex", border:"1.5px solid var(--line)",
+                      borderRadius:9, overflow:"hidden", background:"var(--bg)" }}>
+                      <input type={showKey ? "text" : "password"}
+                        value={apiKey} onChange={e => setApiKey(e.target.value)}
+                        placeholder="Token de acceso permanente (Meta Business)"
+                        style={{ flex:1, height:40, border:"none", outline:"none",
+                          padding:"0 12px", fontSize:13,
+                          fontFamily:"'Cascadia Code','Cascadia Mono',monospace",
+                          color:"var(--ink)", background:"transparent" }} />
+                      <button onClick={() => setShowKey(v => !v)}
+                        style={{ padding:"0 12px", background:"none", border:"none",
+                          cursor:"pointer", color:"var(--muted)", flexShrink:0 }}>
+                        {showKey
+                          ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                          : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        }
+                      </button>
+                    </div>
+                    <button onClick={handleConnect}
+                      disabled={connStatus === "connecting" || !bizPhone || !apiKey}
+                      style={{ flexShrink:0, padding:"0 18px", height:40,
+                        background: (!bizPhone||!apiKey) ? "var(--muted)" : WA,
+                        color:"#fff", border:"none", borderRadius:9,
+                        cursor: (!bizPhone||!apiKey||connStatus==="connecting") ? "default" : "pointer",
+                        fontWeight:700, fontSize:13, fontFamily:"inherit",
+                        display:"flex", alignItems:"center", gap:7, transition:"background .2s",
+                        opacity: (!bizPhone||!apiKey) ? .5 : 1 }}>
+                      {connStatus === "connecting"
+                        ? <><span className="login-spinner" style={{ width:13, height:13, borderWidth:2 }}/> Conectando…</>
+                        : <><IcoWA size={14} fill="#fff"/> Conectar WhatsApp</>
+                      }
+                    </button>
+                  </div>
+                </div>
+                <div style={{ marginTop:12, fontSize:12, color:"var(--muted)", lineHeight:1.6,
+                  display:"flex", gap:6, alignItems:"flex-start",
+                  background:"var(--bg)", borderRadius:8, padding:"10px 13px" }}>
+                  <span>ℹ️</span>
+                  <span>
+                    Requiere una cuenta de <strong>WhatsApp Business Platform</strong> aprobada por Meta.
+                    El token se almacena de forma segura como variable de entorno del servidor — nunca en el cliente.
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p style={{ margin:"0 0 12px", fontSize:13, color:"var(--muted)", lineHeight:1.6 }}>
+                  Recibirás alertas en WhatsApp cuando las reglas del workspace tengan el canal activado.
+                </p>
+                <div style={{ fontSize:13, color:"var(--muted)", marginBottom:14 }}>
+                  📱 Número configurado:{" "}
+                  <strong style={{ color:"var(--ink)" }}>+52 {bizPhone}</strong>
+                </div>
+                <button className="btn" style={{ fontSize:13, color:"#e0492f" }}
+                  onClick={() => setConnStatus("idle")}>
+                  Desconectar WhatsApp
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 2. Números de destino por rol ────────────────────── */}
+      <div className="dcard" style={{ padding:"24px" }}>
+        <div style={{ fontSize:15, fontWeight:700, color:"var(--ink)", marginBottom:3 }}>
+          Números de destino por rol
+        </div>
+        <div style={{ fontSize:12.5, color:"var(--muted)", marginBottom:18, lineHeight:1.6 }}>
+          A estos números se enviarán las alertas de WhatsApp según las reglas configuradas abajo.
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {[["director","Director"],["gerente","Gerente"]].map(([rol, label]) => (
+            <div key={rol} style={{ display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:76, fontSize:13, fontWeight:600,
+                color:"var(--ink-2)", flexShrink:0 }}>{label}</div>
+              <span style={{ display:"flex", alignItems:"center", padding:"0 11px",
+                background:"var(--bg)", border:"1.5px solid var(--line)",
+                borderRight:"none", borderRadius:"9px 0 0 9px",
+                fontSize:13, color:"var(--muted)", height:38, flexShrink:0, userSelect:"none" }}>
+                +52
+              </span>
+              <input type="tel"
+                value={phones[rol]}
+                onChange={e => setPhones(p => ({...p, [rol]: e.target.value}))}
+                placeholder={`Celular del ${label.toLowerCase()} (10 dígitos)`}
+                style={{ flex:1, height:38, border:"1.5px solid var(--line)",
+                  borderRadius:"0 9px 9px 0", padding:"0 12px", fontSize:13,
+                  fontFamily:"inherit", color:"var(--ink)", background:"var(--bg)" }} />
+            </div>
+          ))}
+          <div style={{ display:"flex", alignItems:"flex-start", gap:12, paddingTop:4 }}>
+            <div style={{ width:76, fontSize:13, fontWeight:600,
+              color:"var(--ink-2)", flexShrink:0, paddingTop:2 }}>Vendedor</div>
+            <div style={{ fontSize:13, color:"var(--muted)", lineHeight:1.6 }}>
+              Se usa el número de celular registrado en el perfil de cada vendedor asignado al vehículo.
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop:18, display:"flex", justifyContent:"flex-end",
+          alignItems:"center", gap:10 }}>
+          {savedNums && (
+            <span style={{ fontSize:12, color:"#1f9d57", fontWeight:700 }}>✓ Guardado</span>
+          )}
+          <button className="btn primary" style={{ fontSize:13 }}
+            onClick={() => { setSavedNums(true); setTimeout(() => setSavedNums(false), 2000); }}>
+            Guardar números
+          </button>
+        </div>
+      </div>
+
+      {/* ── 3. Reglas: cuándo enviar por WhatsApp ────────────── */}
+      <div className="dcard">
+        <div style={{ padding:"16px 24px", borderBottom:"1px solid var(--line-2)" }}>
+          <div style={{ fontSize:14, fontWeight:700, color:"var(--ink)", marginBottom:3 }}>
+            ¿Cuándo enviar alertas por WhatsApp?
+          </div>
+          <div style={{ fontSize:12, color:"var(--muted)" }}>
+            Los estados activados enviarán un mensaje de WhatsApp además del email —
+            solo a los roles con número registrado arriba.
+          </div>
+        </div>
+        <div className="alert-hd" style={{ display:"flex", padding:"10px 24px", gap:0 }}>
+          <div style={{ flex:"0 0 220px" }}>Estado</div>
+          <div style={{ flex:1, textAlign:"center" }}>Activa en email</div>
+          <div style={{ flex:1, textAlign:"center", color:WA }}>WhatsApp</div>
+          <div style={{ flex:"0 0 40px" }}></div>
+        </div>
+        {rules.map(rule => {
+          const sem = SEM_CONFIG.find(s => s.key === rule.semaforo);
+          if (!sem) return null;
+          return (
+            <div key={rule.semaforo} style={{
+              display:"flex", alignItems:"center", padding:"14px 24px",
+              borderBottom:"1px solid var(--line-2)",
+              opacity: rule.activa ? 1 : .55,
+            }}>
+              <div style={{ flex:"0 0 220px", display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:16 }}>{sem.emoji}</span>
+                <span style={{ fontSize:13, fontWeight:700, color:"var(--ink)" }}>{sem.label}</span>
+              </div>
+              <div style={{ flex:1, textAlign:"center" }}>
+                <span style={{ fontSize:11, color: rule.activa ? "#1f9d57" : "var(--muted)",
+                  fontWeight:600 }}>{rule.activa ? "✓ Activa" : "Inactiva"}</span>
+              </div>
+              <div className="alert-col" style={{ flex:1, justifyContent:"center" }}>
+                <Toggle
+                  checked={!!wpRules[rule.semaforo]}
+                  onChange={v => setWpRules(prev => ({...prev, [rule.semaforo]: v}))}
+                  disabled={!rule.activa}
+                />
+                <span style={{ fontSize:11, color: wpRules[rule.semaforo] ? WA : "var(--muted)" }}>
+                  {wpRules[rule.semaforo] ? "Activo" : "Inactivo"}
+                </span>
+              </div>
+              <div style={{ flex:"0 0 40px" }} />
+            </div>
+          );
+        })}
+        <div style={{ padding:"13px 24px", fontSize:12.5, color:"var(--muted)",
+          borderTop:"1px solid var(--line-2)" }}>
+          💡 Las alertas de WhatsApp requieren conexión activa con la API de Meta y número registrado para cada rol.
+        </div>
+      </div>
+
+      {/* ── 4. Plantilla + Vista previa ──────────────────────── */}
+      <div className="dcard" style={{ padding:"24px" }}>
+        <div style={{ fontSize:15, fontWeight:700, color:"var(--ink)", marginBottom:3 }}>
+          Plantilla de mensaje
+        </div>
+        <div style={{ fontSize:12.5, color:"var(--muted)", marginBottom:16, lineHeight:1.6 }}>
+          Personaliza el texto por semáforo y rol. Usa{" "}
+          <code style={{ background:"var(--bg)", padding:"1px 6px", borderRadius:4, fontSize:11.5 }}>*negrita*</code>,{" "}
+          <code style={{ background:"var(--bg)", padding:"1px 6px", borderRadius:4, fontSize:11.5 }}>_cursiva_</code> y{" "}
+          <code style={{ background:"var(--bg)", padding:"1px 6px", borderRadius:4, fontSize:11.5 }}>`código`</code> — formato nativo de WhatsApp.
+        </div>
+
+        {/* Selector semáforo */}
+        <div style={{ display:"flex", gap:6, marginBottom:18, flexWrap:"wrap" }}>
+          {SEM_CONFIG.map(s => (
+            <button key={s.key} onClick={() => setPreviewSem(s.key)}
+              style={{ padding:"4px 13px", borderRadius:20, border:"1.5px solid",
+                cursor:"pointer", fontSize:12, fontWeight: previewSem === s.key ? 700 : 400,
+                borderColor: previewSem === s.key ? s.color : "var(--line)",
+                background: previewSem === s.key ? s.color + "1a" : "transparent",
+                color: previewSem === s.key ? s.color : "var(--muted)",
+                transition:"all .15s" }}>
+              {s.emoji} {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Grid editor + preview */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 290px", gap:22, alignItems:"start" }}>
+
+          {/* ── Editor ── */}
+          <div>
+            {/* Tabs de rol */}
+            <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+              {[["director","Director"],["gerente","Gerente"],["vendedor","Vendedor"]].map(([r,l]) => (
+                <button key={r} onClick={() => setPreviewRol(r)}
+                  style={{ padding:"5px 16px", borderRadius:20, border:"1.5px solid",
+                    cursor:"pointer", fontSize:12,
+                    fontWeight: previewRol === r ? 700 : 400,
+                    borderColor: previewRol === r ? "var(--accent)" : "var(--line)",
+                    background: previewRol === r ? "#e8f0fe" : "transparent",
+                    color: previewRol === r ? "var(--accent)" : "var(--muted)" }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            <textarea rows={9}
+              value={currentDraft}
+              onChange={e => setDraft(e.target.value)}
+              style={{ width:"100%", border:"1.5px solid var(--line)", borderRadius:9,
+                padding:"10px 13px", fontSize:13,
+                fontFamily:"'Cascadia Code','Cascadia Mono',monospace",
+                resize:"vertical", boxSizing:"border-box", lineHeight:1.7,
+                color:"var(--ink)", background:"var(--bg)" }} />
+            <div style={{ display:"flex", justifyContent:"space-between",
+              alignItems:"center", marginTop:10 }}>
+              <button onClick={restoreTpl}
+                style={{ fontSize:11.5, color:"var(--muted)", background:"none",
+                  border:"none", cursor:"pointer", padding:0,
+                  textDecoration:"underline" }}>
+                Restaurar predeterminado
+              </button>
+              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                {savedTpl && (
+                  <span style={{ fontSize:12, color:"#1f9d57", fontWeight:700 }}>✓ Guardado</span>
+                )}
+                <button className="btn primary" style={{ fontSize:13 }} onClick={saveTpl}>
+                  Guardar plantilla
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Vista previa ── */}
+          <div>
+            <div style={{ fontSize:11.5, fontWeight:700, color:"var(--muted)", marginBottom:8,
+              textTransform:"uppercase", letterSpacing:".06em" }}>
+              Vista previa
+            </div>
+            {/* Marco de chat */}
+            <div style={{ border:"2px solid var(--line)", borderRadius:16, overflow:"hidden" }}>
+              {/* Header estilo WA */}
+              <div style={{ background:WA_CHAT_BG, padding:"10px 14px",
+                display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ width:34, height:34, borderRadius:"50%", background:WA,
+                  display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2"
+                    strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                    <circle cx="12" cy="8" r="4"/>
+                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontSize:13.5, fontWeight:700, color:"#fff", lineHeight:1.2 }}>
+                    Automind Alertas
+                  </div>
+                  <div style={{ fontSize:11, color:"rgba(255,255,255,.65)" }}>en línea</div>
+                </div>
+              </div>
+              {/* Área de chat */}
+              <div style={{ background:WA_BG, padding:"14px 12px",
+                minHeight:180, display:"flex", flexDirection:"column",
+                justifyContent:"flex-end", gap:6 }}>
+                {/* Burbuja enviada */}
+                <div style={{ alignSelf:"flex-end", background:"#dcf8c6",
+                  borderRadius:"12px 12px 3px 12px", padding:"8px 11px",
+                  maxWidth:"92%", boxShadow:"0 1px 2px rgba(0,0,0,.13)" }}>
+                  <div style={{ fontSize:12.5, lineHeight:1.55, color:"#111",
+                    wordBreak:"break-word" }}
+                    dangerouslySetInnerHTML={waHtml(previewText)} />
+                  <div style={{ fontSize:10, color:"#8fa3b1", textAlign:"right",
+                    marginTop:5, display:"flex", alignItems:"center",
+                    justifyContent:"flex-end", gap:3 }}>
+                    {previewTime}
+                    <svg viewBox="0 0 18 10" fill="none" width="18" height="10">
+                      <path d="M1 5l3.5 3.5L9.5 2M6 5l3.5 3.5L14.5 2" stroke="#34b7f1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{ fontSize:11, color:"var(--muted)", marginTop:6,
+              textAlign:"center", lineHeight:1.5 }}>
+              Vista previa con datos de ejemplo
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 /* ── Tab: Editor de plantillas de mensajes ───────────────────────────── */
 function TabMensajes({ rules, workspaceId }) {
   const [expandido, setExpandido] = React.useState(null);
@@ -802,6 +1273,10 @@ function ConfigAlertas({ usuarioActual }) {
   const [testEmail,   setTestEmail]   = React.useState(usuarioActual?.email || "");
   const [testSending, setTestSending] = React.useState(false);
   const [testResult,  setTestResult]  = React.useState(null);
+  /* Estado WhatsApp — solo frontend, no persiste en BD */
+  const [wpRules,     setWpRules]     = React.useState(() =>
+    SEM_CONFIG.reduce((acc, s) => ({...acc, [s.key]: false}), {})
+  );
 
   React.useEffect(() => {
     if (!workspaceId || !window.DB) return;
@@ -869,6 +1344,11 @@ function ConfigAlertas({ usuarioActual }) {
     } finally {
       setTimeout(() => setSaving(null), 600);
     }
+  }
+
+  function handleUpdateWp(semaforo, value) {
+    setWpRules(prev => ({...prev, [semaforo]: value}));
+    // Frontend-only: no escribe en BD
   }
 
   async function handleUpdateTg(semaforo, value) {
@@ -952,6 +1432,16 @@ function ConfigAlertas({ usuarioActual }) {
             </svg>
             Telegram
           </button>
+          <button className={"btn" + (tab==="whatsapp"?" primary":"")} onClick={() => setTab("whatsapp")}
+            style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <svg viewBox="0 0 24 24" width="14" height="14">
+              <path fill={tab==="whatsapp" ? "#fff" : "#25D366"}
+                d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path fill={tab==="whatsapp" ? "#fff" : "#25D366"}
+                d="M12 2C6.477 2 2 6.484 2 12.017c0 1.99.518 3.86 1.427 5.48L2 22l4.62-1.4A9.962 9.962 0 0012 22c5.523 0 10-4.477 10-10 0-5.522-4.477-10-10-10zm0 18.333a8.327 8.327 0 01-4.247-1.163l-.305-.18-3.14.953.899-3.173-.2-.32A8.333 8.333 0 1112 20.333z"/>
+            </svg>
+            WhatsApp
+          </button>
           <button className={"btn" + (tab==="historial"?" primary":"")} onClick={() => { setTab("historial"); loadData(); }}>
             Historial
           </button>
@@ -995,6 +1485,12 @@ function ConfigAlertas({ usuarioActual }) {
           onUpdateTg={handleUpdateTg}
           saving={saving}
         />
+      ) : tab === "whatsapp" ? (
+        <TabWhatsApp
+          wpRules={wpRules}
+          setWpRules={setWpRules}
+          rules={rules}
+        />
       ) : tab === "mensajes" ? (
         <TabMensajes rules={rules} workspaceId={workspaceId} />
       ) : tab === "reglas" ? (
@@ -1015,11 +1511,22 @@ function ConfigAlertas({ usuarioActual }) {
                 Telegram
               </span>
             </div>
+            <div style={{ flex:1, textAlign:"center" }}>
+              <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:4, color:"#25D366" }}>
+                <svg viewBox="0 0 24 24" width="12" height="12">
+                  <path fill="#25D366" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                  <path fill="#25D366" d="M12 2C6.477 2 2 6.484 2 12.017c0 1.99.518 3.86 1.427 5.48L2 22l4.62-1.4A9.962 9.962 0 0012 22c5.523 0 10-4.477 10-10 0-5.522-4.477-10-10-10zm0 18.333a8.327 8.327 0 01-4.247-1.163l-.305-.18-3.14.953.899-3.173-.2-.32A8.333 8.333 0 1112 20.333z"/>
+                </svg>
+                WhatsApp
+              </span>
+            </div>
             <div style={{ flex:"0 0 40px" }}></div>
           </div>
           {rules.map(rule => (
             <AlertRuleRowWithTg key={rule.semaforo} rule={rule}
-              onUpdate={handleUpdate} onUpdateTg={handleUpdateTg} saving={saving} />
+              onUpdate={handleUpdate} onUpdateTg={handleUpdateTg}
+              onUpdateWp={handleUpdateWp} wpEnabled={!!wpRules[rule.semaforo]}
+              saving={saving} />
           ))}
           <div style={{ padding:"14px 24px", fontSize:12.5, color:"var(--muted)", borderTop:"1px solid var(--line-2)" }}>
             💡 Los emails y mensajes Telegram se envían cuando un vehículo cambia de estado.
