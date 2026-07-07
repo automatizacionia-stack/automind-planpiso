@@ -1074,6 +1074,57 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
             </Sec>
 
+            {/* § E3 — PRUEBA DE MANEJO */}
+            <Sec ico="🚗" titulo="Prueba de manejo">
+              <Fld label="¿Se realizó prueba?" full>
+                <div style={{ display:"flex", gap:8 }}>
+                  {["Sí","No"].map(op => (
+                    <button key={op} type="button"
+                      onClick={() => set("pruebaManejo", op === "Sí")}
+                      style={{
+                        padding:"6px 20px", borderRadius:8, fontSize:13, fontWeight:600,
+                        border:"1px solid var(--line)", cursor:"pointer", transition:"all .15s",
+                        background: (op === "Sí") === !!form.pruebaManejo
+                          ? "var(--accent)" : "var(--card)",
+                        color: (op === "Sí") === !!form.pruebaManejo ? "#fff" : "var(--muted)",
+                      }}>
+                      {op}
+                    </button>
+                  ))}
+                </div>
+              </Fld>
+              {form.pruebaManejo && (<>
+                <Fld label="Fecha de prueba">
+                  <input type="date" className="ef-input" style={IS}
+                    value={form.fechaPrueba || ""}
+                    onChange={e => set("fechaPrueba", e.target.value)} />
+                </Fld>
+                <Fld label="Unidad utilizada">
+                  <input className="ef-input" style={IS}
+                    value={form.unidadPrueba || ""}
+                    onChange={e => set("unidadPrueba", e.target.value)}
+                    placeholder="Marca, modelo, año o VIN" />
+                </Fld>
+                <Fld label="Resultado">
+                  <select className="ef-select" style={IS}
+                    value={form.resultadoPrueba || ""}
+                    onChange={e => set("resultadoPrueba", e.target.value)}>
+                    <option value="">— Seleccionar —</option>
+                    <option value="Positivo">✅ Positivo — cliente interesado</option>
+                    <option value="Neutral">⚪ Neutral — duda sobre la unidad</option>
+                    <option value="Negativo">❌ Negativo — no convenció</option>
+                  </select>
+                </Fld>
+                <Fld label="Observaciones del asesor" full>
+                  <textarea className="ef-input"
+                    style={{ ...IS, minHeight:72, resize:"vertical" }}
+                    value={form.obsPrueba || ""}
+                    onChange={e => set("obsPrueba", e.target.value)}
+                    placeholder="Preferencias detectadas, objeciones, próximo paso…" />
+                </Fld>
+              </>)}
+            </Sec>
+
             {/* § PROCESO DE VENTA */}
             <Sec ico={ICO_PROCESO} titulo="Proceso de venta">
               <Fld label="Etapa">

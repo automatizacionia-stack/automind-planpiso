@@ -539,7 +539,12 @@
       cp:          row.cp                     || "",
       numLicencia: row.numero_licencia        || "",
       tipoLic:     row.tipo_licencia          || "",
-      vigenciaLic: row.vigencia_licencia      || "",
+      vigenciaLic:   row.vigencia_licencia      || "",
+      pruebaManejo:  !!row.prueba_manejo,
+      fechaPrueba:   row.fecha_prueba            || "",
+      unidadPrueba:  row.unidad_prueba           || "",
+      resultadoPrueba: row.resultado_prueba      || "",
+      obsPrueba:     row.obs_prueba              || "",
       createdAt:   row.created_at             || null,
     };
   }
@@ -576,6 +581,11 @@
       numero_licencia:      c.numLicencia  || null,
       tipo_licencia:        c.tipoLic      || null,
       vigencia_licencia:    c.vigenciaLic  || null,
+      prueba_manejo:        !!c.pruebaManejo,
+      fecha_prueba:         c.fechaPrueba   || null,
+      unidad_prueba:        c.unidadPrueba  || null,
+      resultado_prueba:     c.resultadoPrueba || null,
+      obs_prueba:           c.obsPrueba     || null,
       workspace_id:         agencyId,
       agency_id:            parentId,
     };
