@@ -550,6 +550,19 @@
       e5AprobadoPor: row.e5_aprobado_por        || "",
       e5Fecha:       row.e5_fecha               || null,
       e5Notas:       row.e5_notas               || "",
+      // E6 — Proceso de crédito
+      e6Estado:       row.e6_estado             || "Pendiente",
+      e6Institucion:  row.e6_institucion        || "",
+      e6MontoAprobado: Number(row.e6_monto_aprobado) || 0,
+      e6MensualidadReal: Number(row.e6_mensualidad_real) || 0,
+      e6Condiciones:  row.e6_condiciones        || "",
+      e6FechaSolicitud: row.e6_fecha_solicitud  || "",
+      e6FechaResultado: row.e6_fecha_resultado  || "",
+      // E7 — Validación de expediente
+      e7ContratoOk:      !!row.e7_contrato_ok,
+      e7ExcepcionAuth:   !!row.e7_excepcion_auth,
+      e7ExcepcionNota:   row.e7_excepcion_nota  || "",
+      e7Obs:             row.e7_obs             || "",
       // E4 — Cotización
       unidadId:      row.unidad_id              || null,
       unidadDesc:    row.unidad_desc            || "",
@@ -607,6 +620,19 @@
       e5_aprobado_por:      c.e5AprobadoPor || null,
       e5_fecha:             c.e5Fecha       || null,
       e5_notas:             c.e5Notas       || null,
+      // E6 — Proceso de crédito
+      e6_estado:            c.e6Estado        || "Pendiente",
+      e6_institucion:       c.e6Institucion   || null,
+      e6_monto_aprobado:    Number(c.e6MontoAprobado)    || null,
+      e6_mensualidad_real:  Number(c.e6MensualidadReal)  || null,
+      e6_condiciones:       c.e6Condiciones   || null,
+      e6_fecha_solicitud:   c.e6FechaSolicitud || null,
+      e6_fecha_resultado:   c.e6FechaResultado || null,
+      // E7 — Validación de expediente
+      e7_contrato_ok:       !!c.e7ContratoOk,
+      e7_excepcion_auth:    !!c.e7ExcepcionAuth,
+      e7_excepcion_nota:    c.e7ExcepcionNota  || null,
+      e7_obs:               c.e7Obs            || null,
       // E4 — Cotización
       unidad_id:            c.unidadId      || null,
       unidad_desc:          c.unidadDesc    || null,

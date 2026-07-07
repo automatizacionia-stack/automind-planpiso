@@ -1477,6 +1477,173 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               );
             })()}
 
+            {/* § E6 — PROCESO DE CRÉDITO */}
+            {form.formaPagoCot === "Crédito" && (function() {
+              var ICO_BANK = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M3 10l9-7 9 7"/><line x1="12" y1="10" x2="12" y2="21"/></svg>);
+              var ESTADOS_E6 = ["Pendiente","En revisión","Aprobado","Rechazado","Condicional"];
+              var COLOR_E6 = {
+                "Pendiente":     { bg:"rgba(156,163,175,.12)", txt:"#6b7280", dot:"#9ca3af" },
+                "En revisión":   { bg:"rgba(59,130,246,.10)",  txt:"#3b82f6", dot:"#3b82f6" },
+                "Aprobado":      { bg:"rgba(34,197,94,.12)",   txt:"#16a34a", dot:"#22c55e" },
+                "Rechazado":     { bg:"rgba(239,68,68,.10)",   txt:"#dc2626", dot:"#ef4444" },
+                "Condicional":   { bg:"rgba(234,179,8,.12)",   txt:"#854d0e", dot:"#eab308" },
+              };
+              var estad = form.e6Estado || "Pendiente";
+              var cfg6  = COLOR_E6[estad] || COLOR_E6["Pendiente"];
+              return (
+                <Sec ico={ICO_BANK} titulo="Proceso de crédito (E6)">
+                  <Fld label="Estado del crédito" full>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                      {ESTADOS_E6.map(op => (
+                        <button key={op} type="button" onClick={() => set("e6Estado", op)}
+                          style={{
+                            padding:"5px 12px", borderRadius:7, fontSize:12, fontWeight:600,
+                            border:"1px solid var(--line)", cursor:"pointer", transition:"all .15s",
+                            background: estad === op ? COLOR_E6[op].dot : "var(--card)",
+                            color:       estad === op ? "#fff"           : "var(--muted)",
+                          }}>{op}</button>
+                      ))}
+                    </div>
+                  </Fld>
+                  <Fld label="Institución financiera">
+                    <input className="ef-input" style={IS}
+                      value={form.e6Institucion || ""}
+                      onChange={e => set("e6Institucion", e.target.value)}
+                      placeholder="Banco, financiera o SOFOM..." />
+                  </Fld>
+                  <Fld label="Fecha solicitud">
+                    <input type="date" className="ef-input" style={IS}
+                      value={form.e6FechaSolicitud || ""}
+                      onChange={e => set("e6FechaSolicitud", e.target.value)} />
+                  </Fld>
+                  <Fld label="Fecha resultado">
+                    <input type="date" className="ef-input" style={IS}
+                      value={form.e6FechaResultado || ""}
+                      onChange={e => set("e6FechaResultado", e.target.value)} />
+                  </Fld>
+                  <Fld label="Monto aprobado ($)">
+                    <input type="number" className="ef-input" style={IS} min="0" step="1000"
+                      value={form.e6MontoAprobado || ""}
+                      placeholder="0"
+                      onChange={e => set("e6MontoAprobado", Number(e.target.value) || 0)} />
+                  </Fld>
+                  <Fld label="Mensualidad real del banco ($)">
+                    <input type="number" className="ef-input"
+                      style={{ ...IS, fontWeight:700, color:"var(--accent)" }}
+                      min="0" step="100"
+                      value={form.e6MensualidadReal || ""}
+                      placeholder="0"
+                      onChange={e => set("e6MensualidadReal", Number(e.target.value) || 0)} />
+                  </Fld>
+                  <Fld label="Condiciones / observaciones" full>
+                    <textarea className="ef-input"
+                      style={{ ...IS, minHeight:64, resize:"vertical" }}
+                      value={form.e6Condiciones || ""}
+                      onChange={e => set("e6Condiciones", e.target.value)}
+                      placeholder="Tasa, seguro de vida, condición de aprobación..." />
+                  </Fld>
+                </Sec>
+              );
+            })()}
+
+            {/* § E7 — VALIDACIÓN DE EXPEDIENTE */}
+            {(function() {
+              var ICO_CLIP = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>);
+              var esCredito = form.formaPagoCot === "Crédito";
+              var items = [
+                { label:"Nombre completo",              ok:!!(form.nombre),                                      req:true  },
+                { label:"Teléfono o email",             ok:!!(form.tel || form.email),                           req:true  },
+                { label:"CURP (18 caracteres)",         ok:!!(form.curp && form.curp.length === 18),             req:false },
+                { label:"RFC",                          ok:!!(form.rfc),                                         req:false },
+                { label:"Domicilio completo",           ok:!!(form.direccion && form.colonia && form.cp),        req:false },
+                { label:"Unidad seleccionada",          ok:!!(form.unidadId),                                   req:true  },
+                { label:"Cotización (precio de venta)", ok:!!(form.precioVenta > 0),                            req:true  },
+                { label:"Aprobación del gerente (E5)",  ok: form.e5Estado === "Aprobado",                       req:true  },
+              ];
+              if (esCredito) {
+                items.push({ label:"Resultado de crédito (E6)", ok: form.e6Estado === "Aprobado" || form.e6Estado === "Condicional", req:true });
+              }
+              items.push({ label:"Contrato borrador revisado", ok:!!form.e7ContratoOk, req:false, manual:true });
+
+              var hayRojo    = items.some(function(x){ return x.req && !x.ok && !form.e7ExcepcionAuth; });
+              var hayAmarillo= !hayRojo && items.some(function(x){ return !x.ok; });
+              var semColor   = hayRojo ? "#ef4444" : hayAmarillo ? "#eab308" : "#22c55e";
+              var semLabel   = hayRojo ? "Expediente incompleto" : hayAmarillo ? "Expediente pendiente" : "Expediente completo";
+              var semBg      = hayRojo ? "rgba(239,68,68,.10)" : hayAmarillo ? "rgba(234,179,8,.10)" : "rgba(34,197,94,.10)";
+              var semBorder  = hayRojo ? "rgba(239,68,68,.35)" : hayAmarillo ? "rgba(234,179,8,.35)" : "rgba(34,197,94,.35)";
+              return (
+                <Sec ico={ICO_CLIP} titulo="Validación de expediente (E7)">
+                  <Fld label="Estado del expediente" full>
+                    <div style={{
+                      padding:"10px 14px", borderRadius:8,
+                      border:"1px solid " + semBorder, background:semBg,
+                      display:"flex", alignItems:"center", gap:10,
+                    }}>
+                      <span style={{
+                        width:14, height:14, borderRadius:"50%", background:semColor, flexShrink:0,
+                        boxShadow:"0 0 6px " + semColor,
+                      }} />
+                      <span style={{ fontWeight:700, fontSize:13, color:semColor }}>{semLabel}</span>
+                    </div>
+                  </Fld>
+                  <Fld label="Checklist de expediente" full>
+                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                      {items.map(function(it, idx) {
+                        var dot  = it.ok ? "#22c55e" : it.req ? "#ef4444" : "#eab308";
+                        var icon = it.ok ? "✓" : it.req ? "✗" : "○";
+                        return (
+                          <div key={idx}
+                            onClick={it.manual ? function(){ set("e7ContratoOk", !form.e7ContratoOk); } : undefined}
+                            style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 0",
+                              cursor: it.manual ? "pointer" : "default" }}>
+                            <span style={{
+                              width:18, height:18, borderRadius:4, background:dot + "22",
+                              border:"1px solid " + dot, display:"flex", alignItems:"center",
+                              justifyContent:"center", fontSize:10, fontWeight:800,
+                              color:dot, flexShrink:0,
+                            }}>{icon}</span>
+                            <span style={{ fontSize:12, color: it.ok ? "var(--ink)" : "var(--muted)",
+                              fontWeight: it.req && !it.ok ? 600 : 400 }}>
+                              {it.label}{it.req && !it.ok ? " *" : ""}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Fld>
+                  {(hayRojo || hayAmarillo) && (
+                    <Fld label="Excepción autorizada por gerente" full>
+                      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:form.e7ExcepcionAuth ? 6 : 0 }}>
+                        <button type="button"
+                          onClick={() => set("e7ExcepcionAuth", !form.e7ExcepcionAuth)}
+                          style={{
+                            padding:"5px 14px", borderRadius:7, fontSize:12, fontWeight:600,
+                            border:"1px solid " + (form.e7ExcepcionAuth ? "#f59e0b" : "var(--line)"),
+                            background: form.e7ExcepcionAuth ? "rgba(245,158,11,.12)" : "var(--card)",
+                            color: form.e7ExcepcionAuth ? "#92400e" : "var(--muted)", cursor:"pointer",
+                          }}>
+                          {form.e7ExcepcionAuth ? "✓ Excepción autorizada" : "Autorizar excepción"}
+                        </button>
+                      </div>
+                      {form.e7ExcepcionAuth && (
+                        <input className="ef-input" style={IS}
+                          value={form.e7ExcepcionNota || ""}
+                          onChange={e => set("e7ExcepcionNota", e.target.value)}
+                          placeholder="Motivo de la excepción..." />
+                      )}
+                    </Fld>
+                  )}
+                  <Fld label="Observaciones del expediente" full>
+                    <textarea className="ef-input"
+                      style={{ ...IS, minHeight:56, resize:"vertical" }}
+                      value={form.e7Obs || ""}
+                      onChange={e => set("e7Obs", e.target.value)}
+                      placeholder="Notas sobre documentos faltantes, próximos pasos..." />
+                  </Fld>
+                </Sec>
+              );
+            })()}
+
             {/* § PROCESO DE VENTA */}
             <Sec ico={ICO_PROCESO} titulo="Proceso de venta">
               <Fld label="Etapa">
