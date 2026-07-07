@@ -1228,6 +1228,16 @@ function ClienteDrawer({ c, onClose }) {
   );
 }
 
+/* Campo helper — definido FUERA del modal para evitar re-mount en cada render */
+function _NuevoCampo({ label, full, children }) {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:4, gridColumn: full ? "1 / -1" : "auto" }}>
+      <label style={{ fontSize:11, fontWeight:700, color:"var(--muted)", textTransform:"uppercase", letterSpacing:".05em" }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
 /* ── Modal "Nuevo cliente" ─────────────────────────────────────────────
    Crea un registro local con los campos del pipeline. Con datos reales
    esto haría un INSERT contra la tabla `clientes` de Supabase.
@@ -1253,12 +1263,7 @@ function NuevoClienteModal({ onClose, onCreate, asesores, initialData }) {
     borderRadius:7, fontSize:13, background:"var(--card)", color:"var(--ink)",
     outline:"none", fontFamily:"inherit" };
 
-  const Campo = ({ label, full, children }) => (
-    <div style={{ display:"flex", flexDirection:"column", gap:4, gridColumn: full ? "1 / -1" : "auto" }}>
-      <label style={{ fontSize:11, fontWeight:700, color:"var(--muted)", textTransform:"uppercase", letterSpacing:".05em" }}>{label}</label>
-      {children}
-    </div>
-  );
+  const Campo = _NuevoCampo;
 
   return (
     <>
