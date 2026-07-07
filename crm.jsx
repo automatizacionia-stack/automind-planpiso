@@ -988,9 +988,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             {/* § EXPEDIENTE (campos OCR) */}
             <Sec ico="🪪" titulo="Datos del expediente">
               <Fld label="CURP" full>
-                <input className="ef-input" style={IS} value={form.curp || ""}
+                <input className="ef-input" style={{...IS, fontFamily:"monospace", letterSpacing:1}} value={form.curp || ""}
                   onChange={e => set("curp", e.target.value.toUpperCase())}
-                  placeholder="18 caracteres" maxLength={18} style={{...IS, fontFamily:"monospace", letterSpacing:1}} />
+                  placeholder="18 caracteres" maxLength={18} />
               </Fld>
               <Fld label="RFC">
                 <input className="ef-input" style={{...IS, fontFamily:"monospace"}} value={form.rfc || ""}
