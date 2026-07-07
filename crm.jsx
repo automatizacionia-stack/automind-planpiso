@@ -1371,7 +1371,9 @@ function NuevoClienteModal({ onClose, onCreate, asesores, initialData }) {
 
 /* ── Componente principal CRMClientes ────────────────────────────────── */
 function CRMClientes({ rows, kpis, usuarios }) {
-  const [clientesData, setClientesData] = React.useState(CLIENTES_DUMMY);
+  const [clientesData, setClientesData] = React.useState([]);
+  const [cargando,     setCargando]     = React.useState(false);
+  const [errorCrm,     setErrorCrm]     = React.useState(null);
   const [vista, setVista]           = React.useState("editor");
   const [seleccionado, setSeleccionado] = React.useState(null);
   const [busqueda, setBusqueda]     = React.useState("");
@@ -1390,6 +1392,18 @@ function CRMClientes({ rows, kpis, usuarios }) {
     }
   }, []);
 
+  /* Cargar clientes reales desde Supabase */
+  React.useEffect(() => {
+    var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
+    if (!agencyId || !window.DB) return;
+    setCargando(true);
+    setErrorCrm(null);
+    window.DB.getClientes(agencyId)
+      .then(function(lista) { setClientesData(lista); })
+      .catch(function(err)  { console.error("[CRM] Error cargando clientes:", err); setErrorCrm("No se pudieron cargar los clientes."); })
+      .finally(function()   { setCargando(false); });
+  }, []);
+
   const asesores = ["Todos", ...Array.from(new Set(clientesData.map(c => c.asesor)))];
 
   const clientes = clientesData.filter(c => {
@@ -1404,9 +1418,9 @@ function CRMClientes({ rows, kpis, usuarios }) {
 
   const urgentesCount = clientesData.filter(c => _dsc(c.uc) > 3).length;
 
-  function crearCliente(datos) {
+  async function crearCliente(datos) {
     const hoy = new Date().toISOString().slice(0, 10);
-    const nuevo = {
+    var nuevo = {
       id: "c" + Date.now(),
       nombre: datos.nombre.trim(),
       tel: datos.tel, email: datos.email, tipo: datos.tipo, canal: datos.canal,
@@ -1419,6 +1433,17 @@ function CRMClientes({ rows, kpis, usuarios }) {
       vinVinculado: datos.vinVinculado || null,
       inventarioId: datos.inventarioId || null,
     };
+    /* Guardar en Supabase — reemplaza ID temporal con UUID real */
+    var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
+    if (agencyId && window.DB) {
+      try {
+        var guardado = await window.DB.saveCliente(agencyId, nuevo);
+        nuevo = Object.assign({}, guardado, {
+          vinVinculado: datos.vinVinculado || null,
+          inventarioId: datos.inventarioId || null,
+        });
+      } catch(e) { console.error("[CRM] Error guardando cliente:", e); }
+    }
     setClientesData(prev => [nuevo, ...prev]);
     setMostrarNuevo(false);
     setPendingData(null);
@@ -1429,6 +1454,12 @@ function CRMClientes({ rows, kpis, usuarios }) {
 
   function onClienteUpdate(updated) {
     setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
+    /* Persistir cambios en Supabase */
+    var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
+    if (agencyId && window.DB) {
+      window.DB.saveCliente(agencyId, updated)
+        .catch(function(e) { console.error("[CRM] Error actualizando cliente:", e); });
+    }
   }
 
   const TabBtn = ({ id, label, badge }) => (
@@ -1520,15 +1551,25 @@ function CRMClientes({ rows, kpis, usuarios }) {
       {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
 
-      {/* Aviso datos demo */}
-      <div style={{ marginTop:20, padding:"10px 16px", background:"#fef9c3", border:"1px solid #fde047",
-        borderRadius:8, fontSize:12, color:"#854d0e", display:"flex", alignItems:"center", gap:8 }}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"
-          strokeLinejoin="round" width="15" height="15" style={{ flexShrink:0 }}>
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        Vista con datos de ejemplo. Conecta con la tabla <code style={{ background:"rgba(0,0,0,.07)", padding:"1px 5px", borderRadius:4 }}>clientes</code> en Supabase corriendo el archivo <code style={{ background:"rgba(0,0,0,.07)", padding:"1px 5px", borderRadius:4 }}>supabase_add_clientes.sql</code> para activar datos reales.
-      </div>
+      {/* Estado cargando / vacío / error */}
+      {cargando && (
+        <div style={{ textAlign:"center", padding:"48px 0", color:"var(--muted)", fontSize:14 }}>
+          Cargando clientes…
+        </div>
+      )}
+      {!cargando && errorCrm && (
+        <div style={{ marginTop:16, padding:"12px 16px", background:"#fff5f5",
+          border:"1px solid #fecaca", borderRadius:8, fontSize:13, color:"#991b1b" }}>
+          {errorCrm}
+        </div>
+      )}
+      {!cargando && !errorCrm && clientesData.length === 0 && (
+        <div style={{ textAlign:"center", padding:"64px 20px", color:"var(--muted)" }}>
+          <div style={{ fontSize:40, marginBottom:10 }}>👥</div>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>Sin clientes aún</div>
+          <div style={{ fontSize:13 }}>Crea el primer cliente con el botón "Nuevo cliente".</div>
+        </div>
+      )}
 
       {/* Drawer de detalle */}
       <ClienteDrawer c={seleccionado} onClose={() => setSeleccionado(null)} />
@@ -1538,12 +1579,4 @@ function CRMClientes({ rows, kpis, usuarios }) {
         <NuevoClienteModal
           asesores={asesores}
           onClose={() => { setMostrarNuevo(false); setPendingData(null); }}
-          onCreate={crearCliente}
-          initialData={pendingData}
-        />
-      )}
-    </div>
-  );
-}
-
-Object.assign(window, { CRMClientes });
+          onCreate={c
