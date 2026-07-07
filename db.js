@@ -545,6 +545,11 @@
       unidadPrueba:  row.unidad_prueba           || "",
       resultadoPrueba: row.resultado_prueba      || "",
       obsPrueba:     row.obs_prueba              || "",
+      // E5 — Aprobación de gerente
+      e5Estado:      row.e5_estado              || "Pendiente",
+      e5AprobadoPor: row.e5_aprobado_por        || "",
+      e5Fecha:       row.e5_fecha               || null,
+      e5Notas:       row.e5_notas               || "",
       // E4 — Cotización
       unidadId:      row.unidad_id              || null,
       unidadDesc:    row.unidad_desc            || "",
@@ -597,6 +602,11 @@
       unidad_prueba:        c.unidadPrueba  || null,
       resultado_prueba:     c.resultadoPrueba || null,
       obs_prueba:           c.obsPrueba     || null,
+      // E5 — Aprobación de gerente
+      e5_estado:            c.e5Estado      || "Pendiente",
+      e5_aprobado_por:      c.e5AprobadoPor || null,
+      e5_fecha:             c.e5Fecha       || null,
+      e5_notas:             c.e5Notas       || null,
       // E4 — Cotización
       unidad_id:            c.unidadId      || null,
       unidad_desc:          c.unidadDesc    || null,
