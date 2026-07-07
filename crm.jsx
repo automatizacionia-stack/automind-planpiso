@@ -786,6 +786,98 @@ function DocUpload({ label, sublabel, docType, value, onChange, onExtract }) {
   );
 }
 
+/* ── Modal selector de unidad desde inventario Plan Piso ──────────────────── */
+function UnitPickerModal({ onSelect, onClose }) {
+  var [q, setQ] = React.useState("");
+  var rows = (window.AUTOMIND && window.AUTOMIND.ROWS) || [];
+  var COLOR_SEM = {
+    saludable:"#22c55e", rotacion:"#d99613", comprometido:"#f97316",
+    vencer:"#e0492f",    intereses:"#374151",
+  };
+  var filtradas = rows.filter(function(r) {
+    if (!q) return true;
+    var txt = [r.marca, r.modelo, r.anio, r.vin, r.color].filter(Boolean).join(" ").toLowerCase();
+    return txt.includes(q.toLowerCase());
+  });
+  return (
+    <div style={{
+      position:"fixed", inset:0, background:"rgba(0,0,0,.55)",
+      zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center",
+    }} onClick={onClose}>
+      <div style={{
+        background:"var(--card)", borderRadius:14, width:640, maxWidth:"92vw",
+        maxHeight:"75vh", display:"flex", flexDirection:"column", overflow:"hidden",
+        boxShadow:"0 20px 60px rgba(0,0,0,.35)",
+      }} onClick={function(e){ e.stopPropagation(); }}>
+        <div style={{
+          padding:"16px 20px", borderBottom:"1px solid var(--line)",
+          display:"flex", alignItems:"center", gap:10,
+        }}>
+          <span style={{ fontSize:15, fontWeight:700, color:"var(--ink)", flex:1 }}>
+            Seleccionar unidad del inventario
+          </span>
+          <button onClick={onClose} style={{
+            background:"none", border:"none", cursor:"pointer",
+            fontSize:18, color:"var(--muted)", lineHeight:1, padding:0,
+          }}>✕</button>
+        </div>
+        <div style={{ padding:"12px 20px", borderBottom:"1px solid var(--line)" }}>
+          <input autoFocus placeholder="Buscar por marca, modelo, año o VIN…"
+            value={q} onChange={function(e){ setQ(e.target.value); }}
+            style={{
+              width:"100%", padding:"8px 12px", fontSize:14, boxSizing:"border-box",
+              border:"1px solid var(--line)", borderRadius:8,
+              background:"var(--bg)", color:"var(--ink)", outline:"none", fontFamily:"inherit",
+            }} />
+        </div>
+        <div style={{ overflowY:"auto", flex:1 }}>
+          {rows.length === 0 && (
+            <div style={{ padding:"32px 20px", textAlign:"center", color:"var(--muted)", fontSize:13 }}>
+              El inventario Plan Piso no está cargado en esta sesión.<br/>
+              <span style={{ fontSize:12, opacity:.7 }}>Entra a Plan Piso primero para cargar los datos.</span>
+            </div>
+          )}
+          {rows.length > 0 && filtradas.length === 0 && (
+            <div style={{ padding:"32px 20px", textAlign:"center", color:"var(--muted)", fontSize:13 }}>
+              Sin resultados para «{q}»
+            </div>
+          )}
+          {filtradas.map(function(r) {
+            var desc = [r.marca, r.modelo, r.anio].filter(Boolean).join(" ");
+            if (r.vin) desc += " · " + r.vin;
+            var dotColor = COLOR_SEM[r.semaforo] || "#9ca3af";
+            return (
+              <div key={r.id}
+                onClick={function(){ onSelect({ id: r.id, desc: desc }); }}
+                style={{
+                  padding:"11px 20px", display:"flex", alignItems:"center", gap:12,
+                  cursor:"pointer", borderBottom:"1px solid var(--line)", transition:"background .12s",
+                }}
+                onMouseEnter={function(e){ e.currentTarget.style.background="var(--bg)"; }}
+                onMouseLeave={function(e){ e.currentTarget.style.background=""; }}
+              >
+                <span style={{ width:10, height:10, borderRadius:"50%", background:dotColor, flexShrink:0 }} />
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)" }}>{desc}</div>
+                  {r.color && <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>{r.color}</div>}
+                </div>
+                <span style={{
+                  fontSize:10, fontWeight:700, letterSpacing:.5, textTransform:"uppercase", color:dotColor,
+                }}>{r.semaforo || ""}</span>
+              </div>
+            );
+          })}
+        </div>
+        {filtradas.length > 0 && (
+          <div style={{ padding:"8px 20px", borderTop:"1px solid var(--line)", fontSize:11, color:"var(--muted)" }}>
+            {filtradas.length} unidad{filtradas.length !== 1 ? "es" : ""} en inventario
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Editor split‑panel de clientes (espejo de inventario‑editor) ────────── */
 function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const primer = defaultSelId
@@ -797,6 +889,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const [dirty, setDirty] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
   const [q,     setQ]     = React.useState("");
+  const [showUnitPicker, setShowUnitPicker] = React.useState(false);
 
   /* Auto-seleccionar cuando llega un cliente recién creado */
   React.useEffect(() => {
@@ -1125,6 +1218,156 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </>)}
             </Sec>
 
+            {/* § E4 — SELECCIÓN DE UNIDAD + COTIZACIÓN */}
+            <Sec ico={ICO_AUTO} titulo="Selección de unidad y cotización">
+              <Fld label="Unidad seleccionada" full>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  {form.unidadDesc ? (
+                    <div style={{
+                      flex:1, padding:"7px 10px", borderRadius:7,
+                      border:"1px solid var(--line)", background:"var(--bg)",
+                      fontSize:13, color:"var(--ink)", fontWeight:600,
+                    }}>{form.unidadDesc}</div>
+                  ) : (
+                    <div style={{
+                      flex:1, padding:"7px 10px", borderRadius:7,
+                      border:"1px dashed var(--line)", background:"transparent",
+                      fontSize:13, color:"var(--muted)", fontStyle:"italic",
+                    }}>Sin unidad seleccionada</div>
+                  )}
+                  <button type="button" onClick={() => setShowUnitPicker(true)} style={{
+                    padding:"7px 14px", borderRadius:7, border:"1px solid var(--accent)",
+                    background:"transparent", color:"var(--accent)",
+                    fontSize:12, fontWeight:600, cursor:"pointer", flexShrink:0,
+                  }}>{form.unidadDesc ? "Cambiar" : "Buscar unidad"}</button>
+                  {form.unidadDesc && (
+                    <button type="button"
+                      onClick={() => { set("unidadId", null); set("unidadDesc", ""); }}
+                      style={{
+                        padding:"7px 10px", borderRadius:7,
+                        border:"1px solid var(--line)", background:"transparent",
+                        color:"var(--muted)", fontSize:12, cursor:"pointer", flexShrink:0,
+                      }}>✕</button>
+                  )}
+                </div>
+              </Fld>
+
+              <Fld label="Precio de lista ($)">
+                <input type="number" className="ef-input" style={IS} min="0" step="1000"
+                  value={form.precioLista || ""}
+                  placeholder="0"
+                  onChange={e => {
+                    var pl = Number(e.target.value) || 0;
+                    var dm = Number(form.descuentoMonto) || 0;
+                    set("precioLista", pl);
+                    set("precioVenta", Math.max(0, pl - dm));
+                    var pl2 = Number(form.plazoMeses) || 0;
+                    var eng = Number(form.enganche) || 0;
+                    if (pl2 > 0) set("mensualidadEst", Math.round((Math.max(0, pl - dm) - eng) / pl2));
+                  }} />
+              </Fld>
+
+              <Fld label="Descuento ($)">
+                <input type="number" className="ef-input" style={IS} min="0" step="500"
+                  value={form.descuentoMonto || ""}
+                  placeholder="0"
+                  onChange={e => {
+                    var dm = Number(e.target.value) || 0;
+                    var pl = Number(form.precioLista) || 0;
+                    var pv = Math.max(0, pl - dm);
+                    set("descuentoMonto", dm);
+                    set("precioVenta", pv);
+                    var meses = Number(form.plazoMeses) || 0;
+                    var eng = Number(form.enganche) || 0;
+                    if (meses > 0) set("mensualidadEst", Math.round((pv - eng) / meses));
+                  }} />
+              </Fld>
+
+              <Fld label="Precio de venta ($)">
+                <input type="number" className="ef-input"
+                  style={{ ...IS, fontWeight:700, color:"var(--accent)" }}
+                  min="0" step="1000"
+                  value={form.precioVenta || ""}
+                  placeholder="0"
+                  onChange={e => {
+                    var pv = Number(e.target.value) || 0;
+                    var pl = Number(form.precioLista) || 0;
+                    set("precioVenta", pv);
+                    set("descuentoMonto", Math.max(0, pl - pv));
+                    var meses = Number(form.plazoMeses) || 0;
+                    var eng = Number(form.enganche) || 0;
+                    if (meses > 0) set("mensualidadEst", Math.round((pv - eng) / meses));
+                  }} />
+              </Fld>
+
+              <Fld label="Forma de pago" full>
+                <div style={{ display:"flex", gap:8 }}>
+                  {["Contado","Crédito"].map(op => (
+                    <button key={op} type="button"
+                      onClick={() => set("formaPagoCot", op)}
+                      style={{
+                        padding:"6px 20px", borderRadius:8, fontSize:13, fontWeight:600,
+                        border:"1px solid var(--line)", cursor:"pointer", transition:"all .15s",
+                        background: form.formaPagoCot === op ? "var(--accent)" : "var(--card)",
+                        color: form.formaPagoCot === op ? "#fff" : "var(--muted)",
+                      }}>{op}</button>
+                  ))}
+                </div>
+              </Fld>
+
+              {form.formaPagoCot === "Crédito" && (<>
+                <Fld label="Enganche ($)">
+                  <input type="number" className="ef-input" style={IS} min="0" step="1000"
+                    value={form.enganche || ""}
+                    placeholder="0"
+                    onChange={e => {
+                      var eng = Number(e.target.value) || 0;
+                      set("enganche", eng);
+                      var pv = Number(form.precioVenta) || 0;
+                      var meses = Number(form.plazoMeses) || 0;
+                      if (meses > 0) set("mensualidadEst", Math.round((pv - eng) / meses));
+                    }} />
+                </Fld>
+                <Fld label="Plazo">
+                  <select className="ef-select" style={IS}
+                    value={form.plazoMeses || ""}
+                    onChange={e => {
+                      var meses = Number(e.target.value) || 0;
+                      set("plazoMeses", meses);
+                      var pv = Number(form.precioVenta) || 0;
+                      var eng = Number(form.enganche) || 0;
+                      if (meses > 0) set("mensualidadEst", Math.round((pv - eng) / meses));
+                    }}>
+                    <option value="">— Seleccionar —</option>
+                    {[12,18,24,36,48,60,72].map(m => (
+                      <option key={m} value={m}>{m} meses</option>
+                    ))}
+                  </select>
+                </Fld>
+                <Fld label="Mensualidad estimada" full>
+                  <div style={{
+                    padding:"7px 10px", borderRadius:7, border:"1px solid var(--line)",
+                    background:"var(--bg)", fontSize:14, fontWeight:700, color:"var(--accent)",
+                  }}>
+                    {form.mensualidadEst > 0
+                      ? "$" + Number(form.mensualidadEst).toLocaleString("es-MX")
+                      : <span style={{ fontWeight:400, fontSize:12, color:"var(--muted)" }}>
+                          Se calcula al ingresar enganche y plazo
+                        </span>
+                    }
+                  </div>
+                </Fld>
+              </>)}
+
+              <Fld label="Notas de cotización" full>
+                <textarea className="ef-input"
+                  style={{ ...IS, minHeight:64, resize:"vertical" }}
+                  value={form.notasCot || ""}
+                  onChange={e => set("notasCot", e.target.value)}
+                  placeholder="Versión solicitada, accesorios incluidos, condiciones especiales…" />
+              </Fld>
+            </Sec>
+
             {/* § PROCESO DE VENTA */}
             <Sec ico={ICO_PROCESO} titulo="Proceso de venta">
               <Fld label="Etapa">
@@ -1262,6 +1505,18 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
           </svg>
           <span style={{ fontSize:14, fontWeight:600 }}>Selecciona un cliente</span>
         </div>
+      )}
+
+      {/* Modal de selección de unidad (E4) */}
+      {showUnitPicker && (
+        <UnitPickerModal
+          onSelect={function(u) {
+            set("unidadId",   u.id);
+            set("unidadDesc", u.desc);
+            setShowUnitPicker(false);
+          }}
+          onClose={() => setShowUnitPicker(false)}
+        />
       )}
 
     </div>

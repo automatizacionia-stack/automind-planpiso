@@ -545,6 +545,17 @@
       unidadPrueba:  row.unidad_prueba           || "",
       resultadoPrueba: row.resultado_prueba      || "",
       obsPrueba:     row.obs_prueba              || "",
+      // E4 — Cotización
+      unidadId:      row.unidad_id              || null,
+      unidadDesc:    row.unidad_desc            || "",
+      precioLista:   Number(row.precio_lista)   || 0,
+      descuentoMonto: Number(row.descuento_monto) || 0,
+      precioVenta:   Number(row.precio_venta)   || 0,
+      formaPagoCot:  row.forma_pago_cot         || "Contado",
+      enganche:      Number(row.enganche)       || 0,
+      plazoMeses:    Number(row.plazo_meses)    || 0,
+      mensualidadEst: Number(row.mensualidad_est) || 0,
+      notasCot:      row.notas_cot             || "",
       createdAt:   row.created_at             || null,
     };
   }
@@ -586,6 +597,17 @@
       unidad_prueba:        c.unidadPrueba  || null,
       resultado_prueba:     c.resultadoPrueba || null,
       obs_prueba:           c.obsPrueba     || null,
+      // E4 — Cotización
+      unidad_id:            c.unidadId      || null,
+      unidad_desc:          c.unidadDesc    || null,
+      precio_lista:         Number(c.precioLista)  || null,
+      descuento_monto:      Number(c.descuentoMonto) || 0,
+      precio_venta:         Number(c.precioVenta)  || null,
+      forma_pago_cot:       c.formaPagoCot  || "Contado",
+      enganche:             Number(c.enganche) || null,
+      plazo_meses:          Number(c.plazoMeses) || null,
+      mensualidad_est:      Number(c.mensualidadEst) || null,
+      notas_cot:            c.notasCot      || null,
       workspace_id:         agencyId,
       agency_id:            parentId,
     };
