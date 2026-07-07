@@ -1,15 +1,13 @@
 // Edge Function: extract-document
-// Extrae campos de un documento (INE o comprobante de domicilio) con Claude Haiku vision.
+// Extrae campos de un documento (INE o comprobante de domicilio) con OpenAI GPT-4o-mini vision.
 //
 // Deploy:
 //   supabase functions deploy extract-document --no-verify-jwt
 //
-// Secret requerido:
-//   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-//
-// El costo de la API de Anthropic corre a cargo de la plataforma Automind.
+// Secret ya configurado (clave de OpenAI guardada bajo este nombre):
+//   ANTHROPIC_API_KEY   ← contiene la API key de OpenAI
 
-import Anthropic from "npm:@anthropic-ai/sdk@0.39.0";
+import OpenAI from "npm:openai@^4.56.0";
 
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
@@ -34,7 +32,7 @@ Omite cualquier campo que no sea legible o no aplique. Estructura esperada:
   "estado":          "estado de la república (nombre completo)",
   "cp":              "código postal de 5 dígitos"
 }
-Responde SOLO con el JSON. Sin explicaciones, sin markdown.`;
+Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de código.`;
 
 const PROMPT_DOM = `Analiza este comprobante de domicilio (recibo de luz, agua, teléfono, estado de cuenta, etc.).
 Devuelve ÚNICAMENTE un objeto JSON válido con los campos disponibles. Omite los que no puedas leer.
@@ -47,7 +45,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido con los campos disponibles. Omite lo
   "cp":              "código postal de 5 dígitos",
   "fechaDocumento":  "período o fecha del recibo, ej: mayo 2025"
 }
-Responde SOLO con el JSON. Sin explicaciones, sin markdown.`;
+Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de código.`;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -63,49 +61,43 @@ Deno.serve(async (req: Request) => {
       throw new Error("Parámetros faltantes: dataUrl, mimeType, docType");
     }
 
-    // Extraer solo la parte base64 (quitar el prefijo data:…;base64,)
-    const base64 = dataUrl.includes(",") ? dataUrl.split(",")[1] : dataUrl;
-
-    const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
-    const prompt = docType === "id" ? PROMPT_ID : PROMPT_DOM;
-
-    // Construir bloque de contenido según tipo de archivo
-    type ContentBlock = Anthropic.ImageBlockParam | { type: "document"; source: { type: "base64"; media_type: "application/pdf"; data: string } } | Anthropic.TextBlockParam;
-
-    const blocks: ContentBlock[] = [];
-
+    // PDFs no soportados en la API de visión de OpenAI — pedir imagen
     if (mimeType === "application/pdf") {
-      blocks.push({
-        type: "document",
-        source: { type: "base64", media_type: "application/pdf", data: base64 },
-      } as any);
-    } else {
-      const mt = (mimeType === "image/jpg" ? "image/jpeg" : mimeType) as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-      blocks.push({ type: "image", source: { type: "base64", media_type: mt, data: base64 } });
+      return new Response(
+        JSON.stringify({ ok: false, error: "Para la extracción IA sube una foto (JPG/PNG) del documento." }),
+        { status: 400, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
     }
 
-    blocks.push({ type: "text", text: prompt });
+    // La clave de OpenAI está guardada bajo el nombre ANTHROPIC_API_KEY en Supabase Secrets
+    const client = new OpenAI({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
+    const prompt  = docType === "id" ? PROMPT_ID : PROMPT_DOM;
 
-    const msg = await client.messages.create({
-      model:      "claude-haiku-4-5-20251001",
+    const completion = await client.chat.completions.create({
+      model:      "gpt-4o-mini",
       max_tokens: 600,
-      messages:   [{ role: "user", content: blocks as any }],
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: dataUrl, detail: "high" } },
+          { type: "text",      text: prompt },
+        ],
+      }],
     });
 
-    const raw = msg.content.find((b: any) => b.type === "text")?.text ?? "";
+    const raw = completion.choices[0]?.message?.content ?? "";
 
-    // Parsear JSON de la respuesta (tolerante a texto extra)
+    // Parsear JSON tolerando texto extra que el modelo pueda agregar
     let campos: Record<string, string> = {};
     try {
       const match = raw.match(/\{[\s\S]*\}/);
       if (match) {
         const parsed = JSON.parse(match[0]);
-        // Filtrar campos vacíos
         for (const [k, v] of Object.entries(parsed)) {
           if (v && String(v).trim()) campos[k] = String(v).trim();
         }
       }
-    } catch { /* devuelve objeto vacío si el JSON falla */ }
+    } catch { /* devuelve objeto vacío si el parse falla */ }
 
     return new Response(
       JSON.stringify({ ok: true, campos }),
