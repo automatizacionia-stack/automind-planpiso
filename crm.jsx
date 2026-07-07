@@ -851,8 +851,15 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
         if (extractedCampos.estado && !prev.estado) upd.estado  = extractedCampos.estado;
         if (extractedCampos.cp)    upd.cp    = extractedCampos.cp;
       }
+      if (fuente === "licencia") {
+        if (extractedCampos.curp && !prev.curp) upd.curp = extractedCampos.curp;
+        if (extractedCampos.nombre && !prev.nombre) {
+          var partes = [extractedCampos.nombre, extractedCampos.apellidoPaterno, extractedCampos.apellidoMaterno].filter(Boolean);
+          if (partes.length) upd.nombre = partes.join(" ");
+        }
+      }
       // Guardar todos los datos crudos para referencia
-      var clave = fuente === "id" ? "datosId" : "datosDomicilio";
+      var clave = fuente === "id" ? "datosId" : fuente === "licencia" ? "datosLicencia" : "datosDomicilio";
       upd[clave] = extractedCampos;
       return Object.assign({}, prev, upd);
     });
@@ -1066,6 +1073,16 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </div>
               <div style={{ gridColumn:"1/-1", marginTop:4 }}>
                 <DocUpload
+                  label="Licencia de conducir"
+                  sublabel="Licencia de conducir vigente"
+                  docType="licencia"
+                  value={form.docLicencia || null}
+                  onChange={v => set("docLicencia", v)}
+                  onExtract={campos => aplicarCampos(campos, "licencia")}
+                />
+              </div>
+              <div style={{ gridColumn:"1/-1", marginTop:4 }}>
+                <DocUpload
                   label="Comprobante de domicilio"
                   sublabel="Recibo de agua · luz · teléfono"
                   docType="domicilio"
@@ -1074,6 +1091,34 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   onExtract={campos => aplicarCampos(campos, "domicilio")}
                 />
               </div>
+
+              {/* Panel: Datos OCR confirmados */}
+              {(form.datosId || form.datosLicencia || form.datosDomicilio) && (
+                <div style={{ gridColumn:"1/-1", marginTop:8, padding:"12px 14px",
+                  background:"var(--bg)", border:"1px solid var(--line)", borderRadius:10 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)",
+                    textTransform:"uppercase", letterSpacing:".06em", marginBottom:8 }}>
+                    Datos OCR confirmados
+                  </div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 18px" }}>
+                    {[
+                      { lbl:"CURP",      val: form.curp },
+                      { lbl:"RFC",       val: form.rfc },
+                      { lbl:"Nac.",      val: form.datosId && form.datosId.fechaNacimiento },
+                      { lbl:"Sexo",      val: form.datosId && form.datosId.sexo },
+                      { lbl:"Licencia #",val: form.datosLicencia && form.datosLicencia.numeroLicencia },
+                      { lbl:"Tipo lic.", val: form.datosLicencia && form.datosLicencia.tipoLicencia },
+                      { lbl:"Vigencia",  val: form.datosLicencia && form.datosLicencia.vigencia },
+                      { lbl:"C.P.",      val: form.cp },
+                    ].filter(x => x.val).map(x => (
+                      <div key={x.lbl} style={{ fontSize:12 }}>
+                        <span style={{ color:"var(--muted)", marginRight:4 }}>{x.lbl}:</span>
+                        <span style={{ fontWeight:600, color:"var(--ink)", fontFamily:"monospace" }}>{x.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </Sec>
 
             {/* § UNIDAD VINCULADA (desde Plan Piso) */}

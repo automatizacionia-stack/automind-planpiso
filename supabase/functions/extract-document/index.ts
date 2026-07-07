@@ -47,6 +47,23 @@ Devuelve ÚNICAMENTE un objeto JSON válido con los campos disponibles. Omite lo
 }
 Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de código.`;
 
+const PROMPT_LIC = `Analiza esta licencia de conducir mexicana.
+Devuelve ÚNICAMENTE un objeto JSON válido con los campos que puedas leer con certeza.
+Omite cualquier campo que no sea legible o no aplique. Estructura esperada:
+{
+  "nombre":          "nombre(s) de pila",
+  "apellidoPaterno": "primer apellido",
+  "apellidoMaterno": "segundo apellido",
+  "curp":            "CURP en mayúsculas, exactamente 18 caracteres",
+  "fechaNacimiento": "DD/MM/AAAA",
+  "sexo":            "H o M",
+  "numeroLicencia":  "número de folio o licencia",
+  "tipoLicencia":    "tipo: A, B, C, D, E, etc.",
+  "vigencia":        "fecha de vencimiento DD/MM/AAAA",
+  "estado":          "estado emisor de la licencia"
+}
+Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de código.`;
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -54,7 +71,7 @@ Deno.serve(async (req: Request) => {
     const { dataUrl, mimeType, docType } = await req.json() as {
       dataUrl: string;
       mimeType: string;
-      docType: "id" | "domicilio";
+      docType: "id" | "domicilio" | "licencia";
     };
 
     if (!dataUrl || !mimeType || !docType) {
@@ -71,7 +88,7 @@ Deno.serve(async (req: Request) => {
 
     // La clave de OpenAI está guardada bajo el nombre ANTHROPIC_API_KEY en Supabase Secrets
     const client = new OpenAI({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
-    const prompt  = docType === "id" ? PROMPT_ID : PROMPT_DOM;
+    const prompt  = docType === "id" ? PROMPT_ID : docType === "licencia" ? PROMPT_LIC : PROMPT_DOM;
 
     const completion = await client.chat.completions.create({
       model:      "gpt-4o-mini",
