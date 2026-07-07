@@ -506,23 +506,6 @@
     return json;
   }
 
-  /* ── Exponer en window ─────────────────────────────────────── */
-  window.DB = {
-    client,
-    signIn,
-    signOut,
-    getSession,
-    getUserContext,
-    loadWorkspaces,
-    createWorkspace,
-    loadAgencyData,
-    saveVehicle,
-    deleteVehicle,
-    loadInventario,
-    saveColaborador,
-    deleteColaborador,
-    inviteUser,
-
   /* ── Clientes CRM ─────────────────────────────────────────── */
 
   function clienteFromDbRow(row) {
@@ -607,6 +590,22 @@
     if (error) throw new Error(error.message);
   }
 
+  /* ── Exponer en window ─────────────────────────────────────── */
+  window.DB = {
+    client,
+    signIn,
+    signOut,
+    getSession,
+    getUserContext,
+    loadWorkspaces,
+    createWorkspace,
+    loadAgencyData,
+    saveVehicle,
+    deleteVehicle,
+    loadInventario,
+    saveColaborador,
+    deleteColaborador,
+    inviteUser,
     dbRowFromVehicle,
     vehicleFromDbRow,
     colaboradorFromDbRow,
