@@ -497,6 +497,31 @@ const CAMPO_LABEL = {
   cp:"C.P.", fechaDocumento:"Período del recibo",
 };
 
+/* Renderiza la primera página de un PDF a JPEG usando PDF.js (cargado en index.html) */
+function _pdfToImageDataUrl(dataUrl) {
+  return new Promise(function(resolve, reject) {
+    var pdfjsLib = window["pdfjs-dist/build/pdf"];
+    if (!pdfjsLib) { reject(new Error("PDF.js no disponible — recarga la página")); return; }
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    var base64 = dataUrl.includes(",") ? dataUrl.split(",")[1] : dataUrl;
+    var binary = atob(base64);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    pdfjsLib.getDocument({ data: bytes }).promise.then(function(pdf) {
+      pdf.getPage(1).then(function(page) {
+        var viewport = page.getViewport({ scale: 2.0 });
+        var canvas = document.createElement("canvas");
+        canvas.width  = viewport.width;
+        canvas.height = viewport.height;
+        page.render({ canvasContext: canvas.getContext("2d"), viewport: viewport }).promise
+          .then(function() { resolve(canvas.toDataURL("image/jpeg", 0.88)); })
+          .catch(reject);
+      }).catch(reject);
+    }).catch(reject);
+  });
+}
+
 /* Redimensiona una imagen a máx. 1200px para no saturar la Edge Function */
 function _resizeDataUrl(dataUrl, mimeType) {
   return new Promise(function(resolve) {
@@ -544,13 +569,20 @@ function DocUpload({ label, sublabel, docType, value, onChange, onExtract }) {
     if (!value || extrayendo) return;
     setExtrayendo(true); setCampos(null); setErrExt(null);
     try {
-      var dataUrlEnviar = await _resizeDataUrl(value.dataUrl, value.type);
+      /* Si es PDF, renderizar página 1 a imagen antes de enviar */
+      var rawUrl  = value.dataUrl;
+      var rawMime = value.type;
+      if (value.type === "application/pdf") {
+        rawUrl  = await _pdfToImageDataUrl(value.dataUrl);
+        rawMime = "image/jpeg";
+      }
+      var dataUrlEnviar = await _resizeDataUrl(rawUrl, rawMime);
       var supaUrl  = window.SUPABASE_URL;
       var supaAnon = window.SUPABASE_ANON;
       var resp = await fetch(supaUrl + "/functions/v1/extract-document", {
         method: "POST",
         headers: { "Content-Type":"application/json", "Authorization":"Bearer " + supaAnon },
-        body: JSON.stringify({ dataUrl: dataUrlEnviar, mimeType: value.type, docType: docType }),
+        body: JSON.stringify({ dataUrl: dataUrlEnviar, mimeType: rawMime, docType: docType }),
       });
       var data = await resp.json();
       if (!data.ok) throw new Error(data.error || "Error en el servidor");
@@ -1480,33 +1512,4 @@ function CRMClientes({ rows, kpis, usuarios }) {
         />
       )}
       {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={setSeleccionado} />}
-      {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
-      {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
-
-      {/* Aviso datos demo */}
-      <div style={{ marginTop:20, padding:"10px 16px", background:"#fef9c3", border:"1px solid #fde047",
-        borderRadius:8, fontSize:12, color:"#854d0e", display:"flex", alignItems:"center", gap:8 }}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"
-          strokeLinejoin="round" width="15" height="15" style={{ flexShrink:0 }}>
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        Vista con datos de ejemplo. Conecta con la tabla <code style={{ background:"rgba(0,0,0,.07)", padding:"1px 5px", borderRadius:4 }}>clientes</code> en Supabase corriendo el archivo <code style={{ background:"rgba(0,0,0,.07)", padding:"1px 5px", borderRadius:4 }}>supabase_add_clientes.sql</code> para activar datos reales.
-      </div>
-
-      {/* Drawer de detalle */}
-      <ClienteDrawer c={seleccionado} onClose={() => setSeleccionado(null)} />
-
-      {/* Modal nuevo cliente (con prefill opcional desde Plan Piso) */}
-      {mostrarNuevo && (
-        <NuevoClienteModal
-          asesores={asesores}
-          onClose={() => { setMostrarNuevo(false); setPendingData(null); }}
-          onCreate={crearCliente}
-          initialData={pendingData}
-        />
-      )}
-    </div>
-  );
-}
-
-Object.assign(window, { CRMClientes });
+      {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSe
