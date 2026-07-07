@@ -522,8 +522,98 @@
     saveColaborador,
     deleteColaborador,
     inviteUser,
+
+  /* ── Clientes CRM ─────────────────────────────────────────── */
+
+  function clienteFromDbRow(row) {
+    return {
+      id:          row.id,
+      nombre:      row.nombre_completo        || "",
+      tel:         row.telefono               || "",
+      email:       row.email                  || "",
+      tipo:        row.tipo_cliente           || "Persona física",
+      canal:       row.canal_origen           || "Digital",
+      fuente:      row.fuente_especifica      || "",
+      interes:     row.interes_vehiculo       || "",
+      presupuesto: Number(row.presupuesto_estimado) || 0,
+      formaPago:   row.forma_pago             || "No definido",
+      uso:         row.uso_vehiculo           || "Personal",
+      etapa:       row.etapa_proceso          || "Prospección",
+      asesor:      row.asesor_id              || "",
+      prob:        Number(row.probabilidad_cierre) || 0,
+      uc:          row.ultimo_contacto        || "",
+      ciudad:      row.ciudad                 || "",
+      estado:      row.estado_rep             || "",
+      prox:        row.proxima_accion         || "",
+      fprox:       row.fecha_proxima_accion   || "",
+      notas:       row.notas                  || "",
+      createdAt:   row.created_at             || null,
+    };
+  }
+
+  function dbRowFromCliente(agencyId, c) {
+    var parentId = (window.AUTOMIND && window.AUTOMIND.agencyParentId) || agencyId;
+    return {
+      nombre_completo:      c.nombre       || null,
+      telefono:             c.tel          || null,
+      email:                c.email        || null,
+      tipo_cliente:         c.tipo         || "Persona física",
+      canal_origen:         c.canal        || "Digital",
+      fuente_especifica:    c.fuente       || null,
+      interes_vehiculo:     c.interes      || null,
+      presupuesto_estimado: Number(c.presupuesto) || null,
+      forma_pago:           c.formaPago    || "No definido",
+      uso_vehiculo:         c.uso          || "Personal",
+      etapa_proceso:        c.etapa        || "Prospección",
+      asesor_id:            c.asesor       || null,
+      probabilidad_cierre:  Number(c.prob) || null,
+      ultimo_contacto:      c.uc           || null,
+      ciudad:               c.ciudad       || null,
+      estado_rep:           c.estado       || null,
+      proxima_accion:       c.prox         || null,
+      fecha_proxima_accion: c.fprox        || null,
+      notas:                c.notas        || null,
+      workspace_id:         agencyId,
+      agency_id:            parentId,
+    };
+  }
+
+  async function getClientes(agencyId) {
+    const { data, error } = await client
+      .from("clientes")
+      .select("*")
+      .or(`workspace_id.eq.${agencyId},agency_id.eq.${agencyId}`)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data || []).map(clienteFromDbRow);
+  }
+
+  async function saveCliente(agencyId, clienteData) {
+    const row = dbRowFromCliente(agencyId, clienteData);
+    const isNew = !clienteData.id || /^c\d+$/.test(String(clienteData.id));
+    if (isNew) {
+      const { data, error } = await client.from("clientes").insert(row).select().single();
+      if (error) throw new Error(error.message);
+      return clienteFromDbRow(data);
+    } else {
+      const { data, error } = await client.from("clientes").upsert({ id: clienteData.id, ...row }).select().single();
+      if (error) throw new Error(error.message);
+      return clienteFromDbRow(data);
+    }
+  }
+
+  async function deleteCliente(id) {
+    const { error } = await client.from("clientes").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+  }
+
     dbRowFromVehicle,
     vehicleFromDbRow,
     colaboradorFromDbRow,
+    clienteFromDbRow,
+    dbRowFromCliente,
+    getClientes,
+    saveCliente,
+    deleteCliente,
   };
 })();
