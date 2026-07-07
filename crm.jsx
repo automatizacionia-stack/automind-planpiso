@@ -890,6 +890,8 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const [saved, setSaved] = React.useState(false);
   const [q,     setQ]     = React.useState("");
   const [showUnitPicker, setShowUnitPicker] = React.useState(false);
+  const [e8Subiendo, setE8Subiendo] = React.useState(false);
+  const [e8ErrSub,   setE8ErrSub]   = React.useState('');
 
   /* Auto-seleccionar cuando llega un cliente recién creado */
   React.useEffect(() => {
@@ -1639,6 +1641,95 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                       value={form.e7Obs || ""}
                       onChange={e => set("e7Obs", e.target.value)}
                       placeholder="Notas sobre documentos faltantes, próximos pasos..." />
+                  </Fld>
+                </Sec>
+              );
+            })()}
+
+            {/* § E8 — EXPEDIENTE */}
+            {(function() {
+              var ICO_EXP = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>);
+              var subiendo    = e8Subiendo;
+              var setSubiendo = setE8Subiendo;
+              var errSub      = e8ErrSub;
+              var setErrSub   = setE8ErrSub;
+
+              async function handleContrato(file) {
+                if (!file) return;
+                if (!window.DB || !window.DB.storage) { setErrSub("Storage no disponible"); return; }
+                var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
+                if (!agencyId || !form.id) { setErrSub("Guarda el cliente primero"); return; }
+                setSubiendo(true); setErrSub("");
+                var ext  = file.name.split(".").pop().toLowerCase();
+                var path = agencyId + "/" + form.id + "/contrato_" + Date.now() + "." + ext;
+                var { error } = await window.DB.storage.from("expedientes").upload(path, file, { upsert: true });
+                if (error) { setErrSub(error.message); setSubiendo(false); return; }
+                var { data: urlData } = window.DB.storage.from("expedientes").getPublicUrl(path);
+                var url = (urlData && urlData.publicUrl) || path;
+                set("e8ContratoUrl",    url);
+                set("e8ContratoNombre", file.name);
+                set("e8ContratoFecha",  new Date().toISOString().slice(0, 10));
+                setSubiendo(false);
+              }
+
+              return (
+                <Sec ico={ICO_EXP} titulo="Expediente">
+                  {/* Contrato firmado */}
+                  <Fld label="Contrato firmado" full>
+                    {form.e8ContratoUrl ? (
+                      <div style={{
+                        padding:"10px 12px", borderRadius:8, border:"1px solid rgba(34,197,94,.4)",
+                        background:"rgba(34,197,94,.06)", display:"flex", alignItems:"center", gap:10,
+                      }}>
+                        <span style={{ fontSize:20 }}>📄</span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)",
+                            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                            {form.e8ContratoNombre || "Contrato firmado"}
+                          </div>
+                          {form.e8ContratoFecha && (
+                            <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>
+                              Cargado el {new Date(form.e8ContratoFecha + "T12:00:00").toLocaleDateString("es-MX", { day:"numeric", month:"long", year:"numeric" })}
+                            </div>
+                          )}
+                        </div>
+                        <a href={form.e8ContratoUrl} target="_blank" rel="noopener noreferrer"
+                          style={{
+                            padding:"5px 12px", borderRadius:7, border:"1px solid var(--accent)",
+                            background:"transparent", color:"var(--accent)",
+                            fontSize:12, fontWeight:600, textDecoration:"none", flexShrink:0,
+                          }}>Ver</a>
+                        <button type="button"
+                          onClick={() => { set("e8ContratoUrl", null); set("e8ContratoNombre", ""); set("e8ContratoFecha", ""); }}
+                          style={{
+                            background:"none", border:"none", cursor:"pointer",
+                            color:"var(--muted)", fontSize:16, flexShrink:0, padding:"0 4px",
+                          }}>✕</button>
+                      </div>
+                    ) : (
+                      <label style={{
+                        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+                        gap:6, padding:"20px 16px", borderRadius:8, cursor:"pointer",
+                        border:"1.5px dashed var(--line)", background:"var(--bg)", transition:"border-color .15s",
+                      }}
+                        onMouseEnter={function(e){ e.currentTarget.style.borderColor = "var(--accent)"; }}
+                        onMouseLeave={function(e){ e.currentTarget.style.borderColor = "var(--line)"; }}>
+                        <span style={{ fontSize:28, opacity:.5 }}>📎</span>
+                        <span style={{ fontSize:13, color:"var(--muted)", fontWeight:500 }}>
+                          {subiendo ? "Subiendo..." : "Cargar contrato firmado"}
+                        </span>
+                        <span style={{ fontSize:11, color:"var(--muted)", opacity:.7 }}>PDF · JPG · PNG</span>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display:"none" }}
+                          disabled={subiendo}
+                          onChange={function(e){ handleContrato(e.target.files[0]); e.target.value = ""; }} />
+                      </label>
+                    )}
+                    {errSub && (
+                      <div style={{ marginTop:6, fontSize:12, color:"#dc2626", padding:"6px 10px",
+                        borderRadius:6, background:"rgba(239,68,68,.08)", border:"1px solid rgba(239,68,68,.2)" }}>
+                        {errSub}
+                      </div>
+                    )}
                   </Fld>
                 </Sec>
               );

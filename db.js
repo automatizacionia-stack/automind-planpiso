@@ -550,6 +550,10 @@
       e5AprobadoPor: row.e5_aprobado_por        || "",
       e5Fecha:       row.e5_fecha               || null,
       e5Notas:       row.e5_notas               || "",
+      // E8 — Expediente (contrato firmado)
+      e8ContratoUrl:    row.e8_contrato_url     || null,
+      e8ContratoNombre: row.e8_contrato_nombre  || "",
+      e8ContratoFecha:  row.e8_contrato_fecha   || "",
       // E6 — Proceso de crédito
       e6Estado:       row.e6_estado             || "Pendiente",
       e6Institucion:  row.e6_institucion        || "",
@@ -620,6 +624,10 @@
       e5_aprobado_por:      c.e5AprobadoPor || null,
       e5_fecha:             c.e5Fecha       || null,
       e5_notas:             c.e5Notas       || null,
+      // E8 — Expediente (contrato firmado)
+      e8_contrato_url:    c.e8ContratoUrl    || null,
+      e8_contrato_nombre: c.e8ContratoNombre || null,
+      e8_contrato_fecha:  c.e8ContratoFecha  || null,
       // E6 — Proceso de crédito
       e6_estado:            c.e6Estado        || "Pendiente",
       e6_institucion:       c.e6Institucion   || null,
@@ -702,5 +710,6 @@
     getClientes,
     saveCliente,
     deleteCliente,
+    storage: client.storage,
   };
 })();
