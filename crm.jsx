@@ -489,6 +489,122 @@ function ClienteListItem({ c, active, onClick }) {
   );
 }
 
+/* ── Zona de carga de documento ──────────────────────────────────────────── */
+function DocUpload({ label, sublabel, value, onChange }) {
+  const [dragging, setDragging] = React.useState(false);
+  const inputRef = React.useRef(null);
+
+  function handleFile(file) {
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    if (!allowed.includes(file.type)) {
+      alert("Formato no permitido. Usa JPG, PNG o PDF.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => onChange({ name: file.name, type: file.type, dataUrl: e.target.result, cargadoEn: new Date().toISOString() });
+    reader.readAsDataURL(file);
+  }
+
+  const isImage = value && value.type && value.type.startsWith("image/");
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+      {/* Etiqueta */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline" }}>
+        <span style={{ fontSize:12, fontWeight:700, color:"var(--ink-2)" }}>{label}</span>
+        {sublabel && <span style={{ fontSize:10, color:"var(--muted)" }}>{sublabel}</span>}
+      </div>
+
+      {value ? (
+        /* ── Preview del archivo cargado ── */
+        <div style={{ border:"1px solid var(--line)", borderRadius:9, overflow:"hidden",
+          background:"var(--bg)", position:"relative" }}>
+
+          {isImage ? (
+            <div style={{ background:"#000", maxHeight:170, overflow:"hidden", display:"flex",
+              alignItems:"center", justifyContent:"center" }}>
+              <img src={value.dataUrl} alt={value.name}
+                style={{ width:"100%", maxHeight:170, objectFit:"contain", display:"block" }} />
+            </div>
+          ) : (
+            <div style={{ padding:"18px 14px", display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:40, height:48, background:"#fee2e2", borderRadius:6,
+                display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#e0492f" strokeWidth="1.9"
+                  strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14,2 14,8 20,8"/>
+                  <line x1="9" y1="13" x2="15" y2="13"/>
+                  <line x1="9" y1="17" x2="15" y2="17"/>
+                </svg>
+              </div>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)",
+                  overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                  {value.name}
+                </div>
+                <div style={{ fontSize:11, color:"var(--muted)", marginTop:2 }}>PDF · listo para análisis IA</div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer con nombre y botón reemplazar */}
+          <div style={{ padding:"7px 12px", borderTop:"1px solid var(--line)",
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            background:"var(--card)", gap:8 }}>
+            <span style={{ fontSize:11, color:"var(--muted)", overflow:"hidden",
+              textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{value.name}</span>
+            <button onClick={() => onChange(null)}
+              style={{ fontSize:11, color:"#e0492f", fontWeight:600, border:"none",
+                background:"none", cursor:"pointer", padding:"2px 6px", flexShrink:0,
+                borderRadius:4 }}>
+              Quitar
+            </button>
+            <button onClick={() => inputRef.current && inputRef.current.click()}
+              style={{ fontSize:11, color:"var(--accent)", fontWeight:600, border:"none",
+                background:"none", cursor:"pointer", padding:"2px 6px", flexShrink:0,
+                borderRadius:4 }}>
+              Reemplazar
+            </button>
+          </div>
+
+          <input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.pdf" style={{ display:"none" }}
+            onChange={e => { handleFile(e.target.files[0]); e.target.value = ""; }} />
+        </div>
+      ) : (
+        /* ── Zona de drop vacía ── */
+        <div
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); }}
+          onClick={() => inputRef.current && inputRef.current.click()}
+          style={{
+            border: "2px dashed " + (dragging ? "var(--accent)" : "var(--line)"),
+            borderRadius:9, padding:"30px 16px", textAlign:"center",
+            cursor:"pointer", transition:"all .15s",
+            background: dragging ? "#eff6ff" : "var(--bg)",
+            display:"flex", flexDirection:"column", alignItems:"center", gap:8,
+          }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke={dragging ? "var(--accent)" : "var(--muted)"}
+            strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width="30" height="30">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <div style={{ fontSize:13, color:"var(--muted)", lineHeight:1.4 }}>
+            Arrastra aquí o{" "}
+            <span style={{ color:"var(--accent)", fontWeight:600 }}>haz clic para seleccionar</span>
+          </div>
+          <div style={{ fontSize:11, color:"var(--muted)", opacity:.7 }}>JPG · PNG · PDF</div>
+          <input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.pdf" style={{ display:"none" }}
+            onChange={e => { handleFile(e.target.files[0]); e.target.value = ""; }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Editor split‑panel de clientes (espejo de inventario‑editor) ────────── */
 function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const primer = defaultSelId
@@ -572,6 +688,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const ICO_AUTO    = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M3 6.5h11v9H3z"/><path d="M14 9.5h3.5L21 13v2.5h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>);
   const ICO_PROCESO = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>);
   const ICO_LINK    = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>);
+  const ICO_DOC     = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>);
 
   return (
     <div className="inv-editor-shell">
@@ -726,6 +843,26 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   value={form.notas || ""}
                   onChange={e => set("notas", e.target.value)} />
               </Fld>
+            </Sec>
+
+            {/* § DOCUMENTOS DEL CLIENTE */}
+            <Sec ico={ICO_DOC} titulo="Documentos del cliente">
+              <div style={{ gridColumn:"1/-1" }}>
+                <DocUpload
+                  label="Identificación oficial"
+                  sublabel="INE · Pasaporte"
+                  value={form.docId || null}
+                  onChange={v => set("docId", v)}
+                />
+              </div>
+              <div style={{ gridColumn:"1/-1", marginTop:4 }}>
+                <DocUpload
+                  label="Comprobante de domicilio"
+                  sublabel="Recibo de agua · luz · teléfono"
+                  value={form.docDomicilio || null}
+                  onChange={v => set("docDomicilio", v)}
+                />
+              </div>
             </Sec>
 
             {/* § UNIDAD VINCULADA (desde Plan Piso) */}
