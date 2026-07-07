@@ -495,7 +495,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
     ? (clientes.find(c => c.id === defaultSelId) || clientes[0])
     : clientes[0];
 
-  const [selId, setSelId] = React.useState(primer?.id || null);
+  const [selId, setSelId] = React.useState(primer ? primer.id : null);
   const [form,  setForm]  = React.useState(primer ? { ...primer } : null);
   const [dirty, setDirty] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
@@ -743,8 +743,8 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Sec>
             )}
 
-          </div>{/* /inv-form-scroll */}
-        </div>{/* /inv-form-panel */}
+          </div>
+        </div>
       ) : (
         <div className="inv-form-panel"
           style={{ display:"flex", alignItems:"center", justifyContent:"center",
