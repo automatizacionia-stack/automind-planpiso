@@ -462,6 +462,305 @@ function UrgentesView({ clientes, onOpen }) {
   );
 }
 
+/* ── Item de cliente en panel lateral ───────────────────────────────────── */
+function ClienteListItem({ c, active, onClick }) {
+  const cfg = ETAPA_CFG[c.etapa] || { dot:"#94a3b8" };
+  const avColores = ["#2f6fed","#8b5cf6","#1f9d57","#d97706","#e0492f"];
+  const avColor = avColores[c.nombre.charCodeAt(0) % avColores.length];
+  const initials = c.nombre.split(" ").filter(Boolean).slice(0,2).map(w => w[0] || "").join("").toUpperCase();
+  return (
+    <button className={"vie-item" + (active ? " active" : "")} onClick={onClick}>
+      <div className="vie-thumb">
+        <div className="vie-thumb-ph" style={{
+          background:avColor, color:"#fff", fontSize:13, fontWeight:700,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          width:"100%", height:"100%", borderRadius:8,
+        }}>
+          {initials}
+        </div>
+      </div>
+      <div className="vie-meta">
+        <div className="vie-vin" style={{ fontFamily:"inherit" }}>{c.tel || c.email || c.canal}</div>
+        <div className="vie-desc">{c.nombre}</div>
+        <div className="vie-sub">{c.interes || "Sin vehículo de interés"}</div>
+      </div>
+      <span className="vie-dot" style={{ background:cfg.dot }} title={c.etapa} />
+    </button>
+  );
+}
+
+/* ── Editor split‑panel de clientes (espejo de inventario‑editor) ────────── */
+function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
+  const primer = defaultSelId
+    ? (clientes.find(c => c.id === defaultSelId) || clientes[0])
+    : clientes[0];
+
+  const [selId, setSelId] = React.useState(primer?.id || null);
+  const [form,  setForm]  = React.useState(primer ? { ...primer } : null);
+  const [dirty, setDirty] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
+  const [q,     setQ]     = React.useState("");
+
+  /* Auto-seleccionar cuando llega un cliente recién creado */
+  React.useEffect(() => {
+    if (!defaultSelId) return;
+    const c = clientes.find(x => x.id === defaultSelId);
+    if (!c) return;
+    setSelId(defaultSelId);
+    setForm({ ...c });
+    setDirty(false); setSaved(false);
+  }, [defaultSelId]);
+
+  /* Resincronizar form si el array cambia y no hay edición en vuelo */
+  React.useEffect(() => {
+    if (!dirty && selId) {
+      const c = clientes.find(x => x.id === selId);
+      if (c) setForm({ ...c });
+    }
+  }, [clientes]);
+
+  const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setDirty(true); setSaved(false); };
+
+  function selectCliente(id) {
+    if (dirty && !window.confirm("Tienes cambios sin guardar. ¿Descartar?")) return;
+    const c = clientes.find(x => x.id === id);
+    setSelId(id);
+    setForm(c ? { ...c } : null);
+    setDirty(false); setSaved(false);
+  }
+
+  function handleSave() {
+    if (!form) return;
+    onUpdate && onUpdate({ ...form });
+    setDirty(false); setSaved(true);
+    setTimeout(() => setSaved(false), 2200);
+  }
+
+  const filtrados = q
+    ? clientes.filter(c => [c.nombre, c.tel, c.email, c.interes, c.ciudad, c.asesor]
+        .join(" ").toLowerCase().includes(q.toLowerCase()))
+    : clientes;
+
+  const asesoresOpc = [...new Set(clientes.map(c => c.asesor).filter(Boolean))];
+
+  const IS = {
+    width:"100%", padding:"7px 10px", border:"1px solid var(--line)",
+    borderRadius:7, fontSize:13, background:"var(--bg)", color:"var(--ink)",
+    outline:"none", fontFamily:"inherit",
+  };
+
+  /* Sección y campo reutilizables */
+  const Sec = ({ ico, titulo, children }) => (
+    <div className="ef-seccion">
+      <div className="ef-sec-head">
+        <span style={{ display:"flex", alignItems:"center", color:"var(--muted)" }}>{ico}</span>
+        <span style={{ marginLeft:6 }}>{titulo}</span>
+      </div>
+      <div className="ef-grid">{children}</div>
+    </div>
+  );
+  const Fld = ({ label, full, req, children }) => (
+    <div className="ef-field" style={{ gridColumn: full ? "1/-1" : undefined }}>
+      <label className="ef-label">{label}{req && <span className="ef-req"> *</span>}</label>
+      {children}
+    </div>
+  );
+
+  /* Iconos SVG inline */
+  const ICO_PERSONA = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>);
+  const ICO_PIN     = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>);
+  const ICO_AUTO    = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M3 6.5h11v9H3z"/><path d="M14 9.5h3.5L21 13v2.5h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>);
+  const ICO_PROCESO = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>);
+  const ICO_LINK    = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>);
+
+  return (
+    <div className="inv-editor-shell">
+
+      {/* ── Panel izquierdo ────────────────────────────────────────────────── */}
+      <div className="inv-list-panel">
+        <div className="inv-list-head">
+          <label className="search">
+            {I.search({ width:15, height:15 })}
+            <input placeholder="Buscar…" value={q} onChange={e => setQ(e.target.value)} />
+          </label>
+        </div>
+        <div className="inv-list-body">
+          {filtrados.length === 0
+            ? <div style={{ padding:"24px 16px", color:"var(--muted)", fontSize:13 }}>Sin resultados.</div>
+            : filtrados.map(c => (
+              <ClienteListItem key={c.id} c={c} active={c.id === selId}
+                onClick={() => selectCliente(c.id)} />
+            ))
+          }
+        </div>
+        <div className="inv-list-foot">
+          {clientes.length} cliente{clientes.length !== 1 ? "s" : ""}
+        </div>
+      </div>
+
+      {/* ── Panel derecho ─────────────────────────────────────────────────── */}
+      {form ? (
+        <div className="inv-form-panel">
+
+          <div className="inv-form-head">
+            <div style={{ minWidth:0 }}>
+              <div className="inv-form-vin">{form.nombre || "Nuevo cliente"}</div>
+              <div className="inv-form-sub" style={{ display:"flex", alignItems:"center", gap:6, marginTop:4 }}>
+                <EtapaBadge etapa={form.etapa} />
+                <span style={{ color:"var(--muted)", fontSize:12 }}>{form.tipo}</span>
+              </div>
+            </div>
+            <div className="inv-form-actions">
+              {saved && <span style={{ fontSize:12, color:"#1f9d57", fontWeight:600 }}>✓ Guardado</span>}
+              <button className="btn primary" onClick={handleSave} disabled={!dirty}
+                style={{ opacity:dirty ? 1 : .45, cursor:dirty ? "pointer" : "not-allowed" }}>
+                Guardar
+              </button>
+            </div>
+          </div>
+
+          <div className="inv-form-scroll">
+
+            {/* § DATOS DEL CLIENTE */}
+            <Sec ico={ICO_PERSONA} titulo="Datos del cliente">
+              <Fld label="Nombre completo" req full>
+                <input className="ef-input" style={IS} value={form.nombre || ""} onChange={e => set("nombre", e.target.value)} />
+              </Fld>
+              <Fld label="Tipo">
+                <select className="ef-select" style={IS} value={form.tipo || "Persona física"} onChange={e => set("tipo", e.target.value)}>
+                  <option>Persona física</option>
+                  <option>Persona moral</option>
+                </select>
+              </Fld>
+              <Fld label="Teléfono">
+                <input className="ef-input" style={IS} value={form.tel || ""} onChange={e => set("tel", e.target.value)} placeholder="555-000-0000" />
+              </Fld>
+              <Fld label="Email">
+                <input className="ef-input" style={IS} value={form.email || ""} onChange={e => set("email", e.target.value)} placeholder="correo@ejemplo.com" />
+              </Fld>
+            </Sec>
+
+            {/* § ORIGEN */}
+            <Sec ico={ICO_PIN} titulo="Origen del prospecto">
+              <Fld label="Canal">
+                <select className="ef-select" style={IS} value={form.canal || "Digital"} onChange={e => set("canal", e.target.value)}>
+                  {["Digital","Piso","Referido","Marketplace","Otro"].map(o => <option key={o}>{o}</option>)}
+                </select>
+              </Fld>
+              <Fld label="Fuente específica">
+                <input className="ef-input" style={IS} value={form.fuente || ""} onChange={e => set("fuente", e.target.value)} placeholder="Facebook Ads, visita, etc." />
+              </Fld>
+              <Fld label="Ciudad">
+                <input className="ef-input" style={IS} value={form.ciudad || ""} onChange={e => set("ciudad", e.target.value)} />
+              </Fld>
+              <Fld label="Estado">
+                <input className="ef-input" style={IS} value={form.estado || ""} onChange={e => set("estado", e.target.value)} placeholder="N.L., Jal., CDMX…" />
+              </Fld>
+            </Sec>
+
+            {/* § PERFIL COMERCIAL */}
+            <Sec ico={ICO_AUTO} titulo="Perfil comercial">
+              <Fld label="Vehículo de interés" full>
+                <input className="ef-input" style={IS} value={form.interes || ""} onChange={e => set("interes", e.target.value)} placeholder="Marca, modelo, año" />
+              </Fld>
+              <Fld label="Presupuesto estimado">
+                <input type="number" className="ef-input" style={IS}
+                  value={form.presupuesto || ""}
+                  onChange={e => set("presupuesto", Number(e.target.value))} />
+              </Fld>
+              <Fld label="Forma de pago">
+                <select className="ef-select" style={IS} value={form.formaPago || "No definido"} onChange={e => set("formaPago", e.target.value)}>
+                  {["No definido","Contado","Crédito"].map(o => <option key={o}>{o}</option>)}
+                </select>
+              </Fld>
+              <Fld label="Uso del vehículo">
+                <select className="ef-select" style={IS} value={form.uso || "Personal"} onChange={e => set("uso", e.target.value)}>
+                  {["Personal","Trabajo","Familiar"].map(o => <option key={o}>{o}</option>)}
+                </select>
+              </Fld>
+            </Sec>
+
+            {/* § PROCESO DE VENTA */}
+            <Sec ico={ICO_PROCESO} titulo="Proceso de venta">
+              <Fld label="Etapa">
+                <select className="ef-select" style={IS} value={form.etapa || "Prospección"} onChange={e => set("etapa", e.target.value)}>
+                  {ETAPAS_CRM.map(e => <option key={e}>{e}</option>)}
+                </select>
+              </Fld>
+              <Fld label="Probabilidad de cierre">
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <input type="number" min="0" max="100" className="ef-input"
+                    style={{ ...IS, width:72 }}
+                    value={form.prob || 0}
+                    onChange={e => set("prob", Math.min(100, Math.max(0, Number(e.target.value))))} />
+                  <div style={{ flex:1, height:6, background:"var(--line)", borderRadius:3, overflow:"hidden" }}>
+                    <div style={{
+                      height:"100%", borderRadius:3, transition:"width .3s",
+                      width:(form.prob || 0) + "%",
+                      background:(form.prob||0) >= 70 ? "#22c55e" : (form.prob||0) >= 40 ? "#d99613" : "#e0492f",
+                    }} />
+                  </div>
+                  <span style={{ fontSize:12, fontWeight:700, minWidth:30,
+                    color:(form.prob||0) >= 70 ? "#1f9d57" : (form.prob||0) >= 40 ? "#d99613" : "#e0492f" }}>
+                    {form.prob || 0}%
+                  </span>
+                </div>
+              </Fld>
+              <Fld label="Asesor asignado" full>
+                <select className="ef-select" style={IS} value={form.asesor || ""} onChange={e => set("asesor", e.target.value)}>
+                  {asesoresOpc.map(a => <option key={a}>{a}</option>)}
+                </select>
+              </Fld>
+              <Fld label="Próxima acción" full>
+                <input className="ef-input" style={IS} value={form.prox || ""} onChange={e => set("prox", e.target.value)} />
+              </Fld>
+              <Fld label="Fecha próxima acción">
+                <input type="date" className="ef-input" style={IS} value={form.fprox || ""} onChange={e => set("fprox", e.target.value)} />
+              </Fld>
+              <Fld label="Último contacto">
+                <input type="date" className="ef-input" style={IS} value={form.uc || ""} onChange={e => set("uc", e.target.value)} />
+              </Fld>
+              <Fld label="Notas" full>
+                <textarea className="ef-input"
+                  style={{ ...IS, minHeight:76, resize:"vertical" }}
+                  value={form.notas || ""}
+                  onChange={e => set("notas", e.target.value)} />
+              </Fld>
+            </Sec>
+
+            {/* § UNIDAD VINCULADA (desde Plan Piso) */}
+            {form.vinVinculado && (
+              <Sec ico={ICO_LINK} titulo="Unidad vinculada (Plan Piso)">
+                <Fld label="VIN" full>
+                  <div style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
+                    background:"var(--bg)", borderRadius:8, border:"1px solid var(--line)" }}>
+                    {ICO_AUTO}
+                    <code style={{ fontSize:13, fontWeight:700, color:"var(--ink)", letterSpacing:.5 }}>
+                      {form.vinVinculado}
+                    </code>
+                  </div>
+                </Fld>
+              </Sec>
+            )}
+
+          </div>{/* /inv-form-scroll */}
+        </div>{/* /inv-form-panel */}
+      ) : (
+        <div className="inv-form-panel"
+          style={{ display:"flex", alignItems:"center", justifyContent:"center",
+            flexDirection:"column", gap:12, color:"var(--muted)" }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+            strokeLinecap="round" strokeLinejoin="round" width="52" height="52" style={{ opacity:.25 }}>
+            <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          </svg>
+          <span style={{ fontSize:14, fontWeight:600 }}>Selecciona un cliente</span>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
 /* ── Drawer de detalle ─────────────────────────────────────────────────── */
 function ClienteDrawer({ c, onClose }) {
   if (!c) return null;
@@ -720,12 +1019,13 @@ function NuevoClienteModal({ onClose, onCreate, asesores, initialData }) {
 /* ── Componente principal CRMClientes ────────────────────────────────── */
 function CRMClientes({ rows, kpis, usuarios }) {
   const [clientesData, setClientesData] = React.useState(CLIENTES_DUMMY);
-  const [vista, setVista]           = React.useState("kanban");
+  const [vista, setVista]           = React.useState("editor");
   const [seleccionado, setSeleccionado] = React.useState(null);
   const [busqueda, setBusqueda]     = React.useState("");
   const [filtroAsesor, setFiltroAsesor] = React.useState("Todos");
   const [mostrarNuevo, setMostrarNuevo] = React.useState(false);
   const [pendingData, setPendingData]   = React.useState(null);
+  const [editorSelId, setEditorSelId]   = React.useState(null);
 
   /* Detectar prefill desde Plan Piso al montar */
   React.useEffect(() => {
@@ -770,6 +1070,12 @@ function CRMClientes({ rows, kpis, usuarios }) {
     setMostrarNuevo(false);
     setPendingData(null);
     setSeleccionado(nuevo);
+    setEditorSelId(nuevo.id);
+    setVista("editor");
+  }
+
+  function onClienteUpdate(updated) {
+    setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
   }
 
   const TabBtn = ({ id, label, badge }) => (
@@ -792,7 +1098,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
   );
 
   return (
-    <div style={{ padding:"24px 28px", maxWidth:1400, margin:"0 auto" }}>
+    <div style={{ padding: vista === "editor" ? "24px 28px 0" : "24px 28px", maxWidth:1400, margin:"0 auto" }}>
 
       {/* Encabezado */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
@@ -810,40 +1116,53 @@ function CRMClientes({ rows, kpis, usuarios }) {
         </button>
       </div>
 
-      {/* KPIs */}
-      <StatsBar clientes={clientesData} />
+      {/* KPIs — solo en vistas secundarias */}
+      {vista !== "editor" && <StatsBar clientes={clientesData} />}
 
       {/* Controles */}
-      <div style={{ display:"flex", gap:10, marginBottom:16, alignItems:"center", flexWrap:"wrap" }}>
+      <div style={{ display:"flex", gap:10, marginBottom: vista === "editor" ? 12 : 16,
+        alignItems:"center", flexWrap:"wrap" }}>
         {/* Tabs de vista */}
         <div style={{ display:"flex", gap:6, background:"var(--bg)", borderRadius:9, padding:4 }}>
+          <TabBtn id="editor"   label="Editor" />
           <TabBtn id="kanban"   label="Kanban" />
           <TabBtn id="lista"    label="Lista" />
           <TabBtn id="urgentes" label="Urgentes" badge={urgentesCount} />
         </div>
 
-        <div style={{ flex:1, minWidth:180 }}>
-          <div style={{ position:"relative" }}>
-            <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", color:"var(--muted)" }}>
-              {I.search({ width:14, height:14 })}
-            </span>
-            <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre, vehículo, ciudad…"
-              style={{ width:"100%", padding:"7px 10px 7px 32px", border:"1px solid var(--line)",
-                borderRadius:7, fontSize:13, background:"var(--card)", color:"var(--ink)",
-                outline:"none", fontFamily:"inherit" }} />
-          </div>
-        </div>
-
-        <select value={filtroAsesor} onChange={e => setFiltroAsesor(e.target.value)}
-          style={{ padding:"7px 10px", border:"1px solid var(--line)", borderRadius:7,
-            fontSize:13, background:"var(--card)", color:"var(--ink)", fontFamily:"inherit",
-            cursor:"pointer", outline:"none" }}>
-          {asesores.map(a => <option key={a}>{a}</option>)}
-        </select>
+        {/* Búsqueda y filtro asesor — solo para vistas que no tienen buscador propio */}
+        {vista !== "editor" && (
+          <>
+            <div style={{ flex:1, minWidth:180 }}>
+              <div style={{ position:"relative" }}>
+                <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", color:"var(--muted)" }}>
+                  {I.search({ width:14, height:14 })}
+                </span>
+                <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                  placeholder="Buscar por nombre, vehículo, ciudad…"
+                  style={{ width:"100%", padding:"7px 10px 7px 32px", border:"1px solid var(--line)",
+                    borderRadius:7, fontSize:13, background:"var(--card)", color:"var(--ink)",
+                    outline:"none", fontFamily:"inherit" }} />
+              </div>
+            </div>
+            <select value={filtroAsesor} onChange={e => setFiltroAsesor(e.target.value)}
+              style={{ padding:"7px 10px", border:"1px solid var(--line)", borderRadius:7,
+                fontSize:13, background:"var(--card)", color:"var(--ink)", fontFamily:"inherit",
+                cursor:"pointer", outline:"none" }}>
+              {asesores.map(a => <option key={a}>{a}</option>)}
+            </select>
+          </>
+        )}
       </div>
 
       {/* Contenido de la vista */}
+      {vista === "editor"   && (
+        <ClienteEditor
+          clientes={clientesData}
+          defaultSelId={editorSelId}
+          onUpdate={onClienteUpdate}
+        />
+      )}
       {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
