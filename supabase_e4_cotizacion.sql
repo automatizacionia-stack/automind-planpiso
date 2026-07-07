@@ -1,10 +1,10 @@
 -- E4: Selección de unidad + Cotización
 -- Ejecutar en: Supabase → SQL Editor
--- Añade columnas de cotización a la tabla clientes.
 -- Seguro re-ejecutar (IF NOT EXISTS).
+-- NOTA: unidad_id es TEXT (no UUID) porque inventario.id es de tipo text.
 
 ALTER TABLE public.clientes
-  ADD COLUMN IF NOT EXISTS unidad_id         UUID         REFERENCES public.inventario(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS unidad_id         TEXT,
   ADD COLUMN IF NOT EXISTS unidad_desc       TEXT,
   ADD COLUMN IF NOT EXISTS precio_lista      NUMERIC(12,2),
   ADD COLUMN IF NOT EXISTS descuento_monto   NUMERIC(12,2) DEFAULT 0,
