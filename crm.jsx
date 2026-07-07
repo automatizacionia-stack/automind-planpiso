@@ -826,11 +826,15 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
     setDirty(false); setSaved(false);
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!form) return;
-    onUpdate && onUpdate({ ...form });
-    setDirty(false); setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
+    try {
+      await (onUpdate && onUpdate({ ...form }));
+      setDirty(false); setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
+    } catch(e) {
+      /* El error ya se muestra en onClienteUpdate */
+    }
   }
 
   /* Aplica los campos extraídos por IA al formulario del cliente */
@@ -1556,13 +1560,19 @@ function CRMClientes({ rows, kpis, usuarios }) {
     setVista("editor");
   }
 
-  function onClienteUpdate(updated) {
+  async function onClienteUpdate(updated) {
+    /* Actualizar estado local optimistamente */
     setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
     /* Persistir en Supabase */
     var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
-    if (agencyId && window.DB) {
-      window.DB.saveCliente(agencyId, updated)
-        .catch(function(e) { console.error("[CRM] Error actualizando cliente:", e); });
+    if (!agencyId || !window.DB) return;
+    try {
+      await window.DB.saveCliente(agencyId, updated);
+    } catch(e) {
+      console.error("[CRM] Error guardando cliente:", e);
+      /* Revertir estado local */
+      setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
+      window.alert("Error al guardar: " + (e.message || e));
     }
   }
 
