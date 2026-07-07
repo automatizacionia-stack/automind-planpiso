@@ -489,27 +489,93 @@ function ClienteListItem({ c, active, onClick }) {
   );
 }
 
-/* ── Zona de carga de documento ──────────────────────────────────────────── */
-function DocUpload({ label, sublabel, value, onChange }) {
-  const [dragging, setDragging] = React.useState(false);
+/* ── Etiquetas legibles de campos extraídos ──────────────────────────────── */
+const CAMPO_LABEL = {
+  nombre:"Nombre", apellidoPaterno:"Apellido paterno", apellidoMaterno:"Apellido materno",
+  curp:"CURP", rfc:"RFC", fechaNacimiento:"Fecha de nacimiento", sexo:"Sexo",
+  direccion:"Dirección", colonia:"Colonia", ciudad:"Ciudad", estado:"Estado",
+  cp:"C.P.", fechaDocumento:"Período del recibo",
+};
+
+/* Redimensiona una imagen a máx. 1200px para no saturar la Edge Function */
+function _resizeDataUrl(dataUrl, mimeType) {
+  return new Promise(function(resolve) {
+    if (mimeType === "application/pdf") { resolve(dataUrl); return; }
+    var img = new Image();
+    img.onload = function() {
+      var MAX = 1200;
+      var w = img.width, h = img.height;
+      if (w <= MAX && h <= MAX) { resolve(dataUrl); return; }
+      var ratio = Math.min(MAX / w, MAX / h);
+      w = Math.round(w * ratio); h = Math.round(h * ratio);
+      var canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.88));
+    };
+    img.onerror = function() { resolve(dataUrl); };
+    img.src = dataUrl;
+  });
+}
+
+/* ── Zona de carga de documento con extracción IA ────────────────────────── */
+function DocUpload({ label, sublabel, docType, value, onChange, onExtract }) {
+  const [dragging,    setDragging]    = React.useState(false);
+  const [extrayendo,  setExtrayendo]  = React.useState(false);
+  const [campos,      setCampos]      = React.useState(null);   // null | {} | {k:v}
+  const [errExt,      setErrExt]      = React.useState(null);
   const inputRef = React.useRef(null);
+
+  /* Resetear extracción cuando el doc cambia */
+  React.useEffect(() => { setCampos(null); setErrExt(null); }, [value && value.name]);
 
   function handleFile(file) {
     if (!file) return;
-    const allowed = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
-    if (!allowed.includes(file.type)) {
-      alert("Formato no permitido. Usa JPG, PNG o PDF.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = e => onChange({ name: file.name, type: file.type, dataUrl: e.target.result, cargadoEn: new Date().toISOString() });
+    var allowed = ["image/jpeg","image/jpg","image/png","application/pdf"];
+    if (!allowed.includes(file.type)) { alert("Formato no permitido. Usa JPG, PNG o PDF."); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      onChange({ name:file.name, type:file.type, dataUrl:e.target.result, cargadoEn:new Date().toISOString() });
+    };
     reader.readAsDataURL(file);
   }
 
-  const isImage = value && value.type && value.type.startsWith("image/");
+  async function extraer() {
+    if (!value || extrayendo) return;
+    setExtrayendo(true); setCampos(null); setErrExt(null);
+    try {
+      var dataUrlEnviar = await _resizeDataUrl(value.dataUrl, value.type);
+      var supaUrl  = window.SUPABASE_URL;
+      var supaAnon = window.SUPABASE_ANON;
+      var resp = await fetch(supaUrl + "/functions/v1/extract-document", {
+        method: "POST",
+        headers: { "Content-Type":"application/json", "Authorization":"Bearer " + supaAnon },
+        body: JSON.stringify({ dataUrl: dataUrlEnviar, mimeType: value.type, docType: docType }),
+      });
+      var data = await resp.json();
+      if (!data.ok) throw new Error(data.error || "Error en el servidor");
+      setCampos(data.campos || {});
+    } catch(e) {
+      setErrExt(e.message || "Error al extraer");
+    } finally {
+      setExtrayendo(false);
+    }
+  }
+
+  function aplicar() {
+    if (onExtract && campos) onExtract(campos);
+    setCampos(null);
+  }
+
+  var isImage = value && value.type && value.type.startsWith("image/");
+  var tieneCampos = campos && Object.keys(campos).length > 0;
+
+  var btnBase = { fontSize:11, fontWeight:600, border:"none", background:"none",
+    cursor:"pointer", padding:"2px 6px", flexShrink:0, borderRadius:4 };
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+
       {/* Etiqueta */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline" }}>
         <span style={{ fontSize:12, fontWeight:700, color:"var(--ink-2)" }}>{label}</span>
@@ -517,60 +583,146 @@ function DocUpload({ label, sublabel, value, onChange }) {
       </div>
 
       {value ? (
-        /* ── Preview del archivo cargado ── */
-        <div style={{ border:"1px solid var(--line)", borderRadius:9, overflow:"hidden",
-          background:"var(--bg)", position:"relative" }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
 
-          {isImage ? (
-            <div style={{ background:"#000", maxHeight:170, overflow:"hidden", display:"flex",
-              alignItems:"center", justifyContent:"center" }}>
-              <img src={value.dataUrl} alt={value.name}
-                style={{ width:"100%", maxHeight:170, objectFit:"contain", display:"block" }} />
-            </div>
-          ) : (
-            <div style={{ padding:"18px 14px", display:"flex", alignItems:"center", gap:12 }}>
-              <div style={{ width:40, height:48, background:"#fee2e2", borderRadius:6,
-                display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#e0492f" strokeWidth="1.9"
-                  strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14,2 14,8 20,8"/>
-                  <line x1="9" y1="13" x2="15" y2="13"/>
-                  <line x1="9" y1="17" x2="15" y2="17"/>
-                </svg>
+          {/* ── Preview ── */}
+          <div style={{ border:"1px solid var(--line)", borderRadius:9, overflow:"hidden", background:"var(--bg)" }}>
+
+            {isImage ? (
+              <div style={{ background:"#111", maxHeight:160, overflow:"hidden",
+                display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <img src={value.dataUrl} alt={value.name}
+                  style={{ width:"100%", maxHeight:160, objectFit:"contain", display:"block" }} />
               </div>
-              <div style={{ minWidth:0 }}>
-                <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)",
-                  overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                  {value.name}
+            ) : (
+              <div style={{ padding:"16px 14px", display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:38, height:46, background:"#fee2e2", borderRadius:6,
+                  display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#e0492f" strokeWidth="1.9"
+                    strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14,2 14,8 20,8"/>
+                    <line x1="9" y1="13" x2="15" y2="13"/>
+                    <line x1="9" y1="17" x2="15" y2="17"/>
+                  </svg>
                 </div>
-                <div style={{ fontSize:11, color:"var(--muted)", marginTop:2 }}>PDF · listo para análisis IA</div>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)",
+                    overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {value.name}
+                  </div>
+                  <div style={{ fontSize:11, color:"var(--muted)", marginTop:2 }}>PDF</div>
+                </div>
               </div>
+            )}
+
+            {/* Footer */}
+            <div style={{ padding:"7px 12px", borderTop:"1px solid var(--line)",
+              display:"flex", alignItems:"center", gap:4, background:"var(--card)" }}>
+              <span style={{ fontSize:11, color:"var(--muted)", overflow:"hidden",
+                textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{value.name}</span>
+              <button onClick={() => onChange(null)} style={{ ...btnBase, color:"#e0492f" }}>Quitar</button>
+              <button onClick={() => inputRef.current && inputRef.current.click()}
+                style={{ ...btnBase, color:"var(--muted)" }}>Reemplazar</button>
+            </div>
+            <input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.pdf" style={{ display:"none" }}
+              onChange={e => { handleFile(e.target.files[0]); e.target.value = ""; }} />
+          </div>
+
+          {/* ── Botón Extraer con IA ── */}
+          {!campos && !extrayendo && (
+            <button onClick={extraer}
+              style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                padding:"9px 14px", border:"1.5px solid #c4b5fd", borderRadius:8,
+                background:"#f5f3ff", color:"#6d28d9", fontSize:12, fontWeight:700,
+                cursor:"pointer", transition:"all .15s" }}
+              onMouseOver={e => { e.currentTarget.style.background="#ede9fe"; }}
+              onMouseOut={e => { e.currentTarget.style.background="#f5f3ff"; }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"
+                strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
+                <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+              </svg>
+              Extraer información con IA
+            </button>
+          )}
+
+          {/* ── Cargando ── */}
+          {extrayendo && (
+            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px",
+              background:"#f5f3ff", border:"1.5px solid #c4b5fd", borderRadius:8 }}>
+              <div style={{ width:14, height:14, border:"2px solid #c4b5fd",
+                borderTopColor:"#7c3aed", borderRadius:"50%",
+                animation:"spin 0.7s linear infinite", flexShrink:0 }} />
+              <span style={{ fontSize:12, color:"#6d28d9", fontWeight:600 }}>
+                Analizando documento…
+              </span>
             </div>
           )}
 
-          {/* Footer con nombre y botón reemplazar */}
-          <div style={{ padding:"7px 12px", borderTop:"1px solid var(--line)",
-            display:"flex", alignItems:"center", justifyContent:"space-between",
-            background:"var(--card)", gap:8 }}>
-            <span style={{ fontSize:11, color:"var(--muted)", overflow:"hidden",
-              textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{value.name}</span>
-            <button onClick={() => onChange(null)}
-              style={{ fontSize:11, color:"#e0492f", fontWeight:600, border:"none",
-                background:"none", cursor:"pointer", padding:"2px 6px", flexShrink:0,
-                borderRadius:4 }}>
-              Quitar
-            </button>
-            <button onClick={() => inputRef.current && inputRef.current.click()}
-              style={{ fontSize:11, color:"var(--accent)", fontWeight:600, border:"none",
-                background:"none", cursor:"pointer", padding:"2px 6px", flexShrink:0,
-                borderRadius:4 }}>
-              Reemplazar
-            </button>
-          </div>
+          {/* ── Error de extracción ── */}
+          {errExt && (
+            <div style={{ padding:"10px 14px", background:"#fff5f5", border:"1.5px solid #fecaca",
+              borderRadius:8, fontSize:12, color:"#991b1b",
+              display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span>Error: {errExt}</span>
+              <button onClick={() => setErrExt(null)}
+                style={{ border:"none", background:"none", color:"#991b1b", cursor:"pointer", fontSize:13 }}>✕</button>
+            </div>
+          )}
 
-          <input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.pdf" style={{ display:"none" }}
-            onChange={e => { handleFile(e.target.files[0]); e.target.value = ""; }} />
+          {/* ── Resultado de extracción ── */}
+          {campos !== null && !extrayendo && (
+            <div style={{ border:"1.5px solid #a7f3d0", borderRadius:9, overflow:"hidden" }}>
+              {/* Header */}
+              <div style={{ padding:"9px 14px", background:"#ecfdf5",
+                display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.9"
+                    strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
+                    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+                  </svg>
+                  <span style={{ fontSize:12, fontWeight:700, color:"#065f46" }}>
+                    {tieneCampos ? "Información extraída" : "Sin datos detectados"}
+                  </span>
+                </div>
+                <button onClick={() => setCampos(null)}
+                  style={{ border:"none", background:"none", color:"#6b7280", cursor:"pointer", fontSize:13 }}>✕</button>
+              </div>
+
+              {/* Campos */}
+              {tieneCampos ? (
+                <div style={{ background:"var(--card)" }}>
+                  <div style={{ padding:"10px 14px", display:"flex", flexDirection:"column", gap:6 }}>
+                    {Object.entries(campos).map(function(entry) {
+                      var k = entry[0], v = entry[1];
+                      var etiqueta = CAMPO_LABEL[k] || k;
+                      return (
+                        <div key={k} style={{ display:"flex", gap:8, fontSize:12 }}>
+                          <span style={{ color:"var(--muted)", minWidth:130, flexShrink:0 }}>{etiqueta}</span>
+                          <span style={{ fontWeight:600, color:"var(--ink)" }}>{v}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Aplicar */}
+                  <div style={{ padding:"9px 14px", borderTop:"1px solid #a7f3d0", background:"#f0fdf4" }}>
+                    <button onClick={aplicar}
+                      style={{ width:"100%", padding:"7px", border:"none", borderRadius:7,
+                        background:"#059669", color:"#fff", fontSize:12, fontWeight:700,
+                        cursor:"pointer" }}>
+                      Aplicar al formulario
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding:"14px", background:"var(--card)", fontSize:12, color:"var(--muted)",
+                  textAlign:"center" }}>
+                  No se pudo leer información del documento. Intenta con una imagen más clara.
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       ) : (
         /* ── Zona de drop vacía ── */
@@ -579,13 +731,10 @@ function DocUpload({ label, sublabel, value, onChange }) {
           onDragLeave={() => setDragging(false)}
           onDrop={e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); }}
           onClick={() => inputRef.current && inputRef.current.click()}
-          style={{
-            border: "2px dashed " + (dragging ? "var(--accent)" : "var(--line)"),
-            borderRadius:9, padding:"30px 16px", textAlign:"center",
-            cursor:"pointer", transition:"all .15s",
-            background: dragging ? "#eff6ff" : "var(--bg)",
-            display:"flex", flexDirection:"column", alignItems:"center", gap:8,
-          }}>
+          style={{ border:"2px dashed " + (dragging ? "var(--accent)" : "var(--line)"),
+            borderRadius:9, padding:"30px 16px", textAlign:"center", cursor:"pointer",
+            transition:"all .15s", background: dragging ? "#eff6ff" : "var(--bg)",
+            display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke={dragging ? "var(--accent)" : "var(--muted)"}
             strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width="30" height="30">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -650,6 +799,32 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
     onUpdate && onUpdate({ ...form });
     setDirty(false); setSaved(true);
     setTimeout(() => setSaved(false), 2200);
+  }
+
+  /* Aplica los campos extraídos por IA al formulario del cliente */
+  function aplicarCampos(extractedCampos, fuente) {
+    setForm(function(prev) {
+      var upd = {};
+      if (fuente === "id") {
+        // Nombre completo desde INE
+        var partes = [extractedCampos.nombre, extractedCampos.apellidoPaterno, extractedCampos.apellidoMaterno].filter(Boolean);
+        if (partes.length && !prev.nombre) upd.nombre = partes.join(" ");
+        if (extractedCampos.curp)  upd.curp  = extractedCampos.curp;
+        if (extractedCampos.rfc)   upd.rfc   = extractedCampos.rfc;
+        if (extractedCampos.ciudad && !prev.ciudad) upd.ciudad  = extractedCampos.ciudad;
+        if (extractedCampos.estado && !prev.estado) upd.estado  = extractedCampos.estado;
+      }
+      if (fuente === "domicilio") {
+        if (extractedCampos.ciudad && !prev.ciudad) upd.ciudad  = extractedCampos.ciudad;
+        if (extractedCampos.estado && !prev.estado) upd.estado  = extractedCampos.estado;
+        if (extractedCampos.cp)    upd.cp    = extractedCampos.cp;
+      }
+      // Guardar todos los datos crudos para referencia
+      var clave = fuente === "id" ? "datosId" : "datosDomicilio";
+      upd[clave] = extractedCampos;
+      return Object.assign({}, prev, upd);
+    });
+    setDirty(true);
   }
 
   const filtrados = q
@@ -851,16 +1026,20 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                 <DocUpload
                   label="Identificación oficial"
                   sublabel="INE · Pasaporte"
+                  docType="id"
                   value={form.docId || null}
                   onChange={v => set("docId", v)}
+                  onExtract={campos => aplicarCampos(campos, "id")}
                 />
               </div>
               <div style={{ gridColumn:"1/-1", marginTop:4 }}>
                 <DocUpload
                   label="Comprobante de domicilio"
                   sublabel="Recibo de agua · luz · teléfono"
+                  docType="domicilio"
                   value={form.docDomicilio || null}
                   onChange={v => set("docDomicilio", v)}
+                  onExtract={campos => aplicarCampos(campos, "domicilio")}
                 />
               </div>
             </Sec>
