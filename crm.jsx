@@ -1454,7 +1454,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
 
   function onClienteUpdate(updated) {
     setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
-    /* Persistir cambios en Supabase */
+    /* Persistir en Supabase */
     var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
     if (agencyId && window.DB) {
       window.DB.saveCliente(agencyId, updated)
@@ -1565,7 +1565,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
       )}
       {!cargando && !errorCrm && clientesData.length === 0 && (
         <div style={{ textAlign:"center", padding:"64px 20px", color:"var(--muted)" }}>
-          <div style={{ fontSize:40, marginBottom:10 }}>👥</div>
+          <div style={{ fontSize:40, marginBottom:10 }}>&#128101;</div>
           <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>Sin clientes aún</div>
           <div style={{ fontSize:13 }}>Crea el primer cliente con el botón "Nuevo cliente".</div>
         </div>
@@ -1579,4 +1579,12 @@ function CRMClientes({ rows, kpis, usuarios }) {
         <NuevoClienteModal
           asesores={asesores}
           onClose={() => { setMostrarNuevo(false); setPendingData(null); }}
-          onCreate={c
+          onCreate={crearCliente}
+          initialData={pendingData}
+        />
+      )}
+    </div>
+  );
+}
+
+Object.assign(window, { CRMClientes });
