@@ -838,18 +838,24 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
     setForm(function(prev) {
       var upd = {};
       if (fuente === "id") {
-        // Nombre completo desde INE
         var partes = [extractedCampos.nombre, extractedCampos.apellidoPaterno, extractedCampos.apellidoMaterno].filter(Boolean);
-        if (partes.length && !prev.nombre) upd.nombre = partes.join(" ");
-        if (extractedCampos.curp)  upd.curp  = extractedCampos.curp;
-        if (extractedCampos.rfc)   upd.rfc   = extractedCampos.rfc;
-        if (extractedCampos.ciudad && !prev.ciudad) upd.ciudad  = extractedCampos.ciudad;
-        if (extractedCampos.estado && !prev.estado) upd.estado  = extractedCampos.estado;
+        if (partes.length && !prev.nombre) upd.nombre   = partes.join(" ");
+        if (extractedCampos.curp)          upd.curp     = extractedCampos.curp;
+        if (extractedCampos.rfc)           upd.rfc      = extractedCampos.rfc;
+        if (extractedCampos.fechaNacimiento) upd.fechaNac = extractedCampos.fechaNacimiento;
+        if (extractedCampos.sexo)          upd.sexo     = extractedCampos.sexo;
+        if (extractedCampos.direccion)     upd.direccion= extractedCampos.direccion;
+        if (extractedCampos.colonia)       upd.colonia  = extractedCampos.colonia;
+        if (extractedCampos.ciudad && !prev.ciudad) upd.ciudad = extractedCampos.ciudad;
+        if (extractedCampos.estado && !prev.estado) upd.estado = extractedCampos.estado;
+        if (extractedCampos.cp)            upd.cp       = extractedCampos.cp;
       }
       if (fuente === "domicilio") {
-        if (extractedCampos.ciudad && !prev.ciudad) upd.ciudad  = extractedCampos.ciudad;
-        if (extractedCampos.estado && !prev.estado) upd.estado  = extractedCampos.estado;
-        if (extractedCampos.cp)    upd.cp    = extractedCampos.cp;
+        if (extractedCampos.ciudad && !prev.ciudad) upd.ciudad   = extractedCampos.ciudad;
+        if (extractedCampos.estado && !prev.estado) upd.estado   = extractedCampos.estado;
+        if (extractedCampos.cp && !prev.cp)         upd.cp       = extractedCampos.cp;
+        if (extractedCampos.direccion && !prev.direccion) upd.direccion = extractedCampos.direccion;
+        if (extractedCampos.colonia && !prev.colonia)     upd.colonia   = extractedCampos.colonia;
       }
       if (fuente === "licencia") {
         if (extractedCampos.curp && !prev.curp) upd.curp = extractedCampos.curp;
@@ -857,6 +863,10 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
           var partes = [extractedCampos.nombre, extractedCampos.apellidoPaterno, extractedCampos.apellidoMaterno].filter(Boolean);
           if (partes.length) upd.nombre = partes.join(" ");
         }
+        if (extractedCampos.fechaNacimiento && !prev.fechaNac) upd.fechaNac   = extractedCampos.fechaNacimiento;
+        if (extractedCampos.numeroLicencia)  upd.numLicencia = extractedCampos.numeroLicencia;
+        if (extractedCampos.tipoLicencia)    upd.tipoLic     = extractedCampos.tipoLicencia;
+        if (extractedCampos.vigencia)        upd.vigenciaLic = extractedCampos.vigencia;
       }
       // Guardar todos los datos crudos para referencia
       var clave = fuente === "id" ? "datosId" : fuente === "licencia" ? "datosLicencia" : "datosDomicilio";
@@ -968,6 +978,55 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
               <Fld label="Email">
                 <input className="ef-input" style={IS} value={form.email || ""} onChange={e => set("email", e.target.value)} placeholder="correo@ejemplo.com" />
+              </Fld>
+            </Sec>
+
+            {/* § EXPEDIENTE (campos OCR) */}
+            <Sec ico="🪪" titulo="Datos del expediente">
+              <Fld label="CURP" full>
+                <input className="ef-input" style={IS} value={form.curp || ""}
+                  onChange={e => set("curp", e.target.value.toUpperCase())}
+                  placeholder="18 caracteres" maxLength={18} style={{...IS, fontFamily:"monospace", letterSpacing:1}} />
+              </Fld>
+              <Fld label="RFC">
+                <input className="ef-input" style={{...IS, fontFamily:"monospace"}} value={form.rfc || ""}
+                  onChange={e => set("rfc", e.target.value.toUpperCase())} placeholder="RFC con homoclave" />
+              </Fld>
+              <Fld label="Fecha de nacimiento">
+                <input className="ef-input" style={IS} value={form.fechaNac || ""}
+                  onChange={e => set("fechaNac", e.target.value)} placeholder="DD/MM/AAAA" />
+              </Fld>
+              <Fld label="Sexo">
+                <select className="ef-select" style={IS} value={form.sexo || ""}
+                  onChange={e => set("sexo", e.target.value)}>
+                  <option value="">—</option>
+                  <option value="H">Hombre (H)</option>
+                  <option value="M">Mujer (M)</option>
+                </select>
+              </Fld>
+              <Fld label="Dirección" full>
+                <input className="ef-input" style={IS} value={form.direccion || ""}
+                  onChange={e => set("direccion", e.target.value)} placeholder="Calle y número" />
+              </Fld>
+              <Fld label="Colonia">
+                <input className="ef-input" style={IS} value={form.colonia || ""}
+                  onChange={e => set("colonia", e.target.value)} placeholder="Colonia o fracc." />
+              </Fld>
+              <Fld label="C.P.">
+                <input className="ef-input" style={IS} value={form.cp || ""}
+                  onChange={e => set("cp", e.target.value)} placeholder="00000" maxLength={5} />
+              </Fld>
+              <Fld label="# Licencia">
+                <input className="ef-input" style={{...IS, fontFamily:"monospace"}} value={form.numLicencia || ""}
+                  onChange={e => set("numLicencia", e.target.value)} placeholder="Número de folio" />
+              </Fld>
+              <Fld label="Tipo licencia">
+                <input className="ef-input" style={IS} value={form.tipoLic || ""}
+                  onChange={e => set("tipoLic", e.target.value)} placeholder="A, B, C…" />
+              </Fld>
+              <Fld label="Vigencia licencia">
+                <input className="ef-input" style={IS} value={form.vigenciaLic || ""}
+                  onChange={e => set("vigenciaLic", e.target.value)} placeholder="DD/MM/AAAA" />
               </Fld>
             </Sec>
 
@@ -1104,11 +1163,11 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                     {[
                       { lbl:"CURP",      val: form.curp },
                       { lbl:"RFC",       val: form.rfc },
-                      { lbl:"Nac.",      val: form.datosId && form.datosId.fechaNacimiento },
-                      { lbl:"Sexo",      val: form.datosId && form.datosId.sexo },
-                      { lbl:"Licencia #",val: form.datosLicencia && form.datosLicencia.numeroLicencia },
-                      { lbl:"Tipo lic.", val: form.datosLicencia && form.datosLicencia.tipoLicencia },
-                      { lbl:"Vigencia",  val: form.datosLicencia && form.datosLicencia.vigencia },
+                      { lbl:"Nac.",      val: form.fechaNac },
+                      { lbl:"Sexo",      val: form.sexo },
+                      { lbl:"Licencia #",val: form.numLicencia },
+                      { lbl:"Tipo lic.", val: form.tipoLic },
+                      { lbl:"Vigencia",  val: form.vigenciaLic },
                       { lbl:"C.P.",      val: form.cp },
                     ].filter(x => x.val).map(x => (
                       <div key={x.lbl} style={{ fontSize:12 }}>
