@@ -184,12 +184,12 @@ function AgenciaWorkspacesModal({ agencia, onEntrar, onClose }) {
           {/* Lista de workspaces */}
           <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)",
             textTransform:"uppercase", letterSpacing:".06em", marginBottom:10 }}>
-            Agencias ({workspaces.length})
+            Sucursales ({workspaces.length})
           </div>
 
           {workspaces.length === 0 ? (
             <div style={{ textAlign:"center", padding:"24px 0", color:"var(--muted)", fontSize:14 }}>
-              Sin agencias configuradas
+              Sin sucursales configuradas
             </div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:6, maxHeight:320, overflowY:"auto" }}>
@@ -410,7 +410,7 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
                         display:"block", lineHeight:1.2 }}>
                         {ag.workspaces.length}
                       </span>
-                      agencia{ag.workspaces.length !== 1 ? "s" : ""}
+                      sucursal{ag.workspaces.length !== 1 ? "es" : ""}
                     </div>
                     {ag.ownerEmail && (
                       <div style={{ fontSize:12, color:"var(--muted)", overflow:"hidden",
