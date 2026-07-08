@@ -254,34 +254,44 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
                     textTransform:"uppercase", letterSpacing:".07em", padding:"4px 8px 6px" }}>
                     Mis agencias
                   </div>
-                  {(tenant.availableWorkspaces || [])
-                    .filter(w => w.id !== tenant.id)
-                    .map(w => (
+                  {(tenant.availableWorkspaces || []).map(w => {
+                    const esCurrent = w.id === tenant.id;
+                    return (
                       <button key={w.id}
-                        onClick={() => { setShowAgSwitcher(false); onSwitchToWorkspace && onSwitchToWorkspace(w.id); }}
+                        onClick={() => { setShowAgSwitcher(false); if (!esCurrent) onSwitchToWorkspace && onSwitchToWorkspace(w.id); }}
                         style={{
                           display:"flex", alignItems:"center", gap:10, width:"100%",
                           padding:"8px 10px", borderRadius:8, border:"none",
-                          background:"transparent", cursor:"pointer", textAlign:"left",
+                          background: esCurrent ? "var(--bg)" : "transparent",
+                          cursor: esCurrent ? "default" : "pointer", textAlign:"left",
                           transition:"background .12s",
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = "var(--bg)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                        onMouseEnter={e => { if (!esCurrent) e.currentTarget.style.background = "var(--bg)"; }}
+                        onMouseLeave={e => { if (!esCurrent) e.currentTarget.style.background = "transparent"; }}>
                         <span style={{
                           width:28, height:28, borderRadius:7, background:w.accent,
                           display:"grid", placeItems:"center", color:"#fff",
                           fontWeight:800, fontSize:11, flexShrink:0,
+                          outline: esCurrent ? "2px solid var(--ink)" : "none",
+                          outlineOffset:2,
                         }}>{w.iniciales}</span>
-                        <div style={{ minWidth:0 }}>
+                        <div style={{ minWidth:0, flex:1 }}>
                           <div style={{ fontSize:12, fontWeight:700, color:"var(--ink)",
                             overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                             {w.nombre}
                           </div>
                           {w.ciudad && <div style={{ fontSize:10, color:"var(--muted)" }}>{w.ciudad}</div>}
                         </div>
+                        {esCurrent && (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                            strokeLinecap="round" strokeLinejoin="round" width="13" height="13"
+                            style={{ color:"var(--accent)", flexShrink:0 }}>
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
                       </button>
-                    ))
-                  }
+                    );
+                  })}
                 </div>
               </>
             )}
