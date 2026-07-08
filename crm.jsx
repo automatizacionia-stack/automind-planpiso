@@ -878,6 +878,44 @@ function UnitPickerModal({ onSelect, onClose }) {
   );
 }
 
+/* ── Sección colapsable + campo de formulario (nivel módulo para estabilidad de hooks) ── */
+function Sec({ ico, titulo, children, defaultOpen }) {
+  var [open, setOpen] = React.useState(defaultOpen ? true : false);
+  return (
+    <div className="ef-seccion" style={{ overflow:"hidden" }}>
+      <div className="ef-sec-head"
+        onClick={function(){ setOpen(function(o){ return !o; }); }}
+        style={{ cursor:"pointer", userSelect:"none", display:"flex",
+          alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ display:"flex", alignItems:"center" }}>
+          <span style={{ display:"flex", alignItems:"center", color:"var(--muted)" }}>{ico}</span>
+          <span style={{ marginLeft:6 }}>{titulo}</span>
+        </div>
+        <span style={{
+          display:"flex", alignItems:"center", color:"var(--muted)",
+          transition:"transform .2s",
+          transform: open ? "rotate(180deg)" : "rotate(0deg)",
+        }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+            strokeLinecap="round" strokeLinejoin="round" width="13" height="13">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </span>
+      </div>
+      {open && <div className="ef-grid">{children}</div>}
+    </div>
+  );
+}
+
+function Fld({ label, full, req, children }) {
+  return (
+    <div className="ef-field" style={{ gridColumn: full ? "1/-1" : undefined }}>
+      <label className="ef-label">{label}{req && <span className="ef-req"> *</span>}</label>
+      {children}
+    </div>
+  );
+}
+
 /* ── Editor split‑panel de clientes (espejo de inventario‑editor) ────────── */
 function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const primer = defaultSelId
@@ -987,23 +1025,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
     borderRadius:7, fontSize:13, background:"var(--bg)", color:"var(--ink)",
     outline:"none", fontFamily:"inherit",
   };
-
-  /* Sección y campo reutilizables */
-  const Sec = ({ ico, titulo, children }) => (
-    <div className="ef-seccion">
-      <div className="ef-sec-head">
-        <span style={{ display:"flex", alignItems:"center", color:"var(--muted)" }}>{ico}</span>
-        <span style={{ marginLeft:6 }}>{titulo}</span>
-      </div>
-      <div className="ef-grid">{children}</div>
-    </div>
-  );
-  const Fld = ({ label, full, req, children }) => (
-    <div className="ef-field" style={{ gridColumn: full ? "1/-1" : undefined }}>
-      <label className="ef-label">{label}{req && <span className="ef-req"> *</span>}</label>
-      {children}
-    </div>
-  );
 
   /* Iconos SVG inline */
   const ICO_PERSONA = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>);
