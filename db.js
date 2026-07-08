@@ -71,10 +71,10 @@
 
     // ¿Es miembro de workspace?
     // Usamos select sin .single() para no fallar cuando el usuario
-    // tiene registros en más de un workspace (ej. datos de prueba duplicados).
+    // tiene registros en más de un workspace.
     const { data: meRows, error: meErr } = await client
       .from("users")
-      .select("*")
+      .select("*, workspaces(id, nombre, ciudad, iniciales, accent, sidebar)")
       .eq("auth_user_id", authUser.id)
       .order("created_at", { ascending: false });
     if (meErr || !meRows || meRows.length === 0) {
@@ -84,12 +84,26 @@
     // Si tiene varios registros, priorizar el workspace_id más reciente
     const me = meRows[0];
 
+    // Lista de todos los workspaces a los que tiene acceso (para el switcher)
+    const allUserWorkspaces = meRows
+      .filter(r => r.workspace_id || r.agency_id)
+      .map(r => ({
+        id:        r.workspace_id || r.agency_id,
+        nombre:    r.workspaces?.nombre    || "",
+        ciudad:    r.workspaces?.ciudad    || "",
+        iniciales: r.workspaces?.iniciales || (r.workspaces?.nombre || "WS").slice(0,2).toUpperCase(),
+        accent:    r.workspaces?.accent    || "#2f6fed",
+        sidebar:   r.workspaces?.sidebar   || "#1b2a57",
+        rol:       r.rol,
+      }));
+
     return {
       type: "workspace",
       authUserId: authUser.id,
       workspaceId: me.workspace_id || me.agency_id,
       role: me.rol,
       me,
+      allUserWorkspaces,
     };
   }
 

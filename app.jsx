@@ -458,6 +458,7 @@ function App() {
               id:agency.id, nombre:agency.nombre, ciudad:agency.ciudad,
               iniciales:agency.iniciales||agency.nombre.slice(0,2).toUpperCase(),
               accent:agency.accent||"#2f6fed", sidebar:agency.sidebar||"#1b2a57", usuarioActual,
+              availableWorkspaces: ctx.allUserWorkspaces || [],
             });
           }
         }
@@ -480,6 +481,48 @@ function App() {
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  // Cambiar a otro workspace del mismo usuario
+  const handleSwitchToWorkspace = React.useCallback(async (wsId) => {
+    try {
+      const data = await window.DB.loadAgencyData(wsId);
+      const { agency, me, usuarios, rows } = data;
+      const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
+      const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
+      const hoy = new Date();
+      const mesActual = hoy.getFullYear() * 100 + hoy.getMonth();
+      const rowsSinVendidosViejos = rowsEnriquecidas.filter(r => {
+        if (r.estadoVenta !== "VENDIDO") return true;
+        if (!r.fechaVenta) return true;
+        const fv = r.fechaVenta instanceof Date ? r.fechaVenta : new Date(r.fechaVenta);
+        return fv.getFullYear() * 100 + fv.getMonth() === mesActual;
+      });
+      const usuarioActual = usuariosEnriquecidos.find(u => u.auth_user_id === me.auth_user_id) || me;
+      const rowsParaRol = usuarioActual?.rol === "vendedor"
+        ? rowsSinVendidosViejos.filter(r => {
+            const ids = r.vendedorIds || (r.vendedorId ? [r.vendedorId] : []);
+            return ids.length === 0 || ids.includes(usuarioActual.id);
+          })
+        : rowsSinVendidosViejos;
+      window.AUTOMIND = buildAUTOMIND(agency, rowsParaRol, usuariosEnriquecidos);
+      sessionStorage.setItem("automind_workspace_id", wsId);
+      setTenant(prev => ({
+        ...prev,
+        id:        agency.id,
+        nombre:    agency.nombre,
+        ciudad:    agency.ciudad,
+        iniciales: agency.iniciales || agency.nombre.slice(0,2).toUpperCase(),
+        accent:    agency.accent    || "#2f6fed",
+        sidebar:   agency.sidebar   || "#1b2a57",
+        usuarioActual,
+      }));
+      setView("dashboard");
+      setVehicle(null);
+      setFilters({ sem: null, fin: null, gerente: null, urgente: false });
+    } catch(e) {
+      alert("Error al cambiar de agencia: " + e.message);
+    }
   }, []);
 
   const handleLogout = React.useCallback(() => {
@@ -681,6 +724,7 @@ function App() {
     <div className="shell">
       <Sidebar view={view} setView={setView} onMenu={handleMenu} tablaActiva={tablaId} tenant={tenant}
         onLogout={handleLogout}
+        onSwitchToWorkspace={handleSwitchToWorkspace}
         onSwitchWorkspace={tenant?.isAgencyOwner ? () => {
           sessionStorage.removeItem("automind_workspace_id");
           if (tenant.isSuperAdmin && tenant._superAdminCtxRef) {

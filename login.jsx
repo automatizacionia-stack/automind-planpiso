@@ -391,6 +391,7 @@ function LoginScreen({ onLogin }) {
         accent:         agency.accent    || "#2f6fed",
         sidebar:        agency.sidebar   || "#1b2a57",
         usuarioActual,
+        availableWorkspaces: ctx.allUserWorkspaces || [],
       });
     } catch (err) {
       setLoading(false);

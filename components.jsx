@@ -143,8 +143,9 @@ const I = {
 };
 
 /* ---------- Sidebar ---------- */
-function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitchWorkspace }) {
+function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitchWorkspace, onSwitchToWorkspace }) {
   const [open, setOpen] = React.useState(false);
+  const [showAgSwitcher, setShowAgSwitcher] = React.useState(false);
   const act = (a) => { setOpen(false); onMenu && onMenu(a); };
   const Item = ({ id, icon, label }) => {
     const active = view === id;
@@ -238,20 +239,71 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
           </button>
         )}
         {tenant && (
-          <div className="tenant-badge">
-            <span className="tenant-av" style={{ background: tenant.accent }}>{tenant.iniciales}</span>
-            <div className="tenant-meta">
-              <div className="tenant-name">{tenant.nombre}</div>
-              <div className="tenant-city">{tenant.ciudad}</div>
+          <div style={{ position: "relative" }}>
+            {/* Popup switcher de agencias */}
+            {showAgSwitcher && (tenant.availableWorkspaces || []).length > 1 && (
+              <>
+                <div style={{ position:"fixed", inset:0, zIndex:200 }} onClick={() => setShowAgSwitcher(false)} />
+                <div style={{
+                  position:"absolute", bottom:"calc(100% + 8px)", left:0, right:0,
+                  background:"var(--card)", borderRadius:12, border:"1px solid var(--line)",
+                  boxShadow:"0 8px 32px rgba(0,0,0,.18)", zIndex:201, overflow:"hidden",
+                  padding:"6px",
+                }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:"var(--muted)",
+                    textTransform:"uppercase", letterSpacing:".07em", padding:"4px 8px 6px" }}>
+                    Mis agencias
+                  </div>
+                  {(tenant.availableWorkspaces || [])
+                    .filter(w => w.id !== tenant.id)
+                    .map(w => (
+                      <button key={w.id}
+                        onClick={() => { setShowAgSwitcher(false); onSwitchToWorkspace && onSwitchToWorkspace(w.id); }}
+                        style={{
+                          display:"flex", alignItems:"center", gap:10, width:"100%",
+                          padding:"8px 10px", borderRadius:8, border:"none",
+                          background:"transparent", cursor:"pointer", textAlign:"left",
+                          transition:"background .12s",
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = "var(--bg)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                        <span style={{
+                          width:28, height:28, borderRadius:7, background:w.accent,
+                          display:"grid", placeItems:"center", color:"#fff",
+                          fontWeight:800, fontSize:11, flexShrink:0,
+                        }}>{w.iniciales}</span>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color:"var(--ink)",
+                            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                            {w.nombre}
+                          </div>
+                          {w.ciudad && <div style={{ fontSize:10, color:"var(--muted)" }}>{w.ciudad}</div>}
+                        </div>
+                      </button>
+                    ))
+                  }
+                </div>
+              </>
+            )}
+            {/* Badge de agencia actual */}
+            <div className="tenant-badge"
+              style={(tenant.availableWorkspaces || []).length > 1 ? { cursor:"pointer" } : {}}
+              onClick={(tenant.availableWorkspaces || []).length > 1 ? () => setShowAgSwitcher(s => !s) : undefined}>
+              <span className="tenant-av" style={{ background: tenant.accent }}>{tenant.iniciales}</span>
+              <div className="tenant-meta">
+                <div className="tenant-name">{tenant.nombre}</div>
+                <div className="tenant-city">{tenant.ciudad || ((tenant.availableWorkspaces||[]).length > 1 ? "↕ Cambiar agencia" : "")}</div>
+              </div>
+              <button className="logout-btn" title="Cerrar sesión"
+                onClick={e => { e.stopPropagation(); onLogout(); }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"
+                  strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
             </div>
-            <button className="logout-btn" title="Cerrar sesión" onClick={onLogout}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"
-                strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-            </button>
           </div>
         )}
       </div>
