@@ -234,7 +234,7 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
               <rect x="2" y="3" width="9" height="9" rx="2"/><rect x="13" y="3" width="9" height="9" rx="2"/>
               <rect x="2" y="13" width="9" height="9" rx="2"/><rect x="13" y="13" width="9" height="9" rx="2"/>
             </svg>
-            <span>Cambiar subcuenta</span>
+            <span>Cambiar agencia</span>
           </button>
         )}
         {tenant && (

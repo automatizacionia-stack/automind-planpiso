@@ -23,7 +23,7 @@ function WorkspaceSelectorPanel({ agencyCtx, workspaces, loading, onSelect, onAg
       const data = await window.DB.loadAgencyData(ws.id);
       onSelect(ws, data);
     } catch(err) {
-      alert("Error cargando subcuenta: " + err.message);
+      alert("Error cargando agencia: " + err.message);
       setEntering(null);
     }
   }
@@ -40,7 +40,7 @@ function WorkspaceSelectorPanel({ agencyCtx, workspaces, loading, onSelect, onAg
           </svg>
           <input
             ref={inputRef}
-            placeholder="Buscar una subcuenta"
+            placeholder="Buscar una agencia"
             value={q}
             onChange={e => setQ(e.target.value)}
           />
@@ -64,7 +64,7 @@ function WorkspaceSelectorPanel({ agencyCtx, workspaces, loading, onSelect, onAg
         )}
 
         {/* Lista */}
-        <div className="ws-panel-label">TODAS LAS SUBCUENTAS</div>
+        <div className="ws-panel-label">TODAS LAS AGENCIAS</div>
         <div className="ws-panel-list">
           {loading && (
             <div style={{ padding:"20px", textAlign:"center" }}>
@@ -73,7 +73,7 @@ function WorkspaceSelectorPanel({ agencyCtx, workspaces, loading, onSelect, onAg
           )}
           {!loading && filtered.length === 0 && (
             <div style={{ padding:"16px 18px", color:"var(--muted)", fontSize:13 }}>
-              {q ? "Sin resultados para \"" + q + "\"" : "No hay subcuentas aún."}
+              {q ? "Sin resultados para \"" + q + "\"" : "No hay agencias aún."}
             </div>
           )}
           {!loading && filtered.map(ws => (
@@ -107,7 +107,7 @@ function WorkspaceSelectorPanel({ agencyCtx, workspaces, loading, onSelect, onAg
         <div className="ws-panel-footer">
           <button className="ws-panel-new" onClick={() => onSelect && onSelect("__new__", null)}>
             <span style={{ fontSize:18, lineHeight:1 }}>+</span>
-            Crear nueva subcuenta
+            Crear nueva agencia
           </button>
         </div>
       </div>
@@ -115,7 +115,7 @@ function WorkspaceSelectorPanel({ agencyCtx, workspaces, loading, onSelect, onAg
   );
 }
 
-/* ── Drawer para crear nueva subcuenta ─────────────────────── */
+/* ── Drawer para crear nueva agencia ─────────────────────── */
 function NuevoWorkspaceDrawer({ agencyId, onSave, onClose }) {
   const [form, setForm] = React.useState({ nombre:"", ciudad:"", accent:"#2f6fed", sidebar:"#1b2a57" });
   const [loading, setLoading] = React.useState(false);
@@ -149,7 +149,7 @@ function NuevoWorkspaceDrawer({ agencyId, onSave, onClose }) {
       <aside className="inv-drawer">
         <div className="inv-drawer-head">
           <div>
-            <h2>Nueva subcuenta</h2>
+            <h2>Nueva agencia</h2>
             <div style={{ fontSize:13, color:"var(--muted)", marginTop:2 }}>
               Agrega una agencia automotriz a tu plataforma
             </div>
@@ -198,7 +198,7 @@ function NuevoWorkspaceDrawer({ agencyId, onSave, onClose }) {
                 {(form.nombre||"??").slice(0,1).toUpperCase()}
               </div>
               <div>
-                <div style={{ fontWeight:700, fontSize:14 }}>{form.nombre || "Nombre de la subcuenta"}</div>
+                <div style={{ fontWeight:700, fontSize:14 }}>{form.nombre || "Nombre de la agencia"}</div>
                 <div style={{ fontSize:12, color:"var(--muted)" }}>{form.ciudad || "Ciudad"}</div>
               </div>
             </div>
@@ -214,7 +214,7 @@ function NuevoWorkspaceDrawer({ agencyId, onSave, onClose }) {
           <button className="btn" onClick={onClose} disabled={loading}>Cancelar</button>
           <button className="btn primary" form="ws-form" type="submit" disabled={loading}>
             {loading ? <span className="login-spinner" style={{ width:14, height:14, borderWidth:2 }} /> : null}
-            {loading ? "Creando…" : "Crear subcuenta"}
+            {loading ? "Creando…" : "Crear agencia"}
           </button>
         </div>
       </aside>
@@ -279,7 +279,7 @@ function WorkspaceSelector({ agencyCtx, onSelect }) {
       <div className="ws-fp-body">
         <div style={{ marginBottom:28 }}>
           <h1 style={{ fontSize:26, fontWeight:800, margin:"0 0 6px", color:"var(--ink)" }}>
-            Selecciona una subcuenta
+            Selecciona una agencia automotriz
           </h1>
           <p style={{ fontSize:15, color:"var(--muted)", margin:0 }}>
             Elige la agencia automotriz que quieres gestionar.

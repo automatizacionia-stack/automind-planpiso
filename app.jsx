@@ -643,7 +643,7 @@ function App() {
       <Sidebar view={view} setView={setView} onMenu={handleMenu} tablaActiva={tablaId} tenant={tenant}
         onLogout={handleLogout}
         onSwitchWorkspace={tenant?.isAgencyOwner ? () => {
-          // Restaurar el contexto de agencia para volver al selector de subcuentas
+          // Restaurar el contexto de agencia para volver al selector de agencias
           // (antes esto mandaba al owner a la pantalla de login)
           sessionStorage.removeItem("automind_workspace_id");
           setAgencyCtx(tenant.agencyCtx || agencyCtx);
