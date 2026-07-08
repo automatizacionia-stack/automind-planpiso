@@ -70,17 +70,24 @@
     }
 
     // ¿Es miembro de workspace?
-    const { data: me, error: meErr } = await client
+    // Usamos select sin .single() para no fallar cuando el usuario
+    // tiene registros en más de un workspace (ej. datos de prueba duplicados).
+    const { data: meRows, error: meErr } = await client
       .from("users")
       .select("*")
       .eq("auth_user_id", authUser.id)
-      .single();
-    if (meErr) throw new Error("Usuario no encontrado. Verifica que tu correo esté registrado.");
+      .order("created_at", { ascending: false });
+    if (meErr || !meRows || meRows.length === 0) {
+      throw new Error("Usuario no encontrado. Verifica que tu correo esté registrado.");
+    }
+
+    // Si tiene varios registros, priorizar el workspace_id más reciente
+    const me = meRows[0];
 
     return {
       type: "workspace",
       authUserId: authUser.id,
-      workspaceId: me.workspace_id || me.agency_id, // fallback para datos viejos
+      workspaceId: me.workspace_id || me.agency_id,
       role: me.rol,
       me,
     };
