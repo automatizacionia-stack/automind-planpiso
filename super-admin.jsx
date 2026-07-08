@@ -1,6 +1,6 @@
-/* Automind · Super Admin — Gestión global de grupos y agencias */
+/* Automind · Super Admin — Gestión global de agencias y agencias */
 
-/* ── Drawer: nuevo grupo ────────────────────────────────────── */
+/* ── Drawer: nuevo agencia ────────────────────────────────────── */
 function NuevaAgenciaDrawer({ onSave, onClose }) {
   const [form, setForm] = React.useState({
     nombre:"", ciudad:"", ownerEmail:"", plan:"pro",
@@ -37,9 +37,9 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
       <aside className="inv-drawer">
         <div className="inv-drawer-head">
           <div>
-            <h2 style={{ margin:0, fontSize:18, fontWeight:800 }}>Nuevo grupo</h2>
+            <h2 style={{ margin:0, fontSize:18, fontWeight:800 }}>Nueva agencia</h2>
             <div style={{ fontSize:13, color:"var(--muted)", marginTop:2 }}>
-              Crea un nuevo grupo automotriz en la plataforma
+              Crea un nuevo agencia automotriz en la plataforma
             </div>
           </div>
           <button className="icon-btn ghost" onClick={onClose}>
@@ -58,7 +58,7 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
               </label>
               <input style={IS} value={form.nombre}
                 onChange={e => set("nombre", e.target.value)}
-                placeholder="Ej: Grupo Automotriz Vallarta" disabled={loading} />
+                placeholder="Ej: Agencia Automotriz Vallarta" disabled={loading} />
             </div>
             <div>
               <label style={{ fontSize:12, fontWeight:600, color:"var(--muted)", display:"block", marginBottom:4 }}>
@@ -112,7 +112,7 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
               </div>
               <div>
                 <div style={{ fontWeight:700, fontSize:14, color:"var(--ink)" }}>
-                  {form.nombre || "Nombre del grupo"}
+                  {form.nombre || "Nombre del agencia"}
                 </div>
                 <div style={{ fontSize:12, color:"var(--muted)" }}>{form.ciudad || "Ciudad"}</div>
               </div>
@@ -131,7 +131,7 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
           <button className="btn" onClick={onClose} disabled={loading}>Cancelar</button>
           <button className="btn primary" form="sa-form" type="submit" disabled={loading}>
             {loading && <span className="login-spinner" style={{ width:13, height:13, borderWidth:2 }} />}
-            {loading ? "Creando…" : "Crear grupo"}
+            {loading ? "Creando…" : "Crear agencia"}
           </button>
         </div>
       </aside>
@@ -322,10 +322,10 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:28 }}>
           <div>
             <h1 style={{ margin:"0 0 4px", fontSize:24, fontWeight:800, color:"var(--ink)" }}>
-              Gestión de grupos
+              Gestión de agencias
             </h1>
             <p style={{ margin:0, fontSize:14, color:"var(--muted)" }}>
-              {agencias.length} grupo{agencias.length !== 1 ? "s" : ""} registrado{agencias.length !== 1 ? "s" : ""} en la plataforma
+              {agencias.length} agencia{agencias.length !== 1 ? "s" : ""} registrada{agencias.length !== 1 ? "s" : ""} en la plataforma
             </p>
           </div>
           <button onClick={() => setShowNueva(true)} style={{
@@ -337,7 +337,7 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
             onMouseEnter={e => { e.currentTarget.style.opacity = ".88"; }}
             onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}>
             <span style={{ fontSize:18, lineHeight:1 }}>+</span>
-            Nuevo grupo
+            Nueva agencia
           </button>
         </div>
 
@@ -351,7 +351,7 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
           <input
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
-            placeholder="Buscar grupo..."
+            placeholder="Buscar agencia..."
             style={{ width:"100%", boxSizing:"border-box", padding:"9px 12px 9px 34px",
               borderRadius:10, border:"1px solid var(--line)", background:"var(--card)",
               color:"var(--ink)", fontSize:13 }}
@@ -371,7 +371,7 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
             {filtradas.length === 0 ? (
               <div style={{ gridColumn:"1/-1", textAlign:"center", padding:"60px 0",
                 color:"var(--muted)", fontSize:15 }}>
-                {busqueda ? `Sin resultados para "${busqueda}"` : "No hay grupos registrados."}
+                {busqueda ? `Sin resultados para "${busqueda}"` : "No hay agencias registradas."}
               </div>
             ) : filtradas.map(ag => (
               <div key={ag.id} style={{
@@ -405,13 +405,6 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
 
                   {/* Métricas */}
                   <div style={{ display:"flex", gap:16, marginBottom:12 }}>
-                    <div style={{ fontSize:12, color:"var(--muted)" }}>
-                      <span style={{ fontWeight:700, fontSize:15, color:"var(--ink)",
-                        display:"block", lineHeight:1.2 }}>
-                        {ag.workspaces.length}
-                      </span>
-                      agencia{ag.workspaces.length !== 1 ? "s" : ""}
-                    </div>
                     {ag.ownerEmail && (
                       <div style={{ fontSize:12, color:"var(--muted)", overflow:"hidden",
                         textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:180 }}>
@@ -501,7 +494,7 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
             <div style={{ fontSize:28, textAlign:"center", marginBottom:12 }}>⚠️</div>
             <h3 style={{ margin:"0 0 8px", fontSize:17, fontWeight:800,
               textAlign:"center", color:"var(--ink)" }}>
-              ¿Eliminar grupo?
+              ¿Eliminar agencia?
             </h3>
             <p style={{ margin:"0 0 20px", fontSize:14, color:"var(--muted)",
               textAlign:"center", lineHeight:1.5 }}>
