@@ -723,10 +723,32 @@
     }));
   }
 
+  // Carga TODOS los workspaces (tenants) de todas las agencias en plano
+  async function loadAllWorkspaces() {
+    const { data, error } = await client
+      .from("workspaces")
+      .select("*")
+      .neq("status", "deleted")
+      .order("nombre");
+    if (error) throw new Error(error.message);
+    return (data || []).map(w => ({
+      id:         w.id,
+      nombre:     w.nombre || w.name || "",
+      ciudad:     w.ciudad || "",
+      iniciales:  w.iniciales || (w.nombre || "WS").slice(0, 2).toUpperCase(),
+      accent:     w.accent   || "#2f6fed",
+      sidebar:    w.sidebar  || "#1b2a57",
+      agencyId:   w.agency_id,
+      ownerEmail: w.owner_email || "",
+      plan:       w.plan || "pro",
+    }));
+  }
+
   async function createAgency(agencyData) {
     const iniciales = agencyData.iniciales ||
       agencyData.nombre.split(" ").map(w => w[0]).join("").slice(0,3).toUpperCase();
-    const { data, error } = await client
+    // 1. Crear registro padre en agencies
+    const { data: ag, error: agErr } = await client
       .from("agencies")
       .insert({
         nombre:      agencyData.nombre,
@@ -739,8 +761,35 @@
       })
       .select()
       .single();
-    if (error) throw new Error(error.message);
-    return data;
+    if (agErr) throw new Error(agErr.message);
+    // 2. Crear workspace (tenant) bajo la agencia con los mismos datos
+    const { data: ws, error: wsErr } = await client
+      .from("workspaces")
+      .insert({
+        agency_id:   ag.id,
+        nombre:      agencyData.nombre,
+        ciudad:      agencyData.ciudad    || null,
+        iniciales,
+        accent:      agencyData.accent    || "#2f6fed",
+        sidebar:     agencyData.sidebar   || "#1b2a57",
+        owner_email: agencyData.ownerEmail || null,
+        status:      "active",
+      })
+      .select()
+      .single();
+    if (wsErr) throw new Error(wsErr.message);
+    // Retornar el workspace (es lo que se muestra en la vista plana)
+    return {
+      id:         ws.id,
+      nombre:     ws.nombre,
+      ciudad:     ws.ciudad     || "",
+      iniciales:  ws.iniciales  || ws.nombre.slice(0, 2).toUpperCase(),
+      accent:     ws.accent     || "#2f6fed",
+      sidebar:    ws.sidebar    || "#1b2a57",
+      agencyId:   ag.id,
+      ownerEmail: agencyData.ownerEmail || "",
+      plan:       agencyData.plan || "pro",
+    };
   }
 
   async function deleteAgency(agencyId) {
@@ -750,6 +799,22 @@
       .delete()
       .eq("id", agencyId);
     if (error) throw new Error(error.message);
+  }
+
+  // Eliminar un workspace (tenant); si era el último de su agencia, elimina también la agencia padre
+  async function deleteWorkspace(workspaceId, agencyId) {
+    const { error } = await client
+      .from("workspaces")
+      .delete()
+      .eq("id", workspaceId);
+    if (error) throw new Error(error.message);
+    if (agencyId) {
+      const { data: rest } = await client
+        .from("workspaces").select("id").eq("agency_id", agencyId);
+      if (!rest || rest.length === 0) {
+        await client.from("agencies").delete().eq("id", agencyId);
+      }
+    }
   }
 
   async function loadAgencyWorkspaces(agencyId) {
@@ -787,8 +852,10 @@
     saveCliente,
     deleteCliente,
     loadAllAgencies,
+    loadAllWorkspaces,
     createAgency,
     deleteAgency,
+    deleteWorkspace,
     loadAgencyWorkspaces,
     storage: client.storage,
   };

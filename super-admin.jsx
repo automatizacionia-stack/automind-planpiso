@@ -232,16 +232,17 @@ function AgenciaWorkspacesModal({ agencia, onEntrar, onClose }) {
 
 /* ── Vista principal del Super Admin ────────────────────────── */
 function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
-  const [agencias,    setAgencias]    = React.useState([]);
-  const [cargando,    setCargando]    = React.useState(true);
-  const [showNueva,   setShowNueva]   = React.useState(false);
-  const [modalAgencia, setModalAgencia] = React.useState(null);
-  const [confirmDel,  setConfirmDel]  = React.useState(null);
-  const [borrando,    setBorrando]    = React.useState(null);
-  const [busqueda,    setBusqueda]    = React.useState("");
+  const [agencias,   setAgencias]   = React.useState([]);
+  const [cargando,   setCargando]   = React.useState(true);
+  const [showNueva,  setShowNueva]  = React.useState(false);
+  const [confirmDel, setConfirmDel] = React.useState(null);
+  const [borrando,   setBorrando]   = React.useState(null);
+  const [entrando,   setEntrando]   = React.useState(null);
+  const [busqueda,   setBusqueda]   = React.useState("");
 
   React.useEffect(() => {
-    window.DB.loadAllAgencies()
+    // Cargar todos los workspaces (tenants) de todas las agencias en plano
+    window.DB.loadAllWorkspaces()
       .then(setAgencias)
       .catch(e => alert("Error cargando agencias: " + e.message))
       .finally(() => setCargando(false));
@@ -250,13 +251,25 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
   async function eliminarAgencia(ag) {
     setBorrando(ag.id);
     try {
-      await window.DB.deleteAgency(ag.id);
+      // Eliminar el workspace; si era el único de su agencia padre, la elimina también
+      await window.DB.deleteWorkspace(ag.id, ag.agencyId);
       setAgencias(prev => prev.filter(a => a.id !== ag.id));
     } catch(err) {
       alert("Error al eliminar: " + err.message);
     } finally {
       setBorrando(null);
       setConfirmDel(null);
+    }
+  }
+
+  async function entrar(ag) {
+    setEntrando(ag.id);
+    try {
+      const data = await window.DB.loadAgencyData(ag.id);
+      onEntrarWorkspace(ag, data, { id: ag.agencyId });
+    } catch(err) {
+      alert("Error al entrar: " + err.message);
+      setEntrando(null);
     }
   }
 
@@ -430,15 +443,19 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
                 <div style={{ borderTop:"1px solid var(--line)", padding:"12px 20px",
                   display:"flex", gap:8 }}>
                   <button
-                    onClick={() => setModalAgencia(ag)}
+                    onClick={() => entrar(ag)}
+                    disabled={!!entrando}
                     style={{
                       flex:1, padding:"8px 0", borderRadius:8, border:"1px solid var(--line)",
                       background:"var(--bg)", color:"var(--ink)", fontSize:13, fontWeight:600,
                       cursor:"pointer", transition:"all .15s",
+                      display:"flex", alignItems:"center", justifyContent:"center", gap:6,
                     }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = ag.accent; e.currentTarget.style.color = ag.accent; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--ink)"; }}>
-                    Entrar
+                    {entrando === ag.id
+                      ? <span className="login-spinner" style={{ width:13, height:13, borderWidth:2 }} />
+                      : "Entrar"}
                   </button>
                   <button
                     onClick={() => setConfirmDel(ag)}
@@ -461,20 +478,11 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
         )}
       </div>
 
-      {/* Modal: workspaces de la agencia */}
-      {modalAgencia && (
-        <AgenciaWorkspacesModal
-          agencia={modalAgencia}
-          onEntrar={(ws, data) => { setModalAgencia(null); onEntrarWorkspace(ws, data, modalAgencia); }}
-          onClose={() => setModalAgencia(null)}
-        />
-      )}
-
       {/* Drawer: nueva agencia */}
       {showNueva && (
         <NuevaAgenciaDrawer
           onSave={ag => {
-            setAgencias(prev => [...prev, { ...ag, workspaces:[], iniciales: ag.iniciales || ag.nombre.slice(0,2).toUpperCase(), accent: ag.accent || "#2f6fed" }]);
+            setAgencias(prev => [...prev, { ...ag, iniciales: ag.iniciales || ag.nombre.slice(0,2).toUpperCase(), accent: ag.accent || "#2f6fed" }]);
             setShowNueva(false);
           }}
           onClose={() => setShowNueva(false)}
@@ -498,8 +506,8 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
             </h3>
             <p style={{ margin:"0 0 20px", fontSize:14, color:"var(--muted)",
               textAlign:"center", lineHeight:1.5 }}>
-              Se eliminará <strong>{confirmDel.nombre}</strong> y todas sus agencias,
-              inventario y clientes. Esta acción no se puede deshacer.
+              Se eliminará <strong>{confirmDel.nombre}</strong> y todo su inventario
+              y clientes. Esta acción no se puede deshacer.
             </p>
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={() => setConfirmDel(null)} style={{
