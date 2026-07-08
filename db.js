@@ -35,6 +35,21 @@
     if (!authData.user) throw new Error("No autenticado");
     const authUser = authData.user;
 
+    // ¿Es super admin? (acceso total a todas las agencias)
+    const { data: superAdmin } = await client
+      .from("super_admins")
+      .select("*")
+      .eq("user_id", authUser.id)
+      .maybeSingle();
+
+    if (superAdmin) {
+      return {
+        type: "super_admin",
+        authUserId: authUser.id,
+        email: authUser.email,
+      };
+    }
+
     // ¿Es agency owner/admin? (nivel Coperva)
     const { data: agencyMem } = await client
       .from("agency_memberships")
@@ -686,6 +701,67 @@
     if (error) throw new Error(error.message);
   }
 
+  /* ── Super Admin: CRUD de agencias ────────────────────────── */
+
+  async function loadAllAgencies() {
+    const { data, error } = await client
+      .from("agencies")
+      .select("*, workspaces(id, nombre, ciudad, status)")
+      .order("nombre");
+    if (error) throw new Error(error.message);
+    return (data || []).map(a => ({
+      id:          a.id,
+      nombre:      a.nombre,
+      ciudad:      a.ciudad      || "",
+      iniciales:   a.iniciales   || a.nombre.slice(0,2).toUpperCase(),
+      accent:      a.accent      || "#2f6fed",
+      sidebar:     a.sidebar     || "#1b2a57",
+      ownerEmail:  a.owner_email || "",
+      plan:        a.plan        || "pro",
+      workspaces:  (a.workspaces || []).filter(w => w.status !== "deleted"),
+      createdAt:   a.created_at  || null,
+    }));
+  }
+
+  async function createAgency(agencyData) {
+    const iniciales = agencyData.iniciales ||
+      agencyData.nombre.split(" ").map(w => w[0]).join("").slice(0,3).toUpperCase();
+    const { data, error } = await client
+      .from("agencies")
+      .insert({
+        nombre:      agencyData.nombre,
+        ciudad:      agencyData.ciudad    || null,
+        iniciales,
+        accent:      agencyData.accent    || "#2f6fed",
+        sidebar:     agencyData.sidebar   || "#1b2a57",
+        owner_email: agencyData.ownerEmail || null,
+        plan:        agencyData.plan       || "pro",
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async function deleteAgency(agencyId) {
+    // Cascadea a workspaces, users, inventario por FK ON DELETE CASCADE
+    const { error } = await client
+      .from("agencies")
+      .delete()
+      .eq("id", agencyId);
+    if (error) throw new Error(error.message);
+  }
+
+  async function loadAgencyWorkspaces(agencyId) {
+    const { data, error } = await client
+      .from("workspaces")
+      .select("*")
+      .eq("agency_id", agencyId)
+      .order("nombre");
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
   /* ── Exponer en window ─────────────────────────────────────── */
   window.DB = {
     client,
@@ -710,6 +786,10 @@
     getClientes,
     saveCliente,
     deleteCliente,
+    loadAllAgencies,
+    createAgency,
+    deleteAgency,
+    loadAgencyWorkspaces,
     storage: client.storage,
   };
 })();

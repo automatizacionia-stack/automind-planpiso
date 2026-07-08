@@ -338,12 +338,19 @@ function App() {
   const [authLoading, setAuthLoading]     = React.useState(true);
   const [inviteMode,  setInviteMode]      = React.useState(false);
   const [linkError,   setLinkError]       = React.useState(null);
-  const [agencyCtx,   setAgencyCtx]       = React.useState(null); // agency owner mode
+  const [agencyCtx,      setAgencyCtx]      = React.useState(null); // agency owner mode
+  const [superAdminCtx,  setSuperAdminCtx]  = React.useState(null); // super admin mode
   const [t, setTweak]               = useTweaks(TWEAK_DEFAULTS);
 
   // ── Hooks siempre primero, sin condiciones ─────────────────────────────────
 
   const handleLogin = React.useCallback((cfg) => {
+    // Detectar si es super admin
+    if (cfg.__superAdminCtx) {
+      setSuperAdminCtx(cfg.__superAdminCtx);
+      setAuthLoading(false);
+      return;
+    }
     // Detectar si es agency owner (mostrar workspace selector)
     if (cfg.__agencyCtx) {
       setAgencyCtx(cfg.__agencyCtx);
@@ -396,6 +403,10 @@ function App() {
         if (session) {
           // Detectar rol del usuario para saber si necesita workspace selector
           const ctx = await window.DB.getUserContext();
+          if (ctx.type === "super_admin") {
+            handleLogin({ __superAdminCtx: ctx });
+            return;
+          }
           if (ctx.type === "agency") {
             // Agency owner: intentar restaurar el workspace que tenía seleccionado
             const savedWsId = sessionStorage.getItem("automind_workspace_id");
@@ -565,6 +576,34 @@ function App() {
 
   if (inviteMode) {
     return <SetPasswordScreen onDone={() => setInviteMode(false)} />;
+  }
+
+  // ── Super Admin: vista global de agencias ────────────────────────────────
+  if (superAdminCtx && !tenant) {
+    return (
+      <SuperAdminView
+        userCtx={superAdminCtx}
+        onLogout={async () => { await window.DB.signOut(); setSuperAdminCtx(null); }}
+        onEntrarWorkspace={(ws, data, agencia) => {
+          const { agency, me, usuarios, rows } = data;
+          const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
+          const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
+          window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, agencia.id);
+          const usuarioActual = { nombre:"Super Admin", rol:"director", email: superAdminCtx.email, id:"super-admin" };
+          sessionStorage.setItem("automind_workspace_id", ws.id);
+          sessionStorage.setItem("automind_super_admin", "1");
+          setSuperAdminCtx(null);
+          handleLogin({
+            id: agency.id, nombre: agency.nombre, ciudad: agency.ciudad,
+            iniciales: agency.iniciales || agency.nombre.slice(0,2).toUpperCase(),
+            accent:  agency.accent  || "#2f6fed",
+            sidebar: agency.sidebar || "#1b2a57",
+            usuarioActual, isAgencyOwner: true, agencyCtx: null, isSuperAdmin: true,
+            _superAdminCtxRef: superAdminCtx,
+          });
+        }}
+      />
+    );
   }
 
   // ── Agency owner: mostrar selector de workspaces ──────────────────────────
