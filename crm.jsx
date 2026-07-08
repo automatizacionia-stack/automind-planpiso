@@ -2223,7 +2223,16 @@ function CRMClientes({ rows, kpis, usuarios }) {
           vinVinculado: datos.vinVinculado || null,
           inventarioId: datos.inventarioId || null,
         });
-      } catch(e) { console.error("[CRM] Error guardando cliente:", e); }
+      } catch(e) {
+        console.error("[CRM] Error guardando cliente:", e);
+        window.alert(
+          "⚠️ Error al guardar el cliente en la base de datos:\n\n" +
+          (e.message || String(e)) +
+          "\n\nPosible causa: falta ejecutar las migraciones SQL en Supabase.\n" +
+          "Corre el archivo supabase_crm_setup_completo.sql en Supabase → SQL Editor."
+        );
+        return; /* no agregar a la lista si no se guardó */
+      }
     }
     setClientesData(prev => [nuevo, ...prev]);
     setMostrarNuevo(false);
