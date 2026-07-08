@@ -801,16 +801,27 @@
     if (error) throw new Error(error.message);
   }
 
-  // Eliminar un workspace (tenant); si era el último de su agencia, elimina también la agencia padre
+  // Eliminar un workspace (tenant) y todos sus registros dependientes en orden correcto
   async function deleteWorkspace(workspaceId, agencyId) {
-    const { error } = await client
-      .from("workspaces")
-      .delete()
-      .eq("id", workspaceId);
+    const wid = workspaceId;
+    // 1. Inventario (usa workspace_id o agency_id legacy)
+    await client.from("inventario").delete()
+      .or(`workspace_id.eq.${wid},agency_id.eq.${wid}`);
+    // 2. Clientes CRM (puede no existir, ignorar error)
+    try { await client.from("clientes").delete().eq("workspace_id", wid); } catch(e) {}
+    // 3. Reglas de alerta
+    await client.from("alert_rules").delete().eq("workspace_id", wid);
+    // 4. Membresías de workspace
+    await client.from("workspace_memberships").delete().eq("workspace_id", wid);
+    // 5. Usuarios del workspace (usuarios tabla interna, no auth)
+    await client.from("users").delete()
+      .or(`workspace_id.eq.${wid},agency_id.eq.${wid}`);
+    // 6. Borrar el workspace
+    const { error } = await client.from("workspaces").delete().eq("id", wid);
     if (error) throw new Error(error.message);
+    // 7. Si era el último workspace de la agencia padre, borrar la agencia también
     if (agencyId) {
-      const { data: rest } = await client
-        .from("workspaces").select("id").eq("agency_id", agencyId);
+      const { data: rest } = await client.from("workspaces").select("id").eq("agency_id", agencyId);
       if (!rest || rest.length === 0) {
         await client.from("agencies").delete().eq("id", agencyId);
       }

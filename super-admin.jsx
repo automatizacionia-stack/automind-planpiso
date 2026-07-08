@@ -239,6 +239,7 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
   const [borrando,   setBorrando]   = React.useState(null);
   const [entrando,   setEntrando]   = React.useState(null);
   const [busqueda,   setBusqueda]   = React.useState("");
+  const [confirmText, setConfirmText] = React.useState("");
 
   React.useEffect(() => {
     // Cargar todos los workspaces (tenants) de todas las agencias en plano
@@ -259,6 +260,7 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
     } finally {
       setBorrando(null);
       setConfirmDel(null);
+      setConfirmText("");
     }
   }
 
@@ -497,34 +499,63 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
         }}>
           <div style={{
             background:"var(--card)", borderRadius:16, padding:"28px 32px",
-            width:380, maxWidth:"90vw", boxShadow:"0 20px 60px rgba(0,0,0,.3)",
+            width:400, maxWidth:"90vw", boxShadow:"0 20px 60px rgba(0,0,0,.3)",
           }}>
             <div style={{ fontSize:28, textAlign:"center", marginBottom:12 }}>⚠️</div>
             <h3 style={{ margin:"0 0 8px", fontSize:17, fontWeight:800,
               textAlign:"center", color:"var(--ink)" }}>
               ¿Eliminar agencia?
             </h3>
-            <p style={{ margin:"0 0 20px", fontSize:14, color:"var(--muted)",
+            <p style={{ margin:"0 0 16px", fontSize:14, color:"var(--muted)",
               textAlign:"center", lineHeight:1.5 }}>
-              Se eliminará <strong>{confirmDel.nombre}</strong> y todo su inventario
-              y clientes. Esta acción no se puede deshacer.
+              Se eliminará <strong style={{ color:"var(--ink)" }}>{confirmDel.nombre}</strong>{" "}
+              junto con todo su inventario, usuarios y configuración.
+              Esta acción <strong style={{ color:"#dc2626" }}>no se puede deshacer</strong>.
             </p>
+
+            {/* Campo de confirmación */}
+            <div style={{ marginBottom:20 }}>
+              <label style={{ display:"block", fontSize:12, fontWeight:700,
+                color:"var(--muted)", marginBottom:6, textAlign:"center" }}>
+                Escribe <span style={{ color:"#dc2626", fontFamily:"monospace", fontWeight:800 }}>BORRAR</span> para confirmar
+              </label>
+              <input
+                value={confirmText}
+                onChange={e => setConfirmText(e.target.value)}
+                placeholder="BORRAR"
+                autoFocus
+                style={{
+                  width:"100%", boxSizing:"border-box", padding:"9px 12px",
+                  borderRadius:9, fontSize:14, fontWeight:700, textAlign:"center",
+                  border: confirmText === "BORRAR"
+                    ? "2px solid #dc2626"
+                    : "1px solid var(--line)",
+                  background:"var(--bg)", color:"var(--ink)", letterSpacing:".05em",
+                  outline:"none",
+                }}
+              />
+            </div>
+
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={() => setConfirmDel(null)} style={{
+              <button onClick={() => { setConfirmDel(null); setConfirmText(""); }} style={{
                 flex:1, padding:"10px 0", borderRadius:9, border:"1px solid var(--line)",
                 background:"var(--bg)", color:"var(--ink)", fontWeight:600,
                 fontSize:14, cursor:"pointer",
               }}>
                 Cancelar
               </button>
-              <button onClick={() => eliminarAgencia(confirmDel)}
-                disabled={!!borrando}
+              <button
+                onClick={() => eliminarAgencia(confirmDel)}
+                disabled={!!borrando || confirmText !== "BORRAR"}
                 style={{
                   flex:1, padding:"10px 0", borderRadius:9, border:"none",
-                  background:"#dc2626", color:"#fff", fontWeight:700,
-                  fontSize:14, cursor:"pointer",
+                  background: confirmText === "BORRAR" ? "#dc2626" : "var(--line)",
+                  color: confirmText === "BORRAR" ? "#fff" : "var(--muted)",
+                  fontWeight:700, fontSize:14,
+                  cursor: confirmText === "BORRAR" ? "pointer" : "not-allowed",
+                  transition:"all .2s",
                 }}>
-                {borrando ? "Eliminando…" : "Sí, eliminar"}
+                {borrando ? "Eliminando…" : "Eliminar agencia"}
               </button>
             </div>
           </div>
