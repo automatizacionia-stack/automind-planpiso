@@ -1,6 +1,6 @@
-/* Automind · Super Admin — Gestión global de agencias */
+/* Automind · Super Admin — Gestión global de grupos y agencias */
 
-/* ── Drawer: nueva agencia ──────────────────────────────────── */
+/* ── Drawer: nuevo grupo ────────────────────────────────────── */
 function NuevaAgenciaDrawer({ onSave, onClose }) {
   const [form, setForm] = React.useState({
     nombre:"", ciudad:"", ownerEmail:"", plan:"pro",
@@ -37,9 +37,9 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
       <aside className="inv-drawer">
         <div className="inv-drawer-head">
           <div>
-            <h2 style={{ margin:0, fontSize:18, fontWeight:800 }}>Nueva agencia</h2>
+            <h2 style={{ margin:0, fontSize:18, fontWeight:800 }}>Nuevo grupo</h2>
             <div style={{ fontSize:13, color:"var(--muted)", marginTop:2 }}>
-              Crea un nuevo tenant en la plataforma
+              Crea un nuevo grupo automotriz en la plataforma
             </div>
           </div>
           <button className="icon-btn ghost" onClick={onClose}>
@@ -112,7 +112,7 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
               </div>
               <div>
                 <div style={{ fontWeight:700, fontSize:14, color:"var(--ink)" }}>
-                  {form.nombre || "Nombre de la agencia"}
+                  {form.nombre || "Nombre del grupo"}
                 </div>
                 <div style={{ fontSize:12, color:"var(--muted)" }}>{form.ciudad || "Ciudad"}</div>
               </div>
@@ -131,7 +131,7 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
           <button className="btn" onClick={onClose} disabled={loading}>Cancelar</button>
           <button className="btn primary" form="sa-form" type="submit" disabled={loading}>
             {loading && <span className="login-spinner" style={{ width:13, height:13, borderWidth:2 }} />}
-            {loading ? "Creando…" : "Crear agencia"}
+            {loading ? "Creando…" : "Crear grupo"}
           </button>
         </div>
       </aside>
@@ -184,12 +184,12 @@ function AgenciaWorkspacesModal({ agencia, onEntrar, onClose }) {
           {/* Lista de workspaces */}
           <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)",
             textTransform:"uppercase", letterSpacing:".06em", marginBottom:10 }}>
-            Cuentas ({workspaces.length})
+            Agencias ({workspaces.length})
           </div>
 
           {workspaces.length === 0 ? (
             <div style={{ textAlign:"center", padding:"24px 0", color:"var(--muted)", fontSize:14 }}>
-              Sin cuentas configuradas
+              Sin agencias configuradas
             </div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:6, maxHeight:320, overflowY:"auto" }}>
@@ -322,10 +322,10 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:28 }}>
           <div>
             <h1 style={{ margin:"0 0 4px", fontSize:24, fontWeight:800, color:"var(--ink)" }}>
-              Gestión de agencias
+              Gestión de grupos
             </h1>
             <p style={{ margin:0, fontSize:14, color:"var(--muted)" }}>
-              {agencias.length} agencia{agencias.length !== 1 ? "s" : ""} registrada{agencias.length !== 1 ? "s" : ""} en la plataforma
+              {agencias.length} grupo{agencias.length !== 1 ? "s" : ""} registrado{agencias.length !== 1 ? "s" : ""} en la plataforma
             </p>
           </div>
           <button onClick={() => setShowNueva(true)} style={{
@@ -337,7 +337,7 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
             onMouseEnter={e => { e.currentTarget.style.opacity = ".88"; }}
             onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}>
             <span style={{ fontSize:18, lineHeight:1 }}>+</span>
-            Nueva agencia
+            Nuevo grupo
           </button>
         </div>
 
@@ -351,7 +351,7 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
           <input
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
-            placeholder="Buscar agencia..."
+            placeholder="Buscar grupo..."
             style={{ width:"100%", boxSizing:"border-box", padding:"9px 12px 9px 34px",
               borderRadius:10, border:"1px solid var(--line)", background:"var(--card)",
               color:"var(--ink)", fontSize:13 }}
@@ -371,7 +371,7 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
             {filtradas.length === 0 ? (
               <div style={{ gridColumn:"1/-1", textAlign:"center", padding:"60px 0",
                 color:"var(--muted)", fontSize:15 }}>
-                {busqueda ? `Sin resultados para "${busqueda}"` : "No hay agencias registradas."}
+                {busqueda ? `Sin resultados para "${busqueda}"` : "No hay grupos registrados."}
               </div>
             ) : filtradas.map(ag => (
               <div key={ag.id} style={{
@@ -410,7 +410,7 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
                         display:"block", lineHeight:1.2 }}>
                         {ag.workspaces.length}
                       </span>
-                      cuenta{ag.workspaces.length !== 1 ? "s" : ""}
+                      agencia{ag.workspaces.length !== 1 ? "s" : ""}
                     </div>
                     {ag.ownerEmail && (
                       <div style={{ fontSize:12, color:"var(--muted)", overflow:"hidden",
@@ -501,12 +501,12 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
             <div style={{ fontSize:28, textAlign:"center", marginBottom:12 }}>⚠️</div>
             <h3 style={{ margin:"0 0 8px", fontSize:17, fontWeight:800,
               textAlign:"center", color:"var(--ink)" }}>
-              ¿Eliminar agencia?
+              ¿Eliminar grupo?
             </h3>
             <p style={{ margin:"0 0 20px", fontSize:14, color:"var(--muted)",
               textAlign:"center", lineHeight:1.5 }}>
-              Se eliminará <strong>{confirmDel.nombre}</strong> y todos sus datos
-              (agencias, inventario, clientes). Esta acción no se puede deshacer.
+              Se eliminará <strong>{confirmDel.nombre}</strong> y todas sus agencias,
+              inventario y clientes. Esta acción no se puede deshacer.
             </p>
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={() => setConfirmDel(null)} style={{
