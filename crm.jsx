@@ -1080,6 +1080,68 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
             </Sec>
 
+            {/* § DOCUMENTOS DEL CLIENTE */}
+            <Sec ico={ICO_DOC} titulo="Documentos del cliente">
+              <div style={{ gridColumn:"1/-1" }}>
+                <DocUpload
+                  label="Identificación oficial"
+                  sublabel="INE · Pasaporte"
+                  docType="id"
+                  value={form.docId || null}
+                  onChange={v => set("docId", v)}
+                  onExtract={campos => aplicarCampos(campos, "id")}
+                />
+              </div>
+              <div style={{ gridColumn:"1/-1", marginTop:4 }}>
+                <DocUpload
+                  label="Licencia de conducir"
+                  sublabel="Licencia de conducir vigente"
+                  docType="licencia"
+                  value={form.docLicencia || null}
+                  onChange={v => set("docLicencia", v)}
+                  onExtract={campos => aplicarCampos(campos, "licencia")}
+                />
+              </div>
+              <div style={{ gridColumn:"1/-1", marginTop:4 }}>
+                <DocUpload
+                  label="Comprobante de domicilio"
+                  sublabel="Recibo de agua · luz · teléfono"
+                  docType="domicilio"
+                  value={form.docDomicilio || null}
+                  onChange={v => set("docDomicilio", v)}
+                  onExtract={campos => aplicarCampos(campos, "domicilio")}
+                />
+              </div>
+
+              {/* Panel: Datos OCR confirmados */}
+              {(form.datosId || form.datosLicencia || form.datosDomicilio) && (
+                <div style={{ gridColumn:"1/-1", marginTop:8, padding:"12px 14px",
+                  background:"var(--bg)", border:"1px solid var(--line)", borderRadius:10 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)",
+                    textTransform:"uppercase", letterSpacing:".06em", marginBottom:8 }}>
+                    Datos OCR confirmados
+                  </div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 18px" }}>
+                    {[
+                      { lbl:"CURP",      val: form.curp },
+                      { lbl:"RFC",       val: form.rfc },
+                      { lbl:"Nac.",      val: form.fechaNac },
+                      { lbl:"Sexo",      val: form.sexo },
+                      { lbl:"Licencia #",val: form.numLicencia },
+                      { lbl:"Tipo lic.", val: form.tipoLic },
+                      { lbl:"Vigencia",  val: form.vigenciaLic },
+                      { lbl:"C.P.",      val: form.cp },
+                    ].filter(x => x.val).map(x => (
+                      <div key={x.lbl} style={{ fontSize:12 }}>
+                        <span style={{ color:"var(--muted)", marginRight:4 }}>{x.lbl}:</span>
+                        <span style={{ fontWeight:600, color:"var(--ink)", fontFamily:"monospace" }}>{x.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Sec>
+
             {/* § EXPEDIENTE (campos OCR) */}
             <Sec ico="🪪" titulo="Datos del expediente">
               <Fld label="CURP" full>
@@ -1781,68 +1843,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   value={form.notas || ""}
                   onChange={e => set("notas", e.target.value)} />
               </Fld>
-            </Sec>
-
-            {/* § DOCUMENTOS DEL CLIENTE */}
-            <Sec ico={ICO_DOC} titulo="Documentos del cliente">
-              <div style={{ gridColumn:"1/-1" }}>
-                <DocUpload
-                  label="Identificación oficial"
-                  sublabel="INE · Pasaporte"
-                  docType="id"
-                  value={form.docId || null}
-                  onChange={v => set("docId", v)}
-                  onExtract={campos => aplicarCampos(campos, "id")}
-                />
-              </div>
-              <div style={{ gridColumn:"1/-1", marginTop:4 }}>
-                <DocUpload
-                  label="Licencia de conducir"
-                  sublabel="Licencia de conducir vigente"
-                  docType="licencia"
-                  value={form.docLicencia || null}
-                  onChange={v => set("docLicencia", v)}
-                  onExtract={campos => aplicarCampos(campos, "licencia")}
-                />
-              </div>
-              <div style={{ gridColumn:"1/-1", marginTop:4 }}>
-                <DocUpload
-                  label="Comprobante de domicilio"
-                  sublabel="Recibo de agua · luz · teléfono"
-                  docType="domicilio"
-                  value={form.docDomicilio || null}
-                  onChange={v => set("docDomicilio", v)}
-                  onExtract={campos => aplicarCampos(campos, "domicilio")}
-                />
-              </div>
-
-              {/* Panel: Datos OCR confirmados */}
-              {(form.datosId || form.datosLicencia || form.datosDomicilio) && (
-                <div style={{ gridColumn:"1/-1", marginTop:8, padding:"12px 14px",
-                  background:"var(--bg)", border:"1px solid var(--line)", borderRadius:10 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)",
-                    textTransform:"uppercase", letterSpacing:".06em", marginBottom:8 }}>
-                    Datos OCR confirmados
-                  </div>
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 18px" }}>
-                    {[
-                      { lbl:"CURP",      val: form.curp },
-                      { lbl:"RFC",       val: form.rfc },
-                      { lbl:"Nac.",      val: form.fechaNac },
-                      { lbl:"Sexo",      val: form.sexo },
-                      { lbl:"Licencia #",val: form.numLicencia },
-                      { lbl:"Tipo lic.", val: form.tipoLic },
-                      { lbl:"Vigencia",  val: form.vigenciaLic },
-                      { lbl:"C.P.",      val: form.cp },
-                    ].filter(x => x.val).map(x => (
-                      <div key={x.lbl} style={{ fontSize:12 }}>
-                        <span style={{ color:"var(--muted)", marginRight:4 }}>{x.lbl}:</span>
-                        <span style={{ fontWeight:600, color:"var(--ink)", fontFamily:"monospace" }}>{x.val}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </Sec>
 
             {/* § UNIDAD VINCULADA (desde Plan Piso) */}
