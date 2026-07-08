@@ -807,9 +807,11 @@
     // 1. Inventario (usa workspace_id o agency_id legacy)
     await client.from("inventario").delete()
       .or(`workspace_id.eq.${wid},agency_id.eq.${wid}`);
-    // 2. Clientes CRM (puede no existir, ignorar error)
+    // 2. Financieras (puede no existir, ignorar error)
+    try { await client.from("financieras").delete().eq("workspace_id", wid); } catch(e) {}
+    // 3. Clientes CRM (puede no existir, ignorar error)
     try { await client.from("clientes").delete().eq("workspace_id", wid); } catch(e) {}
-    // 3. Reglas de alerta
+    // 4. Reglas de alerta
     await client.from("alert_rules").delete().eq("workspace_id", wid);
     // 4. Membresías de workspace
     await client.from("workspace_memberships").delete().eq("workspace_id", wid);
