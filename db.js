@@ -801,27 +801,13 @@
     if (error) throw new Error(error.message);
   }
 
-  // Eliminar un workspace (tenant) y todos sus registros dependientes en orden correcto
+  // Eliminar un workspace (tenant).
+  // Los registros dependientes (financieras, inventario, users, clientes, etc.)
+  // se borran en cascada por la BD — ver supabase_cascade_workspace_fks.sql.
   async function deleteWorkspace(workspaceId, agencyId) {
-    const wid = workspaceId;
-    // 1. Inventario (usa workspace_id o agency_id legacy)
-    await client.from("inventario").delete()
-      .or(`workspace_id.eq.${wid},agency_id.eq.${wid}`);
-    // 2. Financieras (puede no existir, ignorar error)
-    try { await client.from("financieras").delete().eq("workspace_id", wid); } catch(e) {}
-    // 3. Clientes CRM (puede no existir, ignorar error)
-    try { await client.from("clientes").delete().eq("workspace_id", wid); } catch(e) {}
-    // 4. Reglas de alerta
-    await client.from("alert_rules").delete().eq("workspace_id", wid);
-    // 4. Membresías de workspace
-    await client.from("workspace_memberships").delete().eq("workspace_id", wid);
-    // 5. Usuarios del workspace (usuarios tabla interna, no auth)
-    await client.from("users").delete()
-      .or(`workspace_id.eq.${wid},agency_id.eq.${wid}`);
-    // 6. Borrar el workspace
-    const { error } = await client.from("workspaces").delete().eq("id", wid);
+    const { error } = await client.from("workspaces").delete().eq("id", workspaceId);
     if (error) throw new Error(error.message);
-    // 7. Si era el último workspace de la agencia padre, borrar la agencia también
+    // Si era el último workspace de la agencia padre, borrar la agencia también
     if (agencyId) {
       const { data: rest } = await client.from("workspaces").select("id").eq("agency_id", agencyId);
       if (!rest || rest.length === 0) {
