@@ -51,13 +51,19 @@ Deno.serve(async (req) => {
     const targetAgencyId = wsRow?.agency_id || agencyId || workspaceId;
     const workspaceName  = wsRow?.nombre || null;
 
+    // ¿Es super admin? → acceso total, sin restricciones de tenant
+    const { data: superAdminRow } = await adminClient
+      .from("super_admins").select("user_id")
+      .eq("user_id", invitador.id).maybeSingle();
+    const esSuperAdmin = !!superAdminRow;
+
     const { data: agencyMem } = await adminClient
       .from("agency_memberships").select("role")
       .eq("user_id", invitador.id).eq("agency_id", targetAgencyId)
       .maybeSingle();
     const esAgencyOwner = !!agencyMem;
 
-    if (!esAgencyOwner) {
+    if (!esSuperAdmin && !esAgencyOwner) {
       const { data: inviterRow } = await adminClient
         .from("users").select("rol, workspace_id, agency_id")
         .eq("auth_user_id", invitador.id).maybeSingle();
