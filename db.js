@@ -722,6 +722,35 @@
     if (error) throw new Error(error.message);
   }
 
+  /* ── Super Admin: Audit log ────────────────────────────────── */
+
+  async function logSuperAdminAction(accion, targetId, targetNombre, metadata = {}) {
+    try {
+      const { data: authData } = await client.auth.getUser();
+      if (!authData?.user) return;
+      await client.from("super_admin_audit_log").insert({
+        super_admin_user_id: authData.user.id,
+        super_admin_email:   authData.user.email,
+        accion,
+        target_id:     targetId    || null,
+        target_nombre: targetNombre || null,
+        metadata,
+      });
+    } catch (e) {
+      console.warn("[audit] No se pudo registrar acción:", e.message);
+    }
+  }
+
+  async function loadAuditLog(limit = 100) {
+    const { data, error } = await client
+      .from("super_admin_audit_log")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
   /* ── Super Admin: CRUD de agencias ────────────────────────── */
 
   async function loadAllAgencies() {
@@ -799,8 +828,7 @@
       .select()
       .single();
     if (wsErr) throw new Error(wsErr.message);
-    // Retornar el workspace (es lo que se muestra en la vista plana)
-    return {
+    const result = {
       id:         ws.id,
       nombre:     ws.nombre,
       ciudad:     ws.ciudad     || "",
@@ -811,23 +839,28 @@
       ownerEmail: agencyData.ownerEmail || "",
       plan:       agencyData.plan || "pro",
     };
+    // Auditoría — no bloquea si falla
+    logSuperAdminAction("crear_agencia", ag.id, ws.nombre, { ciudad: agencyData.ciudad || null });
+    return result;
   }
 
   async function deleteAgency(agencyId) {
-    // Cascadea a workspaces, users, inventario por FK ON DELETE CASCADE
-    const { error } = await client
-      .from("agencies")
-      .delete()
-      .eq("id", agencyId);
+    // Capturar nombre antes de borrar para el log
+    const { data: ag } = await client.from("agencies").select("nombre").eq("id", agencyId).maybeSingle();
+    const { error } = await client.from("agencies").delete().eq("id", agencyId);
     if (error) throw new Error(error.message);
+    logSuperAdminAction("eliminar_agencia", agencyId, ag?.nombre || agencyId);
   }
 
   // Eliminar un workspace (tenant).
   // Los registros dependientes (financieras, inventario, users, clientes, etc.)
   // se borran en cascada por la BD — ver supabase_cascade_workspace_fks.sql.
   async function deleteWorkspace(workspaceId, agencyId) {
+    // Capturar nombre antes de borrar para el log
+    const { data: ws } = await client.from("workspaces").select("nombre").eq("id", workspaceId).maybeSingle();
     const { error } = await client.from("workspaces").delete().eq("id", workspaceId);
     if (error) throw new Error(error.message);
+    logSuperAdminAction("eliminar_workspace", workspaceId, ws?.nombre || workspaceId, { agencyId: agencyId || null });
     // Si era el último workspace de la agencia padre, borrar la agencia también
     if (agencyId) {
       const { data: rest } = await client.from("workspaces").select("id").eq("agency_id", agencyId);
@@ -877,6 +910,8 @@
     deleteAgency,
     deleteWorkspace,
     loadAgencyWorkspaces,
+    logSuperAdminAction,
+    loadAuditLog,
     storage: client.storage,
   };
 })();

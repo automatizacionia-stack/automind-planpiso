@@ -230,16 +230,130 @@ function AgenciaWorkspacesModal({ agencia, onEntrar, onClose }) {
   );
 }
 
+/* ── Panel: Historial de auditoría ───────────────────────────── */
+function HistorialPanel({ onClose }) {
+  const [logs,     setLogs]     = React.useState([]);
+  const [cargando, setCargando] = React.useState(true);
+
+  React.useEffect(() => {
+    window.DB.loadAuditLog(200)
+      .then(setLogs)
+      .catch(e => console.warn("Error cargando historial:", e.message))
+      .finally(() => setCargando(false));
+  }, []);
+
+  const ETIQUETA = {
+    login:               { label: "Login",             color: "#6b7280" },
+    entrar_workspace:    { label: "Entró a workspace", color: "#2f6fed" },
+    crear_agencia:       { label: "Creó agencia",      color: "#1f9d57" },
+    eliminar_workspace:  { label: "Eliminó workspace", color: "#d9531e" },
+    eliminar_agencia:    { label: "Eliminó agencia",   color: "#c0392b" },
+  };
+
+  function fmtFecha(ts) {
+    if (!ts) return "—";
+    const d = new Date(ts);
+    return d.toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" });
+  }
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.4)", zIndex:200 }}
+      />
+      <aside style={{
+        position:"fixed", top:0, right:0, bottom:0, width:560,
+        background:"var(--card)", zIndex:201, display:"flex", flexDirection:"column",
+        boxShadow:"-4px 0 24px rgba(0,0,0,.18)",
+      }}>
+        {/* Cabecera */}
+        <div style={{
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          padding:"20px 24px", borderBottom:"1px solid var(--line)",
+        }}>
+          <div>
+            <div style={{ fontWeight:800, fontSize:16 }}>Historial de auditoría</div>
+            <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>
+              Últimas 200 acciones de super admins
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background:"none", border:"none", cursor:"pointer", color:"var(--muted)", padding:4 }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Contenido */}
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 24px" }}>
+          {cargando ? (
+            <div style={{ textAlign:"center", color:"var(--muted)", paddingTop:40 }}>Cargando…</div>
+          ) : logs.length === 0 ? (
+            <div style={{ textAlign:"center", color:"var(--muted)", paddingTop:40 }}>
+              Sin registros aún
+            </div>
+          ) : (
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+              <thead>
+                <tr style={{ color:"var(--muted)", textAlign:"left" }}>
+                  <th style={{ padding:"6px 8px", fontWeight:600 }}>Fecha</th>
+                  <th style={{ padding:"6px 8px", fontWeight:600 }}>Admin</th>
+                  <th style={{ padding:"6px 8px", fontWeight:600 }}>Acción</th>
+                  <th style={{ padding:"6px 8px", fontWeight:600 }}>Objetivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map(log => {
+                  const et = ETIQUETA[log.accion] || { label: log.accion, color:"#6b7280" };
+                  return (
+                    <tr key={log.id} style={{ borderTop:"1px solid var(--line)" }}>
+                      <td style={{ padding:"8px", color:"var(--muted)", whiteSpace:"nowrap" }}>
+                        {fmtFecha(log.created_at)}
+                      </td>
+                      <td style={{ padding:"8px", maxWidth:140, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {log.super_admin_email}
+                      </td>
+                      <td style={{ padding:"8px", whiteSpace:"nowrap" }}>
+                        <span style={{
+                          background: et.color + "18", color: et.color,
+                          fontSize:11, fontWeight:700, padding:"2px 8px",
+                          borderRadius:20, whiteSpace:"nowrap",
+                        }}>
+                          {et.label}
+                        </span>
+                      </td>
+                      <td style={{ padding:"8px", color:"var(--muted)", maxWidth:160,
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {log.target_nombre || "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </aside>
+    </>
+  );
+}
+
 /* ── Vista principal del Super Admin ────────────────────────── */
 function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
-  const [agencias,   setAgencias]   = React.useState([]);
-  const [cargando,   setCargando]   = React.useState(true);
-  const [showNueva,  setShowNueva]  = React.useState(false);
-  const [confirmDel, setConfirmDel] = React.useState(null);
-  const [borrando,   setBorrando]   = React.useState(null);
-  const [entrando,   setEntrando]   = React.useState(null);
-  const [busqueda,   setBusqueda]   = React.useState("");
-  const [confirmText, setConfirmText] = React.useState("");
+  const [agencias,     setAgencias]     = React.useState([]);
+  const [cargando,     setCargando]     = React.useState(true);
+  const [showNueva,    setShowNueva]    = React.useState(false);
+  const [showHistorial,setShowHistorial]= React.useState(false);
+  const [confirmDel,   setConfirmDel]   = React.useState(null);
+  const [borrando,     setBorrando]     = React.useState(null);
+  const [entrando,     setEntrando]     = React.useState(null);
+  const [busqueda,     setBusqueda]     = React.useState("");
+  const [confirmText,  setConfirmText]  = React.useState("");
 
   React.useEffect(() => {
     // Cargar todos los workspaces (tenants) de todas las agencias en plano
@@ -247,6 +361,8 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
       .then(setAgencias)
       .catch(e => alert("Error cargando agencias: " + e.message))
       .finally(() => setCargando(false));
+    // Log de sesión iniciada
+    window.DB.logSuperAdminAction("login", null, null);
   }, []);
 
   async function eliminarAgencia(ag) {
@@ -268,6 +384,8 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
     setEntrando(ag.id);
     try {
       const data = await window.DB.loadAgencyData(ag.id);
+      // Auditoría: registrar qué workspace entró
+      window.DB.logSuperAdminAction("entrar_workspace", ag.id, ag.nombre);
       onEntrarWorkspace(ag, data, { id: ag.agencyId });
     } catch(err) {
       alert("Error al entrar: " + err.message);
@@ -317,6 +435,21 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
 
         {/* Email */}
         <span style={{ fontSize:13, color:"var(--muted)" }}>{userCtx.email}</span>
+
+        {/* Historial */}
+        <button onClick={() => setShowHistorial(true)} style={{
+          padding:"6px 14px", borderRadius:8, border:"1px solid var(--line)",
+          background:"var(--bg)", color:"var(--muted)", fontSize:13, fontWeight:600,
+          cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+        }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--card)"; e.currentTarget.style.color = "var(--ink)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--bg)"; e.currentTarget.style.color = "var(--muted)"; }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Historial
+        </button>
 
         {/* Cerrar sesión */}
         <button onClick={onLogout} style={{
@@ -560,6 +693,11 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Panel Historial de auditoría */}
+      {showHistorial && (
+        <HistorialPanel onClose={() => setShowHistorial(false)} />
       )}
     </div>
   );
