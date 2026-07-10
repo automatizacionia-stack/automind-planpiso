@@ -98,23 +98,40 @@ Deno.serve(async (req) => {
       emailVia   = "supabase";
       console.log("[invite-user] STEP 1 OK: invitación enviada por Supabase, id:", authUserId);
     } else {
-      // Usuario ya existe en Auth → generar recovery link (restablecimiento de contraseña)
+      // Usuario ya existe en Auth → generar magic link (acceso directo sin cambio de contraseña)
       console.log("[invite-user] STEP 1: usuario ya existe en auth:", invErr?.message);
-      const { data: { users } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-      const existing = (users as any[])?.find((u: any) => u.email === email);
-      authUserId = existing?.id || null;
 
-      if (!authUserId) throw new Error("No se pudo crear ni localizar el usuario en Auth: " + email);
+      // Lookup eficiente: buscar auth_user_id en tabla users (evita listUsers que pagina y es lento)
+      const { data: anyUserRow } = await adminClient
+        .from("users")
+        .select("auth_user_id")
+        .eq("email", email)
+        .not("auth_user_id", "is", null)
+        .limit(1)
+        .maybeSingle();
 
-      // generateLink type=recovery → redirige con #access_token&type=recovery
-      // El cliente con flowType:'implicit' procesa este hash correctamente.
+      authUserId = anyUserRow?.auth_user_id || null;
+
+      // Fallback: si no está en users todavía, buscar en auth.users por email
+      if (!authUserId) {
+        const { data: listData } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+        const found = (listData?.users as any[])?.find((u: any) => u.email === email);
+        authUserId = found?.id || null;
+      }
+
+      if (!authUserId) throw new Error("No se pudo localizar el usuario en Auth: " + email);
+
+      // generateLink type=magiclink → el usuario hace clic y queda autenticado directamente.
+      // NO usa el flujo de recovery (que forzaría cambio de contraseña y muestra SetPasswordScreen).
+      // Con flowType:'implicit', Supabase procesa #access_token&type=magiclink en el cliente
+      // y lo enruta al flujo normal de sesión — sin interceptación especial en app.jsx.
       const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
-        type: "recovery",
+        type: "magiclink",
         email,
         options: { redirectTo: siteUrl },
       });
       actionLink = linkData?.properties?.action_link || null;
-      console.log("[invite-user] STEP 1: recovery link:", !!actionLink, linkErr?.message);
+      console.log("[invite-user] STEP 1: magic link generado:", !!actionLink, linkErr?.message);
 
       if (!actionLink) throw new Error("No se pudo generar el link de acceso para " + email);
 
@@ -132,7 +149,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               sender: { name: "Automind Plan Piso", email: "no-reply@coperva.com" },
               to: [{ email, name: nombre }],
-              subject: `Tu acceso a ${agencyDisplay} en Automind Plan Piso`,
+              subject: `Acceso a ${agencyDisplay} en Automind Plan Piso`,
               htmlContent: `
                 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
                   max-width:500px;margin:0 auto;padding:32px 20px;background:#f4f6fb">
@@ -146,22 +163,23 @@ Deno.serve(async (req) => {
                     <div style="padding:32px">
                       <h2 style="margin:0 0 8px;font-size:20px;color:#1a1a2e">Hola, ${nombre} 👋</h2>
                       <p style="color:#555;line-height:1.7;margin:0 0 20px;font-size:15px">
-                        Has sido invitado a <strong>${agencyDisplay}</strong>
+                        Has sido agregado a <strong>${agencyDisplay}</strong>
                         en Automind Plan Piso como
                         <span style="background:${rolColor};color:#fff;font-size:12px;font-weight:700;
                           padding:3px 10px;border-radius:20px;white-space:nowrap">${rolLabel}</span>.
+                        Haz clic para entrar directamente — no necesitas cambiar tu contraseña.
                       </p>
                       <div style="text-align:center;margin-bottom:28px">
                         <a href="${actionLink}"
                           style="display:inline-block;background:#2f6fed;color:#fff;
                           text-decoration:none;padding:15px 36px;border-radius:12px;
                           font-weight:700;font-size:15px;letter-spacing:-.2px">
-                          Activar mi cuenta →
+                          Entrar a la plataforma →
                         </a>
                       </div>
                       <p style="color:#aaa;font-size:12px;text-align:center;margin:0;line-height:1.6">
-                        Este enlace expira en 24 horas.<br>
-                        Si no esperabas esta invitación, ignora este correo.
+                        Este enlace expira en 24 horas y es de un solo uso.<br>
+                        Si no esperabas este correo, ignóralo.
                       </p>
                     </div>
                     <div style="padding:16px 32px;background:#f9fafb;border-top:1px solid #f0f0f0;
