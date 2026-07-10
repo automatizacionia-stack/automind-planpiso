@@ -811,6 +811,7 @@
       .single();
     if (agErr) throw new Error(agErr.message);
     // 2. Crear workspace (tenant) bajo la agencia con los mismos datos
+    // NOTA: owner_email vive en agencies, NO en workspaces — no incluirlo aquí
     const { data: ws, error: wsErr } = await client
       .from("workspaces")
       .insert({
@@ -820,7 +821,6 @@
         iniciales,
         accent:      agencyData.accent    || "#2f6fed",
         sidebar:     agencyData.sidebar   || "#1b2a57",
-        owner_email: agencyData.ownerEmail || null,
         status:      "active",
       })
       .select()
