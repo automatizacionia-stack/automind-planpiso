@@ -187,9 +187,9 @@ function ColabDrawer({ u, usuarios, agencyId, usuarioActual, onSave, onClose }) 
               <label className="cf-label">Rol *</label>
               <select className="cf-input" value={form.rol}
                 onChange={e => { set("rol", e.target.value); set("reportaA", ""); }}
-                disabled={loading || (usuarioActual?.rol === "gerente")}>
-                {(usuarioActual?.rol === "director" || usuarioActual?.isAgencyOwner) && <option value="director">Director</option>}
-                {(usuarioActual?.rol === "director" || usuarioActual?.isAgencyOwner) && <option value="gerente">Gerente</option>}
+                disabled={loading || (usuarioActual?.rol === "gerente" && !usuarioActual?.isAgencyOwner && !usuarioActual?.isSuperAdmin)}>
+                {(usuarioActual?.rol === "director" || usuarioActual?.isAgencyOwner || usuarioActual?.isSuperAdmin) && <option value="director">Director</option>}
+                {(usuarioActual?.rol === "director" || usuarioActual?.isAgencyOwner || usuarioActual?.isSuperAdmin) && <option value="gerente">Gerente</option>}
                 <option value="vendedor">Vendedor</option>
               </select>
             </div>
@@ -313,8 +313,8 @@ function Colaboradores({ usuarios: usuariosInit, rows, usuarioActual, autoOpenFo
   const gerentes   = usuarios.filter(u => u.rol === "gerente");
   const vendedores = usuarios.filter(u => u.rol === "vendedor");
 
-  const puedeInvitar  = ["director", "gerente"].includes(usuarioActual?.rol) || usuarioActual?.isAgencyOwner;
-  const puedeEliminar = usuarioActual?.rol === "director" || usuarioActual?.isAgencyOwner;
+  const puedeInvitar  = ["director", "gerente"].includes(usuarioActual?.rol) || usuarioActual?.isAgencyOwner || usuarioActual?.isSuperAdmin;
+  const puedeEliminar = usuarioActual?.rol === "director" || usuarioActual?.isAgencyOwner || usuarioActual?.isSuperAdmin;
 
   const listaFiltrada = usuarios.filter(u => {
     if (activeGerente && tab === "directorio") {

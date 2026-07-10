@@ -404,7 +404,7 @@ function App() {
                 const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
                 const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
                 window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, ctx.agencyId);
-                const usuarioActual = { nombre: ctx.agency?.name || "Admin", rol: "director", email: "", id: "agency-owner" };
+                const usuarioActual = { nombre: ctx.agency?.name || "Admin", rol: "director", email: "", id: "agency-owner", isAgencyOwner: true };
                 handleLogin({
                   id:agency.id, nombre:agency.nombre, ciudad:agency.ciudad,
                   iniciales:agency.iniciales||agency.nombre.slice(0,2).toUpperCase(),
@@ -619,7 +619,7 @@ function App() {
           const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
           const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
           window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, agencia.id);
-          const usuarioActual = { nombre:"Super Admin", rol:"director", email: superAdminCtx.email, id:"super-admin" };
+          const usuarioActual = { nombre:"Super Admin", rol:"director", email: superAdminCtx.email, id:"super-admin", isSuperAdmin: true };
           sessionStorage.setItem("automind_workspace_id", ws.id);
           sessionStorage.setItem("automind_super_admin", "1");
           setSuperAdminCtx(null);
@@ -646,10 +646,12 @@ function App() {
           const usuariosEnriquecidos = enriquecerUsuarios(usuarios);
           const rowsEnriquecidas     = enriquecerRows(rows, usuariosEnriquecidos);
           window.AUTOMIND = buildAUTOMIND(agency, rowsEnriquecidas, usuariosEnriquecidos, agencyCtx.agencyId);
-          // Para agency owner, el usuarioActual es un objeto sintético
-          const usuarioActual = usuariosEnriquecidos.find(u => u.auth_user_id === agencyCtx.authUserId)
-            || { nombre: agencyCtx.agency?.name || "Admin", rol: "director",
-                 email: "", id: "agency-owner" };
+          // Para agency owner, el usuarioActual es un objeto sintético con isAgencyOwner: true
+          const _foundUser = usuariosEnriquecidos.find(u => u.auth_user_id === agencyCtx.authUserId);
+          const usuarioActual = _foundUser
+            ? { ..._foundUser, isAgencyOwner: true }
+            : { nombre: agencyCtx.agency?.name || "Admin", rol: "director",
+                email: agencyCtx.email || "", id: "agency-owner", isAgencyOwner: true };
           handleLogin({
             id:        agency.id,
             nombre:    agency.nombre,
