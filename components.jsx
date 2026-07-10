@@ -143,21 +143,25 @@ const I = {
 };
 
 /* ---------- Sidebar ---------- */
-function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitchWorkspace, onSwitchToWorkspace }) {
+function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitchWorkspace, onSwitchToWorkspace, mobileOpen, onMobileClose }) {
   const [open, setOpen] = React.useState(false);
   const [showAgSwitcher, setShowAgSwitcher] = React.useState(false);
-  const act = (a) => { setOpen(false); onMenu && onMenu(a); };
+  const act = (a) => { setOpen(false); onMenu && onMenu(a); onMobileClose && onMobileClose(); };
   const Item = ({ id, icon, label }) => {
     const active = view === id;
     return (
-      <button className={"nav-item" + (active ? " active" : "")} onClick={() => setView(id)}>
+      <button className={"nav-item" + (active ? " active" : "")} onClick={() => { setView(id); onMobileClose && onMobileClose(); }}>
         <span className="nav-ico">{icon}</span>
         <span className="nav-lbl">{label}</span>
       </button>
     );
   };
   return (
-    <aside className="sidebar">
+    <>
+      {mobileOpen && <div className="sidebar-scrim visible" onClick={onMobileClose} />}
+      <aside className={"sidebar" + (mobileOpen ? " sidebar--open" : "")}>
+      {/* Botón cerrar — solo visible en mobile */}
+      <button className="sidebar-close-btn" onClick={onMobileClose} title="Cerrar menú">✕</button>
       <div className="brand-wrap">
         <button className={"brand" + (open ? " open" : "")} onClick={() => setOpen((o) => !o)}>
           <span className="brand-mark">{I.truck({ width: 26, height: 26 })}</span>
@@ -318,6 +322,7 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
         )}
       </div>
     </aside>
+    </>
   );
 }
 

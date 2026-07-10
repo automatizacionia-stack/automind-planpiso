@@ -327,6 +327,7 @@ function App() {
   const [agencyCtx,      setAgencyCtx]      = React.useState(null); // agency owner mode
   const [superAdminCtx,  setSuperAdminCtx]  = React.useState(null); // super admin mode
   const [t, setTweak]               = useTweaks(TWEAK_DEFAULTS);
+  const [sidebarMobileOpen, setSidebarMobileOpen] = React.useState(false);
 
   // ── Hooks siempre primero, sin condiciones ─────────────────────────────────
 
@@ -706,13 +707,19 @@ function App() {
     : view === "crm"           ? "Ventas · CRM de Clientes"
     : "Plan Piso · Dashboard — Semáforo";
 
+  // Cerrar sidebar mobile al cambiar de vista
+  const handleSetView = (id) => { setView(id); setSidebarMobileOpen(false); };
+
   return (
     <div className="shell">
-      <Sidebar view={view} setView={setView} onMenu={handleMenu} tablaActiva={tablaId} tenant={tenant}
+      <Sidebar view={view} setView={handleSetView} onMenu={handleMenu} tablaActiva={tablaId} tenant={tenant}
         onLogout={handleLogout}
         onSwitchToWorkspace={handleSwitchToWorkspace}
+        mobileOpen={sidebarMobileOpen}
+        onMobileClose={() => setSidebarMobileOpen(false)}
         onSwitchWorkspace={tenant?.isAgencyOwner ? () => {
           sessionStorage.removeItem("automind_workspace_id");
+          setSidebarMobileOpen(false);
           if (tenant.isSuperAdmin && tenant._superAdminCtxRef) {
             // Super admin: volver a la vista global de gestión de agencias
             setSuperAdminCtx(tenant._superAdminCtxRef);
@@ -723,6 +730,29 @@ function App() {
           setTenant(null);
         } : null} />
       <main className="main">
+        {/* Header mobile: hamburguesa + título de vista — visible solo en móvil via CSS */}
+        <div className="mobile-header">
+          <button className="hamburger-btn" onClick={() => setSidebarMobileOpen(true)} title="Menú">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <span className="mobile-title">
+            {view === "dashboard" ? "Dashboard" : view === "inventario" ? "Inventario"
+              : view === "alertas" ? "Alertas" : view === "importar" ? "Importar"
+              : view === "colaboradores" ? "Equipo" : view === "crm" ? "CRM"
+              : view === "ventas" ? "Ventas" : "Automind"}
+          </span>
+          {/* Logo marca derecha */}
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.75"
+            strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
+            <path d="M3 6.5h11v9H3z"/><path d="M14 9.5h3.5L21 13v2.5h-7"/>
+            <circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>
+          </svg>
+        </div>
         <TopBar crumb={crumb} />
         <div className="scroll">
           {view === "dashboard" && (
