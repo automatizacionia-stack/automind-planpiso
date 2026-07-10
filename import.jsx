@@ -18,7 +18,7 @@ const CAMPOS_DESTINO = [
   { key: "diasGraciaBase",   label: "Días Gracia Base",   tipo: "num",    req: false, aliases: ["dias_gracia_base","gracia_base","diasgraciabase","gracia"] },
   { key: "diasGraciaExtra",  label: "Días Gracia Extra",  tipo: "num",    req: false, aliases: ["dias_gracia_extra","gracia_extra","diasgraciaextra","gracia_adicional"] },
   { key: "pctInteres",    label: "% Interés Anual",        tipo: "pct",    req: true,  aliases: ["pct_interes","porcentaje_interes","tasa","tasa_anual","interes","pctinteres","tasa_interes"] },
-  { key: "plazoDias",     label: "Plazo (días)",           tipo: "num",    req: true,  aliases: ["plazo_dias","plazo","plazodias","dias_plazo","vigencia"] },
+  { key: "plazoDias",     label: "Plazo (días)",           tipo: "num",    req: false, aliases: ["plazo_dias","plazo","plazodias","dias_plazo","vigencia"] },
   { key: "observaciones", label: "Observaciones",          tipo: "text",   req: false, aliases: ["observaciones","notas","comentarios","obs","nota"] },
 ];
 
@@ -44,7 +44,7 @@ function descargarPlantilla() {
     "Días Gracia Base":   90,
     "Días Gracia Extra":  0,
     "% Interés Anual *":  18,
-    "Plazo (días) *":     365,
+    "Plazo (días)":       365,
     "Observaciones":      "",
   };
   const wb = XLSX.utils.book_new();
