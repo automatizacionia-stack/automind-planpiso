@@ -55,7 +55,6 @@ function VehicleDrawer({ v, onClose, onEdit, onNuevoCliente, usuarioActual }) {
     }
   }
 
-  const plazoPct = v.plazoDias > 0 ? Math.min(100, Math.round((v.diasEnPiso / v.plazoDias) * 100)) : 0;
   return (
     <>
       <div className="scrim" onClick={onClose} />
@@ -78,18 +77,6 @@ function VehicleDrawer({ v, onClose, onEdit, onNuevoCliente, usuarioActual }) {
               : v.semaforo === "rotacion"    ? "Rotación media — sin urgencia inmediata."
               : "Saludable — dentro del plan de gracia."}
           </span>
-        </div>
-
-        <div className="plazo">
-          <div className="plazo-top">
-            <span>Día {v.diasEnPiso} de {v.plazoDias}</span>
-            <span style={{ color: restColor, fontWeight: 700 }}>
-              {v.diasLibresRestantes <= 0 ? "Vencido" : v.diasLibresRestantes + " días libres restantes"}
-            </span>
-          </div>
-          <div className="plazo-track">
-            <div className="plazo-fill" style={{ width: plazoPct + "%", background: restColor }} />
-          </div>
         </div>
 
         {/* Métricas clave */}
@@ -124,7 +111,6 @@ function VehicleDrawer({ v, onClose, onEdit, onNuevoCliente, usuarioActual }) {
           <div className="dr-stat"><span>Monto financiado</span><b>{fmtMoney(v.montoFinanciado, 2)}</b></div>
           <div className="dr-stat"><span>Tasa anual</span><b>{fmtPct(v.pctInteres, 2)}</b></div>
           <div className="dr-stat"><span>Días de gracia</span><b>{v.diasGraciaTotal} días</b></div>
-          <div className="dr-stat"><span>Plazo</span><b>{v.plazoDias} días</b></div>
           {v.observaciones && (
             <div className="dr-stat" style={{gridColumn:"1/-1"}}><span>Observaciones</span><b>{v.observaciones}</b></div>
           )}
@@ -281,7 +267,7 @@ function enriquecerRows(rows, usuariosEnriquecidos) {
     const fechaVenc = new Date(fFact.getTime()+diasGraciaTotal*MS_DIA);
     const row = { ...v, diasEnPiso, diasGraciaBase:v.diasGraciaBase, diasGraciaExtra:v.diasGraciaExtra,
       diasGraciaTotal, diasLibresRestantes, diasVencidos, interesDiario, interesAcum,
-      pctPlanConsumido, semaforo, plazoDias:v.plazoDias||0,
+      pctPlanConsumido, semaforo,
       fechaFacturaTxt:fmtF(fFact), fechaLlegadaTxt:fmtF(fLleg), fechaVencTxt:fmtF(fechaVenc) };
     const vids=Array.isArray(row.vendedorIds)&&row.vendedorIds.length>0?row.vendedorIds:(row.vendedorId?[row.vendedorId]:[]);
     const vd=vids.length>0?(usuariosEnriquecidos.find(u=>u.id===vids[0])||null):null;

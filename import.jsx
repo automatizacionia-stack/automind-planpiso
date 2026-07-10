@@ -18,7 +18,6 @@ const CAMPOS_DESTINO = [
   { key: "diasGraciaBase",   label: "Días Gracia Base",   tipo: "num",    req: false, aliases: ["dias_gracia_base","gracia_base","diasgraciabase","gracia"] },
   { key: "diasGraciaExtra",  label: "Días Gracia Extra",  tipo: "num",    req: false, aliases: ["dias_gracia_extra","gracia_extra","diasgraciaextra","gracia_adicional"] },
   { key: "pctInteres",    label: "% Interés Anual",        tipo: "pct",    req: true,  aliases: ["pct_interes","porcentaje_interes","tasa","tasa_anual","interes","pctinteres","tasa_interes"] },
-  { key: "plazoDias",     label: "Plazo (días)",           tipo: "num",    req: false, aliases: ["plazo_dias","plazo","plazodias","dias_plazo","vigencia"] },
   { key: "observaciones", label: "Observaciones",          tipo: "text",   req: false, aliases: ["observaciones","notas","comentarios","obs","nota"] },
 ];
 
@@ -44,7 +43,6 @@ function descargarPlantilla() {
     "Días Gracia Base":   90,
     "Días Gracia Extra":  0,
     "% Interés Anual *":  18,
-    "Plazo (días)":       365,
     "Observaciones":      "",
   };
   const wb = XLSX.utils.book_new();
@@ -163,7 +161,6 @@ function aplicarMapeo(rows, mapeo) {
     const fechaFactura = parsearFecha(get("fechaFactura")) || new Date(fechaLlegada.getTime() - 7 * MS_DIA);
     const monto = parsearNumero(get("montoFinanciado"));
     const tasa  = parsearPct(get("pctInteres")) || 0.14;
-    const plazo = parsearNumero(get("plazoDias")) || 120;
     const graciaBase  = parsearNumero(get("diasGraciaBase")) || 30;
     const graciaExtra = parsearNumero(get("diasGraciaExtra")) || 0;
     // Misma fórmula que el motor canónico (app.jsx → enriquecerRows):
@@ -176,8 +173,6 @@ function aplicarMapeo(rows, mapeo) {
     const interesDiario   = Math.round(monto * tasa / 365 * 100) / 100;
     const interesAcum     = Math.round(diasConInteres * interesDiario * 100) / 100;
     const interesPctMonto = monto ? interesAcum / monto : 0;
-    const diasRestantes   = plazo - diasEnPiso;
-    const proximoVencer   = diasRestantes <= 25;
     const pctPlanConsumido = diasGraciaTotal > 0
       ? Math.round((diasEnPiso / diasGraciaTotal) * 100)
       : (diasEnPiso > 0 ? 101 : 0);
@@ -211,12 +206,11 @@ function aplicarMapeo(rows, mapeo) {
       diasGraciaBase: graciaBase,
       diasGraciaExtra: graciaExtra,
       pctInteres: tasa,
-      plazoDias: plazo,
       observaciones: get("observaciones") || "",
       // computed
       diasEnPiso, diasGraciaTotal, diasConInteres, diasLibresRestantes,
       diasVencidos: diasConInteres, interesDiario, pctPlanConsumido,
-      interesAcum, interesPctMonto, diasRestantes, proximoVencer, semaforo,
+      interesAcum, interesPctMonto, semaforo,
       fechaFacturaTxt: fmtFecha(fechaFactura),
       fechaLlegadaTxt: fmtFecha(fechaLlegada),
     };

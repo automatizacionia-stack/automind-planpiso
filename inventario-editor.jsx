@@ -48,7 +48,6 @@ function recomputar(v) {
     diasEnPiso, diasGraciaBase, diasGraciaExtra, diasGraciaTotal,
     diasLibresRestantes, diasVencidos, interesDiario, interesAcum,
     pctPlanConsumido, semaforo,
-    plazoDias:       Number(v.plazoDias)      || 0,
     montoFinanciado: monto,
     pctInteres:      tasa,
     fechaFacturaTxt: fmtF(fFact),
@@ -320,7 +319,7 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
       fechaFactura: HOY, fechaLlegada: HOY,
       montoFinanciado:0, diasGraciaBase:30, diasGraciaExtra:0,
       pctInteres:0.14,
-      plazoDias: 120, observaciones:"",
+      observaciones:"",
       vendedorIds:[], vendedorId:null, fotoUrl:null,
     });
     const nextRows = [newRow, ...rows];
@@ -525,11 +524,6 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
                   <input className="ef-input" type="number" step="0.001"
                     value={form.pctInteres ? (form.pctInteres * 100).toFixed(2) : ""}
                     onChange={e => set("pctInteres", (parseFloat(e.target.value) || 0) / 100)} />
-                </FormField>
-                <FormField label="Plazo (días)">
-                  <input className="ef-input" type="number"
-                    value={form.plazoDias || ""}
-                    onChange={e => set("plazoDias", parseInt(e.target.value) || 0)} />
                 </FormField>
                 <FormField label="Días de gracia base">
                   <input className="ef-input" type="number"
