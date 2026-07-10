@@ -153,13 +153,24 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── Autorización: el usuario debe pertenecer al workspace ──────
-    const { data: memberRow } = await adminClient
-      .from("users").select("id, email")
-      .eq("auth_user_id", user.id)
-      .eq("workspace_id", workspaceId)
-      .maybeSingle();
-    let autorizado = !!memberRow;
+    // ── Autorización: super admin, agency owner o miembro del workspace ──
+    // 1. ¿Es super admin? → acceso total
+    const { data: superAdminRow } = await adminClient
+      .from("super_admins").select("user_id")
+      .eq("user_id", user.id).maybeSingle();
+    let autorizado = !!superAdminRow;
+
+    // 2. ¿Es miembro directo del workspace?
+    if (!autorizado) {
+      const { data: memberRow } = await adminClient
+        .from("users").select("id")
+        .eq("auth_user_id", user.id)
+        .eq("workspace_id", workspaceId)
+        .maybeSingle();
+      autorizado = !!memberRow;
+    }
+
+    // 3. ¿Es agency owner del workspace?
     if (!autorizado) {
       const { data: wsRow } = await adminClient
         .from("workspaces").select("agency_id").eq("id", workspaceId).maybeSingle();
@@ -169,6 +180,7 @@ Deno.serve(async (req) => {
         .eq("user_id", user.id).eq("agency_id", agId).maybeSingle();
       autorizado = !!am;
     }
+
     if (!autorizado) {
       return new Response(JSON.stringify({ error: "Sin permisos sobre este workspace" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
