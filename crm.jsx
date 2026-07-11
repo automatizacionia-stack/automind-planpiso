@@ -916,6 +916,95 @@ function Fld({ label, full, req, children }) {
   );
 }
 
+/* ── Stepper de etapas ────────────────────────────────────────────────────── */
+function EtapaStepper({ etapaActual, onCambiar }) {
+  var idx = ETAPAS_CRM.indexOf(etapaActual);
+  return (
+    <div style={{
+      padding:"14px 20px 10px",
+      borderBottom:"1px solid var(--line)",
+      background:"var(--card)",
+    }}>
+      <div style={{
+        display:"flex", alignItems:"flex-start",
+        overflowX:"auto", paddingBottom:2,
+      }}>
+        {ETAPAS_CRM.map(function(etapa, i) {
+          var completada = i < idx;
+          var activa     = i === idx;
+          var futura     = i > idx;
+          var cfg        = ETAPA_CFG[etapa] || { dot:"#9ca3af", bg:"#f3f4f6", txt:"#6b7280" };
+          var dotBorder  = activa ? cfg.dot : completada ? "#1f9d57" : "var(--line)";
+          var dotBg      = activa ? cfg.dot : completada ? "#1f9d57" : "var(--card)";
+          var lblColor   = activa ? cfg.txt : completada ? "#065f46" : "var(--muted)";
+          var lblBg      = activa ? cfg.bg  : "transparent";
+          var lineColor  = i < idx ? "#1f9d57" : "var(--line)";
+
+          return (
+            <React.Fragment key={etapa}>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:5, flexShrink:0 }}>
+                {/* Dot / botón */}
+                <button
+                  type="button"
+                  onClick={function(){ onCambiar(etapa); }}
+                  title={"Mover a: " + etapa}
+                  style={{
+                    width:28, height:28, borderRadius:"50%",
+                    border:"2px solid " + dotBorder,
+                    background: dotBg,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    cursor:"pointer", outline:"none", transition:"all .18s",
+                    boxShadow: activa ? ("0 0 0 4px " + cfg.dot + "28") : "none",
+                    flexShrink:0,
+                  }}
+                >
+                  {completada ? (
+                    /* Checkmark para etapas completadas */
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.8"
+                      strokeLinecap="round" strokeLinejoin="round" width="12" height="12">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  ) : (
+                    <span style={{
+                      width: activa ? 9 : 7, height: activa ? 9 : 7,
+                      borderRadius:"50%",
+                      background: activa ? "#fff" : (futura ? "var(--line)" : dotBg),
+                      display:"block", transition:"all .18s",
+                    }} />
+                  )}
+                </button>
+
+                {/* Label */}
+                <span style={{
+                  fontSize:9.5, fontWeight: activa ? 800 : completada ? 600 : 500,
+                  color: lblColor, whiteSpace:"nowrap",
+                  padding: activa ? "2px 7px" : "1px 2px",
+                  borderRadius:5, background: lblBg,
+                  letterSpacing: activa ? ".01em" : "normal",
+                  transition:"all .18s",
+                }}>
+                  {etapa}
+                </span>
+              </div>
+
+              {/* Línea conectora */}
+              {i < ETAPAS_CRM.length - 1 && (
+                <div style={{
+                  height:2, flex:1, minWidth:8,
+                  background: lineColor,
+                  marginTop:13,
+                  borderRadius:2,
+                  transition:"background .3s",
+                }} />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ── Editor split‑panel de clientes (espejo de inventario‑editor) ────────── */
 function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const primer = defaultSelId
@@ -1067,7 +1156,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             <div style={{ minWidth:0 }}>
               <div className="inv-form-vin">{form.nombre || "Nuevo cliente"}</div>
               <div className="inv-form-sub" style={{ display:"flex", alignItems:"center", gap:6, marginTop:4 }}>
-                <EtapaBadge etapa={form.etapa} />
                 <span style={{ color:"var(--muted)", fontSize:12 }}>{form.tipo}</span>
               </div>
             </div>
@@ -1079,6 +1167,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </button>
             </div>
           </div>
+
+          {/* ── Stepper de etapas ── */}
+          <EtapaStepper etapaActual={form.etapa || "Prospección"} onCambiar={v => set("etapa", v)} />
 
           <div className="inv-form-scroll">
 
