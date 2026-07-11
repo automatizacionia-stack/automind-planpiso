@@ -848,7 +848,7 @@ function UnitPickerModal({ onSelect, onClose }) {
             var dotColor = COLOR_SEM[r.semaforo] || "#9ca3af";
             return (
               <div key={r.id}
-                onClick={function(){ onSelect({ id: r.id, desc: desc }); }}
+                onClick={function(){ onSelect({ id: r.id, desc: desc, precio: r.montoFinanciado || 0 }); }}
                 style={{
                   padding:"11px 20px", display:"flex", alignItems:"center", gap:12,
                   cursor:"pointer", borderBottom:"1px solid var(--line)", transition:"background .12s",
@@ -1992,6 +1992,16 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
           onSelect={function(u) {
             set("unidadId",   u.id);
             set("unidadDesc", u.desc);
+            // Auto-rellenar precio de lista si la unidad lo trae
+            if (u.precio > 0) {
+              set("precioLista",     u.precio);
+              set("precioVenta",     u.precio);
+              set("descuentoMonto",  0);
+              // Recalcular mensualidad si ya hay enganche y plazo
+              var eng   = Number(form.enganche)    || 0;
+              var meses = Number(form.plazoMeses)  || 0;
+              if (meses > 0) set("mensualidadEst", Math.round((u.precio - eng) / meses));
+            }
             setShowUnitPicker(false);
           }}
           onClose={() => setShowUnitPicker(false)}
