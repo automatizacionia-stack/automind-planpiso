@@ -3,7 +3,10 @@
 /* ── Drawer: nuevo agencia ────────────────────────────────────── */
 function NuevaAgenciaDrawer({ onSave, onClose }) {
   const [form, setForm] = React.useState({
-    nombre:"", ciudad:"", ownerEmail:"", plan:"pro",
+    nombre:"", razonSocial:"", rfc:"", marca:"",
+    calle:"", colonia:"", municipio:"", cp:"", estado:"",
+    repLegalNombre:"", repLegalEmail:"",
+    ownerEmail:"", plan:"pro",
     accent:"#2f6fed", sidebar:"#1b2a57",
   });
   const [loading, setLoading] = React.useState(false);
@@ -15,7 +18,7 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.nombre.trim()) { setError("El nombre es requerido."); return; }
+    if (!form.nombre.trim()) { setError("El nombre comercial es requerido."); return; }
     setLoading(true); setError("");
     try {
       const ag = await window.DB.createAgency(form);
@@ -31,15 +34,22 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
     borderRadius:8, border:"1px solid var(--line)", background:"var(--card)",
     color:"var(--ink)", fontSize:13 };
 
+  const SL = { fontSize:11, fontWeight:700, color:"var(--muted)", letterSpacing:".05em",
+    textTransform:"uppercase", display:"block", marginBottom:4 };
+
+  const SEC = { fontSize:11, fontWeight:800, color:"var(--muted)", letterSpacing:".08em",
+    textTransform:"uppercase", padding:"14px 0 8px",
+    borderBottom:"1px solid var(--line)", marginBottom:12 };
+
   return (
     <>
       <div className="inv-drawer-scrim" onClick={onClose} />
-      <aside className="inv-drawer">
+      <aside className="inv-drawer" style={{ width:480 }}>
         <div className="inv-drawer-head">
           <div>
             <h2 style={{ margin:0, fontSize:18, fontWeight:800 }}>Nueva agencia</h2>
             <div style={{ fontSize:13, color:"var(--muted)", marginTop:2 }}>
-              Crea un nuevo agencia automotriz en la plataforma
+              Registro de agencia automotriz en la plataforma
             </div>
           </div>
           <button className="icon-btn ghost" onClick={onClose}>
@@ -51,35 +61,112 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
         </div>
 
         <div className="inv-drawer-body">
-          <form id="sa-form" onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            <div>
-              <label style={{ fontSize:12, fontWeight:600, color:"var(--muted)", display:"block", marginBottom:4 }}>
-                Nombre *
-              </label>
-              <input style={IS} value={form.nombre}
-                onChange={e => set("nombre", e.target.value)}
-                placeholder="Ej: Agencia Automotriz Vallarta" disabled={loading} />
+          <form id="sa-form" onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+
+            {/* ── Datos legales ── */}
+            <div style={SEC}>Datos legales</div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              <div style={{ gridColumn:"1/-1" }}>
+                <label style={SL}>Razón social</label>
+                <input style={IS} value={form.razonSocial}
+                  onChange={e => set("razonSocial", e.target.value)}
+                  placeholder="Ej: Grupo Automotriz Vallarta S.A. de C.V." disabled={loading} />
+              </div>
+              <div>
+                <label style={SL}>RFC</label>
+                <input style={IS} value={form.rfc}
+                  onChange={e => set("rfc", e.target.value.toUpperCase())}
+                  placeholder="GAV123456ABC" disabled={loading}
+                  maxLength={13} style={{ ...IS, textTransform:"uppercase", letterSpacing:".05em" }} />
+              </div>
+              <div>
+                <label style={SL}>Nombre comercial *</label>
+                <input style={IS} value={form.nombre}
+                  onChange={e => set("nombre", e.target.value)}
+                  placeholder="Ej: Agencia Vallarta" disabled={loading} required />
+              </div>
+              <div style={{ gridColumn:"1/-1" }}>
+                <label style={SL}>Marca</label>
+                <input style={IS} value={form.marca}
+                  onChange={e => set("marca", e.target.value)}
+                  placeholder="Ej: Chevrolet, Toyota, Ford…" disabled={loading} />
+              </div>
             </div>
-            <div>
-              <label style={{ fontSize:12, fontWeight:600, color:"var(--muted)", display:"block", marginBottom:4 }}>
-                Ciudad
-              </label>
-              <input style={IS} value={form.ciudad}
-                onChange={e => set("ciudad", e.target.value)}
-                placeholder="Ej: Puerto Vallarta" disabled={loading} />
+
+            {/* ── Dirección ── */}
+            <div style={SEC}>Dirección</div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              <div style={{ gridColumn:"1/-1" }}>
+                <label style={SL}>Calle y número</label>
+                <input style={IS} value={form.calle}
+                  onChange={e => set("calle", e.target.value)}
+                  placeholder="Ej: Av. Francisco Villa 1234" disabled={loading} />
+              </div>
+              <div style={{ gridColumn:"1/-1" }}>
+                <label style={SL}>Colonia</label>
+                <input style={IS} value={form.colonia}
+                  onChange={e => set("colonia", e.target.value)}
+                  placeholder="Ej: Col. Centro" disabled={loading} />
+              </div>
+              <div>
+                <label style={SL}>Municipio / Ciudad</label>
+                <input style={IS} value={form.municipio}
+                  onChange={e => { set("municipio", e.target.value); set("ciudad", e.target.value); }}
+                  placeholder="Ej: Puerto Vallarta" disabled={loading} />
+              </div>
+              <div>
+                <label style={SL}>C.P.</label>
+                <input style={IS} value={form.cp}
+                  onChange={e => set("cp", e.target.value)}
+                  placeholder="48300" disabled={loading} maxLength={5} />
+              </div>
+              <div style={{ gridColumn:"1/-1" }}>
+                <label style={SL}>Estado</label>
+                <select style={IS} value={form.estado}
+                  onChange={e => set("estado", e.target.value)} disabled={loading}>
+                  <option value="">— Selecciona estado —</option>
+                  {["Aguascalientes","Baja California","Baja California Sur","Campeche","Chiapas",
+                    "Chihuahua","Ciudad de México","Coahuila","Colima","Durango","Guanajuato",
+                    "Guerrero","Hidalgo","Jalisco","México","Michoacán","Morelos","Nayarit",
+                    "Nuevo León","Oaxaca","Puebla","Querétaro","Quintana Roo","San Luis Potosí",
+                    "Sinaloa","Sonora","Tabasco","Tamaulipas","Tlaxcala","Veracruz","Yucatán","Zacatecas"
+                  ].map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
             </div>
+
+            {/* ── Representante legal ── */}
+            <div style={SEC}>Representante legal</div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              <div>
+                <label style={SL}>Nombre</label>
+                <input style={IS} value={form.repLegalNombre}
+                  onChange={e => set("repLegalNombre", e.target.value)}
+                  placeholder="Nombre completo" disabled={loading} />
+              </div>
+              <div>
+                <label style={SL}>Correo</label>
+                <input type="email" style={IS} value={form.repLegalEmail}
+                  onChange={e => set("repLegalEmail", e.target.value)}
+                  placeholder="rep@agencia.com" disabled={loading} />
+              </div>
+            </div>
+
+            {/* ── Cuenta / Acceso ── */}
+            <div style={SEC}>Cuenta en la plataforma</div>
+
             <div>
-              <label style={{ fontSize:12, fontWeight:600, color:"var(--muted)", display:"block", marginBottom:4 }}>
-                Email del owner
-              </label>
+              <label style={SL}>Email del owner (acceso)</label>
               <input type="email" style={IS} value={form.ownerEmail}
                 onChange={e => set("ownerEmail", e.target.value)}
                 placeholder="owner@agencia.com" disabled={loading} />
             </div>
+
             <div>
-              <label style={{ fontSize:12, fontWeight:600, color:"var(--muted)", display:"block", marginBottom:6 }}>
-                Color de acento
-              </label>
+              <label style={{ ...SL, marginBottom:8 }}>Color de acento</label>
               <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                 {ACCENTS.map(c => (
                   <button key={c} type="button"
@@ -89,10 +176,9 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
                 ))}
               </div>
             </div>
+
             <div>
-              <label style={{ fontSize:12, fontWeight:600, color:"var(--muted)", display:"block", marginBottom:6 }}>
-                Color de barra lateral
-              </label>
+              <label style={{ ...SL, marginBottom:8 }}>Color de barra lateral</label>
               <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                 {SIDEBARS.map(c => (
                   <button key={c} type="button"
@@ -107,14 +193,21 @@ function NuevaAgenciaDrawer({ onSave, onClose }) {
             <div style={{ background:"var(--bg)", borderRadius:10, padding:"12px 14px",
               display:"flex", alignItems:"center", gap:12 }}>
               <div style={{ width:40, height:40, borderRadius:10, background:form.accent,
-                display:"grid", placeItems:"center", color:"#fff", fontWeight:800, fontSize:15 }}>
+                display:"grid", placeItems:"center", color:"#fff", fontWeight:800, fontSize:15, flexShrink:0 }}>
                 {(form.nombre || "??").split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase() || "?"}
               </div>
               <div>
                 <div style={{ fontWeight:700, fontSize:14, color:"var(--ink)" }}>
-                  {form.nombre || "Nombre del agencia"}
+                  {form.nombre || "Nombre comercial"}
                 </div>
-                <div style={{ fontSize:12, color:"var(--muted)" }}>{form.ciudad || "Ciudad"}</div>
+                <div style={{ fontSize:12, color:"var(--muted)" }}>
+                  {[form.marca, form.municipio, form.estado].filter(Boolean).join(" · ") || "Marca · Ciudad · Estado"}
+                </div>
+                {form.rfc && (
+                  <div style={{ fontSize:11, color:"var(--muted)", fontFamily:"monospace", letterSpacing:".03em" }}>
+                    RFC: {form.rfc}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -551,16 +644,36 @@ function SuperAdminView({ userCtx, onEntrarWorkspace, onLogout }) {
                     </div>
                   </div>
 
-                  {/* Métricas */}
-                  <div style={{ display:"flex", gap:16, marginBottom:12 }}>
+                  {/* Datos legales / contacto */}
+                  <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:12, fontSize:12 }}>
+                    {ag.razonSocial && (
+                      <div style={{ color:"var(--muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        <span style={{ fontWeight:600, color:"var(--ink)" }}>RS: </span>{ag.razonSocial}
+                      </div>
+                    )}
+                    {ag.rfc && (
+                      <div style={{ color:"var(--muted)", fontFamily:"monospace", fontSize:11, letterSpacing:".03em" }}>
+                        RFC: {ag.rfc}
+                      </div>
+                    )}
+                    {ag.marca && (
+                      <div style={{ color:"var(--muted)" }}>
+                        <span style={{ fontWeight:600, color:"var(--ink)" }}>Marca: </span>{ag.marca}
+                      </div>
+                    )}
+                    {(ag.municipio || ag.estado) && (
+                      <div style={{ color:"var(--muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        📍 {[ag.municipio, ag.estado].filter(Boolean).join(", ")}
+                      </div>
+                    )}
+                    {ag.repLegalNombre && (
+                      <div style={{ color:"var(--muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        <span style={{ fontWeight:600, color:"var(--ink)" }}>Rep. legal: </span>{ag.repLegalNombre}
+                      </div>
+                    )}
                     {ag.ownerEmail && (
-                      <div style={{ fontSize:12, color:"var(--muted)", overflow:"hidden",
-                        textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:180 }}>
-                        <span style={{ display:"block", fontWeight:600, color:"var(--ink-2)",
-                          overflow:"hidden", textOverflow:"ellipsis" }}>
-                          {ag.ownerEmail}
-                        </span>
-                        owner
+                      <div style={{ color:"var(--muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        <span style={{ fontWeight:600, color:"var(--ink)" }}>Owner: </span>{ag.ownerEmail}
                       </div>
                     )}
                   </div>

@@ -758,16 +758,26 @@
       .order("nombre");
     if (error) throw new Error(error.message);
     return (data || []).map(a => ({
-      id:          a.id,
-      nombre:      a.nombre,
-      ciudad:      a.ciudad      || "",
-      iniciales:   a.iniciales   || a.nombre.slice(0,2).toUpperCase(),
-      accent:      a.accent      || "#2f6fed",
-      sidebar:     a.sidebar     || "#1b2a57",
-      ownerEmail:  a.owner_email || "",
-      plan:        a.plan        || "pro",
-      workspaces:  (a.workspaces || []).filter(w => w.status !== "deleted"),
-      createdAt:   a.created_at  || null,
+      id:              a.id,
+      nombre:          a.nombre,
+      ciudad:          a.ciudad           || "",
+      iniciales:       a.iniciales        || a.nombre.slice(0,2).toUpperCase(),
+      accent:          a.accent           || "#2f6fed",
+      sidebar:         a.sidebar          || "#1b2a57",
+      ownerEmail:      a.owner_email      || "",
+      plan:            a.plan             || "pro",
+      razonSocial:     a.razon_social     || "",
+      rfc:             a.rfc              || "",
+      marca:           a.marca            || "",
+      calle:           a.calle            || "",
+      colonia:         a.colonia          || "",
+      municipio:       a.municipio        || "",
+      cp:              a.cp               || "",
+      estado:          a.estado           || "",
+      repLegalNombre:  a.rep_legal_nombre || "",
+      repLegalEmail:   a.rep_legal_email  || "",
+      workspaces:      (a.workspaces || []).filter(w => w.status !== "deleted"),
+      createdAt:       a.created_at       || null,
     }));
   }
 
@@ -793,30 +803,41 @@
   }
 
   async function createAgency(agencyData) {
+    const nombreComercial = (agencyData.nombre || "").trim();
     const iniciales = agencyData.iniciales ||
-      agencyData.nombre.split(" ").map(w => w[0]).join("").slice(0,3).toUpperCase();
+      nombreComercial.split(" ").map(w => w[0]).join("").slice(0,3).toUpperCase();
     // 1. Crear registro padre en agencies
     const { data: ag, error: agErr } = await client
       .from("agencies")
       .insert({
-        nombre:      agencyData.nombre,
-        ciudad:      agencyData.ciudad    || null,
+        nombre:           nombreComercial,
+        ciudad:           agencyData.ciudad          || null,
         iniciales,
-        accent:      agencyData.accent    || "#2f6fed",
-        sidebar:     agencyData.sidebar   || "#1b2a57",
-        owner_email: agencyData.ownerEmail || null,
-        plan:        agencyData.plan       || "pro",
+        accent:           agencyData.accent          || "#2f6fed",
+        sidebar:          agencyData.sidebar         || "#1b2a57",
+        owner_email:      agencyData.ownerEmail      || null,
+        plan:             agencyData.plan            || "pro",
+        razon_social:     agencyData.razonSocial     || null,
+        rfc:              agencyData.rfc             || null,
+        marca:            agencyData.marca           || null,
+        calle:            agencyData.calle           || null,
+        colonia:          agencyData.colonia         || null,
+        municipio:        agencyData.municipio       || null,
+        cp:               agencyData.cp              || null,
+        estado:           agencyData.estado          || null,
+        rep_legal_nombre: agencyData.repLegalNombre  || null,
+        rep_legal_email:  agencyData.repLegalEmail   || null,
       })
       .select()
       .single();
     if (agErr) throw new Error(agErr.message);
     // 2. Crear workspace (tenant) bajo la agencia con los mismos datos
-    // NOTA: owner_email vive en agencies, NO en workspaces — no incluirlo aquí
+    // NOTA: owner_email y campos legales viven en agencies, NO en workspaces
     const { data: ws, error: wsErr } = await client
       .from("workspaces")
       .insert({
         agency_id:   ag.id,
-        nombre:      agencyData.nombre,
+        nombre:      nombreComercial,
         ciudad:      agencyData.ciudad    || null,
         iniciales,
         accent:      agencyData.accent    || "#2f6fed",
@@ -827,15 +848,25 @@
       .single();
     if (wsErr) throw new Error(wsErr.message);
     const result = {
-      id:         ws.id,
-      nombre:     ws.nombre,
-      ciudad:     ws.ciudad     || "",
-      iniciales:  ws.iniciales  || ws.nombre.slice(0, 2).toUpperCase(),
-      accent:     ws.accent     || "#2f6fed",
-      sidebar:    ws.sidebar    || "#1b2a57",
-      agencyId:   ag.id,
-      ownerEmail: agencyData.ownerEmail || "",
-      plan:       agencyData.plan || "pro",
+      id:              ws.id,
+      nombre:          ws.nombre,
+      ciudad:          ws.ciudad            || "",
+      iniciales:       ws.iniciales         || ws.nombre.slice(0, 2).toUpperCase(),
+      accent:          ws.accent            || "#2f6fed",
+      sidebar:         ws.sidebar           || "#1b2a57",
+      agencyId:        ag.id,
+      ownerEmail:      agencyData.ownerEmail    || "",
+      plan:            agencyData.plan          || "pro",
+      razonSocial:     agencyData.razonSocial   || "",
+      rfc:             agencyData.rfc           || "",
+      marca:           agencyData.marca         || "",
+      calle:           agencyData.calle         || "",
+      colonia:         agencyData.colonia       || "",
+      municipio:       agencyData.municipio     || "",
+      cp:              agencyData.cp            || "",
+      estado:          agencyData.estado        || "",
+      repLegalNombre:  agencyData.repLegalNombre || "",
+      repLegalEmail:   agencyData.repLegalEmail  || "",
     };
     // Auditoría — no bloquea si falla
     logSuperAdminAction("crear_agencia", ag.id, ws.nombre, { ciudad: agencyData.ciudad || null });
