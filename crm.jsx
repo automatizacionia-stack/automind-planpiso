@@ -2394,4 +2394,163 @@ function CRMClientes({ rows, kpis, usuarios }) {
           inventarioId: datos.inventarioId || null,
         });
       } catch(e) {
-        console.error("[CRM] Error guar
+        console.error("[CRM] Error guardando cliente:", e);
+        window.alert(
+          "⚠️ Error al guardar el cliente en la base de datos:\n\n" +
+          (e.message || String(e)) +
+          "\n\nPosible causa: falta ejecutar las migraciones SQL en Supabase.\n" +
+          "Corre el archivo supabase_crm_setup_completo.sql en Supabase → SQL Editor."
+        );
+        return; /* no agregar a la lista si no se guardó */
+      }
+    }
+    setClientesData(prev => [nuevo, ...prev]);
+    setMostrarNuevo(false);
+    setPendingData(null);
+    setSeleccionado(nuevo);
+    setEditorSelId(nuevo.id);
+    setVista("editor");
+  }
+
+  async function onClienteUpdate(updated) {
+    /* Actualizar estado local optimistamente */
+    setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
+    /* Persistir en Supabase */
+    var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
+    if (!agencyId || !window.DB) return;
+    try {
+      await window.DB.saveCliente(agencyId, updated);
+    } catch(e) {
+      console.error("[CRM] Error guardando cliente:", e);
+      /* Revertir estado local */
+      setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
+      window.alert("Error al guardar: " + (e.message || e));
+    }
+  }
+
+  const TabBtn = ({ id, label, badge }) => (
+    <button onClick={() => setVista(id)} style={{
+      padding:"6px 14px", borderRadius:7, fontSize:13, fontWeight:600, border:"none",
+      cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"all .15s",
+      background: vista === id ? "var(--accent)" : "var(--card)",
+      color:       vista === id ? "#fff"         : "var(--muted)",
+      boxShadow:   vista === id ? "0 2px 8px rgba(47,111,237,.22)" : "none",
+    }}>
+      {label}
+      {badge > 0 && (
+        <span style={{ background: vista === id ? "rgba(255,255,255,.25)" : "#fee2e2",
+          color: vista === id ? "#fff" : "#991b1b",
+          fontSize:10, fontWeight:700, padding:"1px 6px", borderRadius:20 }}>
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+
+  return (
+    <div style={{ padding: vista === "editor" ? "24px 28px 0" : "24px 28px", maxWidth:1400, margin:"0 auto" }}>
+
+      {/* Encabezado */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+        <div>
+          <h1 style={{ margin:"0 0 3px", fontSize:22, fontWeight:800 }}>CRM de Clientes</h1>
+          <p style={{ margin:0, color:"var(--muted)", fontSize:14 }}>
+            Pipeline de ventas · <span style={{ color:"#8b5cf6", fontWeight:600 }}>Datos de ejemplo</span>
+          </p>
+        </div>
+        <button className="btn primary" style={{ display:"flex", alignItems:"center", gap:7 }}
+          onClick={() => setMostrarNuevo(true)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"
+            strokeLinejoin="round" width="15" height="15"><path d="M12 5v14M5 12h14"/></svg>
+          Nuevo cliente
+        </button>
+      </div>
+
+      {/* KPIs — solo en vistas secundarias */}
+      {vista !== "editor" && <StatsBar clientes={clientesData} />}
+
+      {/* Controles */}
+      <div style={{ display:"flex", gap:10, marginBottom: vista === "editor" ? 12 : 16,
+        alignItems:"center", flexWrap:"wrap" }}>
+        {/* Tabs de vista */}
+        <div style={{ display:"flex", gap:6, background:"var(--bg)", borderRadius:9, padding:4 }}>
+          <TabBtn id="editor"   label="Editor" />
+          <TabBtn id="kanban"   label="Kanban" />
+          <TabBtn id="lista"    label="Lista" />
+          <TabBtn id="urgentes" label="Urgentes" badge={urgentesCount} />
+        </div>
+
+        {/* Búsqueda y filtro asesor — solo para vistas que no tienen buscador propio */}
+        {vista !== "editor" && (
+          <>
+            <div style={{ flex:1, minWidth:180 }}>
+              <div style={{ position:"relative" }}>
+                <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", color:"var(--muted)" }}>
+                  {I.search({ width:14, height:14 })}
+                </span>
+                <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                  placeholder="Buscar por nombre, vehículo, ciudad…"
+                  style={{ width:"100%", padding:"7px 10px 7px 32px", border:"1px solid var(--line)",
+                    borderRadius:7, fontSize:13, background:"var(--card)", color:"var(--ink)",
+                    outline:"none", fontFamily:"inherit" }} />
+              </div>
+            </div>
+            <select value={filtroAsesor} onChange={e => setFiltroAsesor(e.target.value)}
+              style={{ padding:"7px 10px", border:"1px solid var(--line)", borderRadius:7,
+                fontSize:13, background:"var(--card)", color:"var(--ink)", fontFamily:"inherit",
+                cursor:"pointer", outline:"none" }}>
+              {asesores.map(a => <option key={a}>{a}</option>)}
+            </select>
+          </>
+        )}
+      </div>
+
+      {/* Contenido de la vista */}
+      {vista === "editor"   && (
+        <ClienteEditor
+          clientes={clientesData}
+          defaultSelId={editorSelId}
+          onUpdate={onClienteUpdate}
+        />
+      )}
+      {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={setSeleccionado} />}
+      {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
+      {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
+
+      {/* Estado cargando / vacío / error */}
+      {cargando && (
+        <div style={{ textAlign:"center", padding:"48px 0", color:"var(--muted)", fontSize:14 }}>
+          Cargando clientes…
+        </div>
+      )}
+      {!cargando && errorCrm && (
+        <div style={{ marginTop:16, padding:"12px 16px", background:"#fff5f5",
+          border:"1px solid #fecaca", borderRadius:8, fontSize:13, color:"#991b1b" }}>
+          {errorCrm}
+        </div>
+      )}
+      {!cargando && !errorCrm && clientesData.length === 0 && (
+        <div style={{ textAlign:"center", padding:"64px 20px", color:"var(--muted)" }}>
+          <div style={{ fontSize:40, marginBottom:10 }}>&#128101;</div>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>Sin clientes aún</div>
+          <div style={{ fontSize:13 }}>Crea el primer cliente con el botón "Nuevo cliente".</div>
+        </div>
+      )}
+
+      {/* Drawer de detalle */}
+      <ClienteDrawer c={seleccionado} onClose={() => setSeleccionado(null)} />
+
+      {/* Modal nuevo cliente (con prefill opcional desde Plan Piso) */}
+      {mostrarNuevo && (
+        <NuevoClienteModal
+          asesores={asesores}
+          onClose={() => { setMostrarNuevo(false); setPendingData(null); }}
+          onCreate={crearCliente}
+          initialData={pendingData}
+        />
+      )}
+    </div>
+  );
+}
+
+Object.assign(window, { CRMClientes });
