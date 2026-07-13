@@ -543,6 +543,16 @@ function _resizeDataUrl(dataUrl, mimeType) {
   });
 }
 
+/* ── Helper: convierte dataUrl a Blob sin fetch() ───────────────────────── */
+function _dataUrlToBlob(dataUrl) {
+  var arr  = dataUrl.split(",");
+  var mime = arr[0].match(/:(.*?);/)[1];
+  var raw  = atob(arr[1]);
+  var buf  = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
+  return new Blob([buf], { type: mime });
+}
+
 /* ── Zona de carga de documento con extracción IA ────────────────────────── */
 function DocUpload({ label, sublabel, docType, value, onChange, onExtract }) {
   const [dragging,    setDragging]    = React.useState(false);
@@ -557,9 +567,10 @@ function DocUpload({ label, sublabel, docType, value, onChange, onExtract }) {
 
   async function _uploadDocToStorage(file, dataUrl) {
     try {
+      if (!window.DB || !window.DB.storage) return null;
       var ext = file.type === "application/pdf" ? "pdf" : file.type === "image/png" ? "png" : "jpg";
-      var key = "clientes/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
-      var blob = await (await fetch(dataUrl)).blob();
+      var key  = "clientes/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+      var blob = _dataUrlToBlob(dataUrl);
       var { error } = await window.DB.storage
         .from("expedientes")
         .upload(key, blob, { contentType: file.type, upsert: false });
@@ -1190,7 +1201,41 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   async function handleSave() {
     if (!form) return;
     try {
-      await (onUpdate && onUpdate({ ...form }));
+      /* ── Subir documentos pendientes a Storage antes de guardar ── */
+      var formToSave = Object.assign({}, form);
+      var docCampos = [
+        { key:"docId",        label:"INE"          },
+        { key:"docLicencia",  label:"Licencia"     },
+        { key:"docDomicilio", label:"Comprobante"  },
+      ];
+      for (var i = 0; i < docCampos.length; i++) {
+        var dc  = docCampos[i];
+        var doc = formToSave[dc.key];
+        if (doc && doc.dataUrl && !doc.storageKey && window.DB && window.DB.storage) {
+          try {
+            var ext  = doc.type === "application/pdf" ? "pdf" : doc.type === "image/png" ? "png" : "jpg";
+            var key  = "clientes/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+            var blob = _dataUrlToBlob(doc.dataUrl);
+            var upResult = await window.DB.storage
+              .from("expedientes")
+              .upload(key, blob, { contentType: doc.type, upsert: false });
+            if (!upResult.error) {
+              /* Guardar sin el dataUrl para no inflar la BD */
+              formToSave[dc.key] = { name: doc.name, type: doc.type, storageKey: key, cargadoEn: doc.cargadoEn };
+              setForm(function(p) {
+                var updated = Object.assign({}, p);
+                updated[dc.key] = formToSave[dc.key];
+                return updated;
+              });
+            } else {
+              console.warn("[CRM] Upload " + dc.label + " falló:", upResult.error.message);
+            }
+          } catch(eDoc) {
+            console.warn("[CRM] Upload " + dc.label + " error:", eDoc.message);
+          }
+        }
+      }
+      await (onUpdate && onUpdate(formToSave));
       setDirty(false); setSaved(true);
       setTimeout(() => setSaved(false), 2200);
     } catch(e) {
