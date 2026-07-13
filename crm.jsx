@@ -964,6 +964,97 @@ function Fld({ label, full, req, children }) {
   );
 }
 
+/* ── Resumen de expediente (panel fijo arriba del form) ──────────────────── */
+function _buildExpedienteItems(form) {
+  var esCredito = form.formaPagoCot === "Crédito";
+  var items = [
+    { label:"Nombre completo",    ok:!!(form.nombre),                                       req:true  },
+    { label:"Teléfono / email",   ok:!!(form.tel || form.email),                            req:true  },
+    { label:"CURP (18 car.)",     ok:!!(form.curp && form.curp.length === 18),              req:false },
+    { label:"RFC",                ok:!!(form.rfc),                                          req:false },
+    { label:"Domicilio",          ok:!!(form.direccion && form.colonia && form.cp),         req:false },
+    { label:"INE / Identificación", ok:!!(form.docId && (form.docId.storageKey || form.docId.dataUrl)), req:false },
+    { label:"Licencia de manejar",  ok:!!(form.docLicencia && (form.docLicencia.storageKey || form.docLicencia.dataUrl)), req:false },
+    { label:"Comprobante domicilio",ok:!!(form.docDomicilio && (form.docDomicilio.storageKey || form.docDomicilio.dataUrl)), req:false },
+    { label:"Unidad seleccionada",ok:!!(form.unidadId),                                    req:true  },
+    { label:"Cotización / precio", ok:!!(form.precioVenta > 0),                            req:true  },
+    { label:"Aprobación gerente", ok: form.e5Estado === "Aprobado",                        req:true  },
+  ];
+  if (esCredito) {
+    items.push({ label:"Resultado crédito E6", ok: form.e6Estado === "Aprobado" || form.e6Estado === "Condicional", req:true });
+  }
+  items.push({ label:"Contrato revisado", ok:!!form.e7ContratoOk, req:false, manual:true });
+  return items;
+}
+
+function ExpedienteResumen({ form }) {
+  var items = _buildExpedienteItems(form);
+  var hayRojo    = items.some(function(x){ return x.req && !x.ok && !form.e7ExcepcionAuth; });
+  var hayAmarillo= !hayRojo && items.some(function(x){ return !x.ok; });
+  var semColor   = hayRojo ? "#ef4444" : hayAmarillo ? "#eab308" : "#22c55e";
+  var semLabel   = hayRojo ? "Incompleto" : hayAmarillo ? "Pendiente" : "Completo";
+  var semBg      = hayRojo ? "rgba(239,68,68,.06)" : hayAmarillo ? "rgba(234,179,8,.06)" : "rgba(34,197,94,.06)";
+  var pend       = items.filter(function(x){ return !x.ok; }).length;
+
+  return (
+    <div style={{
+      padding:"10px 20px 12px", borderBottom:"1px solid var(--line)", background:semBg,
+    }}>
+      {/* ── Cabecera ── */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+        <span style={{ fontSize:11, fontWeight:700, letterSpacing:".04em",
+          color:"var(--ink-2)", textTransform:"uppercase" }}>
+          Expediente
+        </span>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          {pend > 0 && (
+            <span style={{ fontSize:10, color:"var(--muted)" }}>
+              {pend} {pend === 1 ? "pendiente" : "pendientes"}
+            </span>
+          )}
+          <span style={{
+            display:"flex", alignItems:"center", gap:5,
+            padding:"3px 10px 3px 7px", borderRadius:999,
+            background: semColor + "20", border:"1px solid " + semColor + "55",
+            fontSize:11, fontWeight:700, color:semColor,
+          }}>
+            <span style={{ width:7, height:7, borderRadius:"50%", background:semColor,
+              boxShadow:"0 0 5px " + semColor }} />
+            {semLabel}
+          </span>
+        </div>
+      </div>
+      {/* ── Grid de ítems ── */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))",
+        gap:"3px 6px",
+      }}>
+        {items.map(function(it, idx) {
+          var dot  = it.ok ? "#22c55e" : (it.req && !form.e7ExcepcionAuth) ? "#ef4444" : "#94a3b8";
+          var icon = it.ok ? "✓" : (it.req && !form.e7ExcepcionAuth) ? "✗" : "○";
+          return (
+            <div key={idx} style={{ display:"flex", alignItems:"center", gap:5, padding:"2px 0" }}>
+              <span style={{
+                width:15, height:15, borderRadius:3, flexShrink:0,
+                background: dot + "20", border:"1px solid " + dot + "80",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:9, fontWeight:900, color:dot,
+              }}>{icon}</span>
+              <span style={{
+                fontSize:11,
+                color: it.ok ? "var(--ink)" : (it.req && !form.e7ExcepcionAuth) ? "#991b1b" : "var(--muted)",
+                fontWeight: (it.req && !it.ok && !form.e7ExcepcionAuth) ? 600 : 400,
+                overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+              }}>{it.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ── Stepper de etapas ────────────────────────────────────────────────────── */
 function EtapaStepper({ etapaActual, onCambiar }) {
   var idx = ETAPAS_CRM.indexOf(etapaActual);
@@ -1218,6 +1309,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
           {/* ── Stepper de etapas ── */}
           <EtapaStepper etapaActual={form.etapa || "Prospección"} onCambiar={v => set("etapa", v)} />
+
+          {/* ── Resumen de expediente (siempre visible) ── */}
+          <ExpedienteResumen form={form} />
 
           <div className="inv-form-scroll">
 
@@ -1773,21 +1867,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             {/* § E7 — VALIDACIÓN DE EXPEDIENTE */}
             {(function() {
               var ICO_CLIP = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>);
-              var esCredito = form.formaPagoCot === "Crédito";
-              var items = [
-                { label:"Nombre completo",              ok:!!(form.nombre),                                      req:true  },
-                { label:"Teléfono o email",             ok:!!(form.tel || form.email),                           req:true  },
-                { label:"CURP (18 caracteres)",         ok:!!(form.curp && form.curp.length === 18),             req:false },
-                { label:"RFC",                          ok:!!(form.rfc),                                         req:false },
-                { label:"Domicilio completo",           ok:!!(form.direccion && form.colonia && form.cp),        req:false },
-                { label:"Unidad seleccionada",          ok:!!(form.unidadId),                                   req:true  },
-                { label:"Cotización (precio de venta)", ok:!!(form.precioVenta > 0),                            req:true  },
-                { label:"Aprobación del gerente (E5)",  ok: form.e5Estado === "Aprobado",                       req:true  },
-              ];
-              if (esCredito) {
-                items.push({ label:"Resultado de crédito (E6)", ok: form.e6Estado === "Aprobado" || form.e6Estado === "Condicional", req:true });
-              }
-              items.push({ label:"Contrato borrador revisado", ok:!!form.e7ContratoOk, req:false, manual:true });
+              var items = _buildExpedienteItems(form);
 
               var hayRojo    = items.some(function(x){ return x.req && !x.ok && !form.e7ExcepcionAuth; });
               var hayAmarillo= !hayRojo && items.some(function(x){ return !x.ok; });
