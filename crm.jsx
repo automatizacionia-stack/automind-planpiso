@@ -2446,11 +2446,381 @@ function NuevoClienteModal({ onClose, onCreate, asesores, initialData }) {
 }
 
 /* ── Componente principal CRMClientes ────────────────────────────────── */
+/* ── Vista General del Proceso de Venta ──────────────────────────────────── */
+function ProcesoView({ clientes, onOpen }) {
+  var [q,             setQ]           = React.useState("");
+  var [filtEtapa,     setFiltEtapa]   = React.useState("");
+  var [filtAsesor,    setFiltAsesor]  = React.useState("");
+  var [filtPago,      setFiltPago]    = React.useState("");
+  var [filtEstatus,   setFiltEstatus] = React.useState("");
+  var [filtDocsPend,  setFiltDocsPend]= React.useState(false);
+  var [filtDesde,     setFiltDesde]   = React.useState("");
+  var [filtHasta,     setFiltHasta]   = React.useState("");
+  var [sort, setSort] = React.useState({ key:"uc", dir:1 });
+
+  /* ── Valores derivados ── */
+  var asesores = React.useMemo(function() {
+    return [...new Set(clientes.map(function(c){ return c.asesor; }).filter(Boolean))].sort();
+  }, [clientes]);
+
+  function calcEstatus(c) {
+    var items = _buildExpedienteItems(c);
+    var rojo = items.some(function(x){ return x.req && !x.ok && !c.e7ExcepcionAuth; });
+    return rojo ? "incompleto" : items.some(function(x){ return !x.ok; }) ? "pendiente" : "completo";
+  }
+  function calcDocsPend(c) {
+    return _buildExpedienteItems(c).filter(function(x){ return !x.ok; }).length;
+  }
+  function tipoPagoCliente(c) {
+    if (c.formaPagoCot && c.formaPagoCot !== "No definido") return c.formaPagoCot;
+    if (c.formaPago && c.formaPago !== "No definido") return c.formaPago;
+    return "";
+  }
+
+  /* ── Filtrado ── */
+  var filtrados = clientes.filter(function(c) {
+    if (q) {
+      var qL = q.toLowerCase();
+      var ok =
+        (c.nombre      || "").toLowerCase().includes(qL) ||
+        (c.tel         || "").toLowerCase().includes(qL) ||
+        (c.email       || "").toLowerCase().includes(qL) ||
+        (c.curp        || "").toLowerCase().includes(qL) ||
+        (c.rfc         || "").toLowerCase().includes(qL) ||
+        (c.vinVinculado|| "").toLowerCase().includes(qL) ||
+        (c.unidadDesc  || "").toLowerCase().includes(qL) ||
+        (c.interes     || "").toLowerCase().includes(qL) ||
+        (c.ciudad      || "").toLowerCase().includes(qL);
+      if (!ok) return false;
+    }
+    if (filtEtapa   && c.etapa !== filtEtapa) return false;
+    if (filtAsesor  && c.asesor !== filtAsesor) return false;
+    if (filtPago) {
+      var tp = tipoPagoCliente(c);
+      if (tp !== filtPago) return false;
+    }
+    if (filtEstatus && calcEstatus(c) !== filtEstatus) return false;
+    if (filtDocsPend && calcDocsPend(c) === 0) return false;
+    if (filtDesde && c.createdAt && c.createdAt.slice(0,10) < filtDesde) return false;
+    if (filtHasta && c.createdAt && c.createdAt.slice(0,10) > filtHasta) return false;
+    return true;
+  });
+
+  /* ── Ordenamiento ── */
+  var sorted = filtrados.slice().sort(function(a, b) {
+    var va, vb;
+    if (sort.key === "uc")        { va = _dsc(a.uc);       vb = _dsc(b.uc); }
+    else if (sort.key === "docsPend") { va = calcDocsPend(a); vb = calcDocsPend(b); }
+    else if (sort.key === "estatus")  { va = calcEstatus(a);  vb = calcEstatus(b); }
+    else { va = a[sort.key]; vb = b[sort.key]; }
+    if (typeof va === "string") return sort.dir * (va||"").localeCompare(vb||"", "es");
+    return sort.dir * ((va||0) - (vb||0));
+  });
+
+  var nFiltros = [filtEtapa, filtAsesor, filtPago, filtEstatus].filter(Boolean).length
+    + (filtDocsPend ? 1 : 0) + (filtDesde ? 1 : 0) + (filtHasta ? 1 : 0);
+
+  function limpiar() {
+    setQ(""); setFiltEtapa(""); setFiltAsesor(""); setFiltPago("");
+    setFiltEstatus(""); setFiltDocsPend(false); setFiltDesde(""); setFiltHasta("");
+  }
+  function toggleSort(key) {
+    setSort(function(p){ return p.key === key ? { key, dir: -p.dir } : { key, dir: 1 }; });
+  }
+
+  var SEM_COLOR = { completo:"#22c55e", pendiente:"#eab308", incompleto:"#ef4444" };
+  var SEM_LABEL = { completo:"Completo",  pendiente:"Pendiente",  incompleto:"Incompleto" };
+
+  var th = { padding:"8px 10px", color:"var(--muted)", fontWeight:600, fontSize:11,
+    textAlign:"left", whiteSpace:"nowrap", userSelect:"none" };
+  function Hdr({ col, label, center }) {
+    var act = sort.key === col;
+    return (
+      <th onClick={function(){ toggleSort(col); }}
+        style={{ ...th, cursor:"pointer", textAlign: center ? "center" : "left" }}>
+        <span style={{ display:"inline-flex", alignItems:"center", gap:3 }}>
+          {label}
+          <span style={{ fontSize:10, opacity: act ? 1 : .3, color: act ? "var(--accent)" : "inherit" }}>
+            {act ? (sort.dir === 1 ? "↑" : "↓") : "↕"}
+          </span>
+        </span>
+      </th>
+    );
+  }
+
+  var inputSt = {
+    fontSize:12, padding:"5px 8px", borderRadius:6,
+    border:"1px solid var(--line)", background:"var(--bg)",
+    color:"var(--ink)", outline:"none",
+  };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100%", overflow:"hidden" }}>
+
+      {/* ── Barra de filtros ─────────────────────────────── */}
+      <div style={{ flexShrink:0, padding:"10px 16px 8px", borderBottom:"1px solid var(--line)",
+        background:"var(--card)", display:"flex", flexDirection:"column", gap:7 }}>
+
+        {/* Búsqueda */}
+        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          <div style={{ position:"relative", flex:1, maxWidth:600 }}>
+            <svg style={{ position:"absolute", left:9, top:"50%", transform:"translateY(-50%)",
+              opacity:.4, pointerEvents:"none" }}
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="13" height="13">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input value={q} onChange={function(e){ setQ(e.target.value); }}
+              placeholder="Buscar por nombre, teléfono, email, CURP, RFC, VIN, vehículo…"
+              style={{ ...inputSt, width:"100%", paddingLeft:28, boxSizing:"border-box", height:33 }} />
+          </div>
+          {(q || nFiltros > 0) && (
+            <button onClick={limpiar}
+              style={{ ...inputSt, cursor:"pointer", whiteSpace:"nowrap", height:33,
+                color:"var(--accent)", borderColor:"var(--accent)" }}>
+              Limpiar {nFiltros > 0 ? "(" + nFiltros + " filtros)" : ""}
+            </button>
+          )}
+        </div>
+
+        {/* Filtros rápidos — fila 1 */}
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+          {/* Etapa */}
+          <select value={filtEtapa} onChange={function(e){ setFiltEtapa(e.target.value); }}
+            style={{ ...inputSt }}>
+            <option value="">Todas las etapas</option>
+            {ETAPAS_CRM.map(function(e){ return <option key={e} value={e}>{e}</option>; })}
+          </select>
+
+          {/* Vendedor */}
+          <select value={filtAsesor} onChange={function(e){ setFiltAsesor(e.target.value); }}
+            style={{ ...inputSt }}>
+            <option value="">Todos los vendedores</option>
+            {asesores.map(function(a){ return <option key={a} value={a}>{a}</option>; })}
+          </select>
+
+          {/* Tipo operación */}
+          {[["","Todos"],["Crédito","Crédito"],["Contado","Contado"]].map(function(pair){
+            var val = pair[0], lbl = pair[1];
+            var act = filtPago === val;
+            return (
+              <button key={val} onClick={function(){ setFiltPago(val); }}
+                style={{ ...inputSt, cursor:"pointer",
+                  background: act ? "var(--accent)" : "var(--bg)",
+                  color: act ? "#fff" : "var(--muted)",
+                  borderColor: act ? "var(--accent)" : "var(--line)",
+                  fontWeight: act ? 700 : 400 }}>
+                {lbl}
+              </button>
+            );
+          })}
+
+          <span style={{ width:1, height:18, background:"var(--line)", flexShrink:0 }} />
+
+          {/* Estatus expediente */}
+          {[["","Todos"],[" completo","✓ Completo"],["pendiente","◐ Pendiente"],["incompleto","✗ Incompleto"]].map(function(pair){
+            var val = pair[0].trim(), lbl = pair[1];
+            var act = filtEstatus === val;
+            var c = val ? SEM_COLOR[val] : null;
+            return (
+              <button key={val} onClick={function(){ setFiltEstatus(val); }}
+                style={{ ...inputSt, cursor:"pointer",
+                  background: act && c ? c + "20" : act ? "var(--accent)" : "var(--bg)",
+                  color: act && c ? c : act ? "var(--accent)" : "var(--muted)",
+                  borderColor: act && c ? c : act ? "var(--accent)" : "var(--line)",
+                  fontWeight: act ? 700 : 400 }}>
+                {lbl}
+              </button>
+            );
+          })}
+
+          {/* Docs incompletos */}
+          <label style={{ display:"flex", alignItems:"center", gap:5, fontSize:12,
+            color: filtDocsPend ? "#dc2626" : "var(--muted)", cursor:"pointer" }}>
+            <input type="checkbox" checked={filtDocsPend}
+              onChange={function(e){ setFiltDocsPend(e.target.checked); }}
+              style={{ accentColor:"#dc2626" }} />
+            Docs incompletos
+          </label>
+        </div>
+
+        {/* Filtros — fila 2: fechas + contador */}
+        <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+          <span style={{ fontSize:11, color:"var(--muted)" }}>Creado desde:</span>
+          <input type="date" value={filtDesde} onChange={function(e){ setFiltDesde(e.target.value); }}
+            style={{ ...inputSt, fontSize:11 }} />
+          <span style={{ fontSize:11, color:"var(--muted)" }}>hasta:</span>
+          <input type="date" value={filtHasta} onChange={function(e){ setFiltHasta(e.target.value); }}
+            style={{ ...inputSt, fontSize:11 }} />
+          <span style={{ fontSize:11, color:"var(--muted)", marginLeft:8 }}>
+            {sorted.length === clientes.length
+              ? sorted.length + " clientes"
+              : sorted.length + " de " + clientes.length + " clientes"}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Tabla ───────────────────────────────────────── */}
+      <div style={{ flex:1, overflow:"auto" }}>
+        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+          <thead style={{ position:"sticky", top:0, zIndex:2 }}>
+            <tr style={{ background:"var(--card)", borderBottom:"2px solid var(--line)" }}>
+              <th style={{ ...th, width:36, textAlign:"center" }}>#</th>
+              <Hdr col="nombre"   label="Nombre" />
+              <th style={th}>Teléfono / Email</th>
+              <Hdr col="asesor"   label="Vendedor" />
+              <th style={th}>Vehículo</th>
+              <Hdr col="formaPago" label="Operación" center />
+              <Hdr col="etapa"    label="Etapa" />
+              <Hdr col="uc"       label="Últ. contacto" center />
+              <Hdr col="docsPend" label="Docs" center />
+              <th style={th}>Próxima actividad</th>
+              <Hdr col="estatus"  label="Expediente" />
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.length === 0 ? (
+              <tr>
+                <td colSpan={11} style={{ textAlign:"center", padding:"60px 20px",
+                  color:"var(--muted)", fontSize:13 }}>
+                  No hay clientes con los filtros aplicados.
+                </td>
+              </tr>
+            ) : sorted.map(function(c, idx) {
+              var estatus  = calcEstatus(c);
+              var docsPend = calcDocsPend(c);
+              var diasSC   = _dsc(c.uc);
+              var eColor   = SEM_COLOR[estatus];
+              var tp       = tipoPagoCliente(c);
+              var vehiculo = c.unidadDesc || c.interes || "—";
+
+              return (
+                <tr key={c.id} onClick={function(){ onOpen(c.id); }}
+                  style={{ borderBottom:"1px solid var(--line)", cursor:"pointer" }}
+                  onMouseOver={function(e){ e.currentTarget.style.background = "var(--hover,#f9fafb)"; }}
+                  onMouseOut={function(e){ e.currentTarget.style.background = ""; }}>
+
+                  {/* # */}
+                  <td style={{ padding:"10px 6px", textAlign:"center",
+                    color:"var(--muted)", fontSize:11, width:36 }}>{idx + 1}</td>
+
+                  {/* Nombre */}
+                  <td style={{ padding:"10px 12px 10px 4px", minWidth:180 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                      <Ini nombre={c.nombre} />
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontWeight:600, color:"var(--ink)",
+                          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:180 }}>
+                          {c.nombre}
+                        </div>
+                        <div style={{ fontSize:10, color:"var(--muted)", marginTop:1 }}>
+                          {c.tipo === "Persona moral" ? "PM" : "PF"}
+                          {c.vinVinculado ? " · VIN …" + c.vinVinculado.slice(-6) : ""}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Tel / Email */}
+                  <td style={{ padding:"10px 12px", minWidth:150 }}>
+                    {c.tel   && <div style={{ fontWeight:500, color:"var(--ink)" }}>{c.tel}</div>}
+                    {c.email && <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>{c.email}</div>}
+                    {!c.tel && !c.email && <span style={{ color:"var(--muted)" }}>—</span>}
+                  </td>
+
+                  {/* Vendedor */}
+                  <td style={{ padding:"10px 12px", whiteSpace:"nowrap", color:"var(--ink)" }}>
+                    {c.asesor
+                      ? <span>{c.asesor.split(" ").slice(0,2).join(" ")}</span>
+                      : <span style={{ color:"var(--muted)" }}>—</span>}
+                  </td>
+
+                  {/* Vehículo */}
+                  <td style={{ padding:"10px 12px", maxWidth:200 }}>
+                    <div style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                      fontWeight:500, color:"var(--ink)" }}>{vehiculo}</div>
+                    {c.unidadDesc && c.interes && c.unidadDesc !== c.interes && (
+                      <div style={{ fontSize:10, color:"var(--muted)", marginTop:1,
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {c.interes}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Tipo operación */}
+                  <td style={{ padding:"10px 6px", textAlign:"center" }}>
+                    {tp ? (
+                      <span style={{
+                        fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:999,
+                        background: tp === "Crédito" ? "#dbeafe" : "#f0fdf4",
+                        color:      tp === "Crédito" ? "#1d4ed8" : "#166534",
+                        border:"1px solid " + (tp === "Crédito" ? "#93c5fd" : "#86efac"),
+                      }}>{tp}</span>
+                    ) : <span style={{ color:"var(--muted)" }}>—</span>}
+                  </td>
+
+                  {/* Etapa */}
+                  <td style={{ padding:"10px 12px" }}>
+                    <EtapaBadge etapa={c.etapa} />
+                  </td>
+
+                  {/* Último contacto */}
+                  <td style={{ padding:"10px 6px", textAlign:"center" }}>
+                    <DiasTag dias={diasSC} />
+                  </td>
+
+                  {/* Docs pendientes */}
+                  <td style={{ padding:"10px 6px", textAlign:"center" }}>
+                    {docsPend === 0 ? (
+                      <span style={{ fontSize:12, color:"#22c55e", fontWeight:700 }}>✓</span>
+                    ) : (
+                      <span style={{
+                        fontSize:11, fontWeight:700, padding:"2px 7px", borderRadius:999,
+                        background:"#fee2e2", color:"#991b1b", border:"1px solid #fecaca",
+                      }}>{docsPend} pend.</span>
+                    )}
+                  </td>
+
+                  {/* Próxima actividad */}
+                  <td style={{ padding:"10px 12px", maxWidth:220 }}>
+                    {c.prox ? (
+                      <div>
+                        <div style={{ overflow:"hidden", textOverflow:"ellipsis",
+                          whiteSpace:"nowrap", color:"var(--ink)" }}>{c.prox}</div>
+                        {c.fprox && (
+                          <div style={{ fontSize:10, color:"var(--muted)", marginTop:1 }}>
+                            {_fmtFechaCRM(c.fprox)}
+                          </div>
+                        )}
+                      </div>
+                    ) : <span style={{ color:"var(--muted)" }}>—</span>}
+                  </td>
+
+                  {/* Estatus expediente */}
+                  <td style={{ padding:"10px 12px" }}>
+                    <span style={{
+                      fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:999,
+                      background: eColor + "20", color: eColor,
+                      border:"1px solid " + eColor + "55",
+                    }}>
+                      {SEM_LABEL[estatus]}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function CRMClientes({ rows, kpis, usuarios }) {
   const [clientesData, setClientesData] = React.useState([]);
   const [cargando,     setCargando]     = React.useState(false);
   const [errorCrm,     setErrorCrm]     = React.useState(null);
-  const [vista, setVista]           = React.useState("editor");
+  const [vista, setVista]           = React.useState("proceso");
   const [seleccionado, setSeleccionado] = React.useState(null);
   const [busqueda, setBusqueda]     = React.useState("");
   const [filtroAsesor, setFiltroAsesor] = React.useState("Todos");
@@ -2599,6 +2969,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
         alignItems:"center", flexWrap:"wrap" }}>
         {/* Tabs de vista */}
         <div style={{ display:"flex", gap:6, background:"var(--bg)", borderRadius:9, padding:4 }}>
+          <TabBtn id="proceso"  label="Proceso de Venta" />
           <TabBtn id="editor"   label="Editor" />
           <TabBtn id="kanban"   label="Kanban" />
           <TabBtn id="lista"    label="Lista" />
@@ -2641,6 +3012,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
       {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
+      {vista === "proceso"  && <ProcesoView  clientes={clientesData} onOpen={function(id){ setEditorSelId(id); setVista("editor"); }} />}
 
       {/* Estado cargando / vacío / error */}
       {cargando && (
