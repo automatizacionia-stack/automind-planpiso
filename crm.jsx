@@ -2675,7 +2675,8 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             })()}
 
 
-            </>) }
+            </>)
+            )}
 
             {/* ══ TAB: APROBACIONES ══ */}
             {tabActivo === "aprob" && (<>
