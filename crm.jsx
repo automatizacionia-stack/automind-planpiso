@@ -1372,8 +1372,9 @@ function ExpedienteResumen({ form }) {
 }
 
 /* ── Stepper de etapas ────────────────────────────────────────────────────── */
-function EtapaStepper({ etapaActual, onCambiar }) {
+function EtapaStepper({ etapaActual, onCambiar, formaPagoCot }) {
   var idx = ETAPAS_CRM.indexOf(etapaActual);
+  var esContado = formaPagoCot === "Contado";
   return (
     <div style={{
       padding:"14px 20px 10px",
@@ -1388,11 +1389,12 @@ function EtapaStepper({ etapaActual, onCambiar }) {
           var completada = i < idx;
           var activa     = i === idx;
           var futura     = i > idx;
+          var esNA       = esContado && etapa === "Crédito";
           var cfg        = ETAPA_CFG[etapa] || { dot:"#9ca3af", bg:"#f3f4f6", txt:"#6b7280" };
-          var dotBorder  = activa ? cfg.dot : completada ? "#1f9d57" : "var(--line)";
-          var dotBg      = activa ? cfg.dot : completada ? "#1f9d57" : "var(--card)";
-          var lblColor   = activa ? cfg.txt : completada ? "#065f46" : "var(--muted)";
-          var lblBg      = activa ? cfg.bg  : "transparent";
+          var dotBorder  = esNA ? "#d1d5db" : activa ? cfg.dot : completada ? "#1f9d57" : "var(--line)";
+          var dotBg      = esNA ? "#f3f4f6" : activa ? cfg.dot : completada ? "#1f9d57" : "var(--card)";
+          var lblColor   = esNA ? "#9ca3af" : activa ? cfg.txt : completada ? "#065f46" : "var(--muted)";
+          var lblBg      = esNA ? "transparent" : activa ? cfg.bg  : "transparent";
           var lineColor  = i < idx ? "#1f9d57" : "var(--line)";
 
           return (
@@ -1413,7 +1415,9 @@ function EtapaStepper({ etapaActual, onCambiar }) {
                     flexShrink:0,
                   }}
                 >
-                  {completada ? (
+                  {esNA ? (
+                    <span style={{ fontSize:11, fontWeight:800, color:"#9ca3af", lineHeight:1 }}>—</span>
+                  ) : completada ? (
                     /* Checkmark para etapas completadas */
                     <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.8"
                       strokeLinecap="round" strokeLinejoin="round" width="12" height="12">
@@ -1436,9 +1440,10 @@ function EtapaStepper({ etapaActual, onCambiar }) {
                   padding: activa ? "2px 7px" : "1px 2px",
                   borderRadius:5, background: lblBg,
                   letterSpacing: activa ? ".01em" : "normal",
+                  textDecoration: esNA ? "line-through" : "none",
                   transition:"all .18s",
                 }}>
-                  {etapa}
+                  {esNA ? "N/A" : etapa}
                 </span>
               </div>
 
@@ -1913,7 +1918,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
           <ExpedienteHeader form={form} onChangeEstado={function(v){ set("estadoGeneral", v); }} />
 
           {/* ── Stepper de etapas ── */}
-          <EtapaStepper etapaActual={form.etapa || "Prospección"} onCambiar={v => set("etapa", v)} />
+          <EtapaStepper etapaActual={form.etapa || "Prospección"} onCambiar={v => set("etapa", v)} formaPagoCot={form.formaPagoCot} />
 
           {/* ── Layout: lista de secciones (izq) + contenido (der) ── */}
           <div style={{ display:"flex", flex:1, overflow:"hidden", minHeight:0 }}>
@@ -1953,8 +1958,29 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                         color:      isAct ? "#fff"           : "var(--ink)",
                         borderLeft: isAct ? "3px solid var(--accent)" : "3px solid transparent",
                       }}>
-                      <span style={{ fontSize:14, lineHeight:1, flexShrink:0 }}>{t.ico}</span>
-                      <span style={{ lineHeight:1.3 }}>{t.lbl}</span>
+                      {(function() {
+                        var esCredNA = form && t.id === "credito" && form.formaPagoCot === "Contado";
+                        return (<>
+                          <span style={{ fontSize:14, lineHeight:1, flexShrink:0,
+                            opacity: esCredNA ? 0.4 : 1 }}>{esCredNA ? "🔒" : t.ico}</span>
+                          <span style={{ lineHeight:1.3, flex:1, minWidth:0,
+                            color: esCredNA && !isAct ? "var(--muted)" : undefined,
+                            opacity: esCredNA ? 0.55 : 1 }}>{t.lbl}</span>
+                          {form && t.id === "fpago" && form.formaPagoCot && (
+                            <span style={{ fontSize:9, fontWeight:800, lineHeight:1, flexShrink:0,
+                              padding:"2px 5px", borderRadius:4,
+                              background: form.formaPagoCot === "Contado" ? "#dcfce7" : "#dbeafe",
+                              color:      form.formaPagoCot === "Contado" ? "#166534" : "#1d4ed8" }}>
+                              {form.formaPagoCot === "Contado" ? "Efe" : "Cred"}
+                            </span>
+                          )}
+                          {esCredNA && !isAct && (
+                            <span style={{ fontSize:9, fontWeight:800, lineHeight:1, flexShrink:0,
+                              padding:"2px 5px", borderRadius:4,
+                              background:"#f3f4f6", color:"#6b7280" }}>N/A</span>
+                          )}
+                        </>);
+                      })()}
                     </button>
                   );
                 })}
@@ -2407,6 +2433,42 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
             {/* ══ TAB: FORMA DE PAGO ══ */}
             {tabActivo === "fpago" && (<>
+
+            {/* Card: método confirmado en cotización */}
+            {form.formaPagoCot && (
+              <div style={{ margin:"16px 20px 0", padding:"14px 16px", borderRadius:10,
+                border:"2px solid " + (form.formaPagoCot === "Contado" ? "#bbf7d0" : "#bfdbfe"),
+                background: form.formaPagoCot === "Contado" ? "#f0fdf4" : "#eff6ff",
+                display:"flex", alignItems:"center", gap:14 }}>
+                <div style={{ fontSize:28, lineHeight:1 }}>
+                  {form.formaPagoCot === "Contado" ? "💵" : "🏦"}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase",
+                    letterSpacing:".07em",
+                    color: form.formaPagoCot === "Contado" ? "#166534" : "#1e40af",
+                    marginBottom:3 }}>Método confirmado en cotización</div>
+                  <div style={{ fontSize:16, fontWeight:800, color:"var(--ink)" }}>
+                    {form.formaPagoCot === "Contado" ? "Pago en efectivo" : "Financiamiento / Crédito"}
+                  </div>
+                  {form.precioVenta > 0 && (
+                    <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>
+                      Precio de venta: <strong style={{ color:"var(--ink)" }}>
+                        ${Number(form.precioVenta).toLocaleString("es-MX")}
+                      </strong>
+                    </div>
+                  )}
+                </div>
+                {form.formaPagoCot === "Contado" && (
+                  <div style={{ fontSize:11, fontWeight:700, color:"#166534",
+                    background:"#dcfce7", border:"1px solid #86efac",
+                    borderRadius:20, padding:"4px 10px", whiteSpace:"nowrap" }}>
+                    Sin crédito
+                  </div>
+                )}
+              </div>
+            )}
+
             <Sec ico="💳" titulo="Forma de pago general" defaultOpen>
               <Fld label="Forma de pago" full>
                 <div style={{ display:"flex", gap:8 }}>
@@ -2427,7 +2489,39 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab fpago */}
 
             {/* ══ TAB: SOLICITUD DE CRÉDITO ══ */}
-            {tabActivo === "credito" && (<>
+            {tabActivo === "credito" && (
+              form.formaPagoCot === "Contado" ? (
+                /* ── Bloqueo: pago en efectivo — crédito no aplica ── */
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
+                  justifyContent:"center", gap:20, padding:"48px 32px", textAlign:"center",
+                  height:"100%" }}>
+                  <div style={{ width:72, height:72, borderRadius:20,
+                    background:"#f3f4f6", display:"flex", alignItems:"center",
+                    justifyContent:"center", fontSize:34 }}>🔒</div>
+                  <div>
+                    <div style={{ fontSize:17, fontWeight:800, color:"var(--ink)",
+                      marginBottom:8 }}>Crédito no aplica</div>
+                    <div style={{ fontSize:13, color:"var(--muted)", maxWidth:340,
+                      lineHeight:1.55 }}>
+                      La forma de pago confirmada en cotización es <strong>Efectivo (Contado)</strong>.
+                      Esta sección no es requerida para este cliente.
+                    </div>
+                  </div>
+                  <div style={{ padding:"14px 20px", borderRadius:10,
+                    background:"#f0fdf4", border:"1px solid #bbf7d0",
+                    fontSize:12, color:"#166534", fontWeight:600, lineHeight:1.5 }}>
+                    ✓ Pago en efectivo registrado
+                    {form.precioVenta ? " · $" + Number(form.precioVenta).toLocaleString("es-MX") : ""}
+                  </div>
+                  <button type="button"
+                    onClick={function(){ setTabActivo("fpago"); }}
+                    style={{ padding:"8px 20px", borderRadius:8, border:"1px solid var(--accent)",
+                      background:"transparent", color:"var(--accent)",
+                      fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                    Ver forma de pago
+                  </button>
+                </div>
+              ) : (<>
             {(function() {
               var ICO_BANK = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M3 10l9-7 9 7"/><line x1="12" y1="10" x2="12" y2="21"/></svg>);
               var ESTADOS_E6 = ["Pendiente","En revisión","Aprobado","Rechazado","Condicional"];
@@ -2581,7 +2675,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             })()}
 
 
-            </>) /* fin tab credito */}
+            </>) /* fin credito content */ ) /* fin ternario Contado/Credito */ )} /* fin tab credito */
 
             {/* ══ TAB: APROBACIONES ══ */}
             {tabActivo === "aprob" && (<>
