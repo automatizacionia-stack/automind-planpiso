@@ -217,8 +217,8 @@ function Sidebar({ view, setView, onMenu, tablaActiva, tenant, onLogout, onSwitc
           <div className="nav-section">
             {I.arrowUR({ width: 11, height: 11 })} Ventas
           </div>
-          <Item id="ventas" icon={I.sale({     width: 17, height: 17 })} label="Proceso de venta" />
-          <Item id="crm"    icon={I.contacts({ width: 17, height: 17 })} label="Clientes" />
+          <Item id="ventas" icon={I.sale({     width: 17, height: 17 })} label="Dashboard" />
+          <Item id="crm"    icon={I.contacts({ width: 17, height: 17 })} label="Proceso de ventas" />
         </div>
 
         {/* ── Configuración ── */}
