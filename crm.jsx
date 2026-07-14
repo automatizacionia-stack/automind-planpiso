@@ -3469,7 +3469,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
   const [clientesData, setClientesData] = React.useState([]);
   const [cargando,     setCargando]     = React.useState(false);
   const [errorCrm,     setErrorCrm]     = React.useState(null);
-  const [vista, setVista]           = React.useState("dashboard");
+  const [vista, setVista]           = React.useState("editor");
   const [seleccionado, setSeleccionado] = React.useState(null);
   const [busqueda, setBusqueda]     = React.useState("");
   const [filtroAsesor, setFiltroAsesor] = React.useState("Todos");
@@ -3611,14 +3611,13 @@ function CRMClientes({ rows, kpis, usuarios }) {
       </div>
 
       {/* KPIs — solo en vistas secundarias */}
-      {vista !== "editor" && vista !== "dashboard" && <StatsBar clientes={clientesData} />}
+      {vista !== "editor" && <StatsBar clientes={clientesData} />}
 
       {/* Controles */}
       <div style={{ display:"flex", gap:10, marginBottom: vista === "editor" ? 12 : 16,
         alignItems:"center", flexWrap:"wrap" }}>
         {/* Tabs de vista */}
         <div style={{ display:"flex", gap:6, background:"var(--bg)", borderRadius:9, padding:4 }}>
-          <TabBtn id="dashboard" label="Dashboard" />
           <TabBtn id="editor"   label="Editor" />
           <TabBtn id="kanban"   label="Kanban" />
           <TabBtn id="lista"    label="Lista" />
@@ -3658,7 +3657,6 @@ function CRMClientes({ rows, kpis, usuarios }) {
           onUpdate={onClienteUpdate}
         />
       )}
-      {vista === "dashboard" && <DashboardVentas clientes={clientesData} onOpen={function(c){ setSeleccionado(c); setVista("editor"); }} />}
       {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
@@ -3699,5 +3697,37 @@ function CRMClientes({ rows, kpis, usuarios }) {
   );
 }
 
-Object.assign(window, { CRMClientes });
+/* ── Vista standalone del dashboard de ventas ────────────────────────────── */
+function VentasDashboardView({ onGoToCRM }) {
+  var [clientesData, setClientesData] = React.useState([]);
+  var [cargando,     setCargando]     = React.useState(false);
+
+  React.useEffect(function() {
+    var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
+    if (!agencyId || !window.DB) return;
+    setCargando(true);
+    window.DB.getClientes(agencyId)
+      .then(function(lista) { setClientesData(lista || []); })
+      .catch(function(e)    { console.error("[Dashboard] Error:", e); })
+      .finally(function()   { setCargando(false); });
+  }, []);
+
+  if (cargando) return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center",
+      height:300, color:"var(--muted)", fontSize:14 }}>Cargando dashboard…</div>
+  );
+
+  return (
+    <DashboardVentas
+      clientes={clientesData}
+      onOpen={function(c) {
+        if (window.AUTOMIND) window.AUTOMIND._pendingOpenCliente = c.id;
+        if (onGoToCRM) onGoToCRM();
+      }}
+    />
+  );
+}
+
+Object.assign(window, { CRMClientes, VentasDashboardView });
+
 

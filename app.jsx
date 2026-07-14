@@ -705,7 +705,7 @@ function App() {
     : view === "alertas"       ? "Plan Piso · Alertas"
     : view === "importar"      ? "Plan Piso · Importar inventario"
     : view === "config"        ? "Admin · Configuración"
-    : view === "ventas"        ? "Proceso de Venta"
+    : view === "ventas"        ? "Dashboard de Ventas"
     : view === "crm"           ? "Ventas · CRM de Clientes"
     : "Plan Piso · Dashboard — Semáforo";
 
@@ -746,7 +746,7 @@ function App() {
             {view === "dashboard" ? "Dashboard" : view === "inventario" ? "Inventario"
               : view === "alertas" ? "Alertas" : view === "importar" ? "Importar"
               : view === "colaboradores" ? "Equipo" : view === "crm" ? "CRM"
-              : view === "ventas" ? "Ventas" : "Automind"}
+              : view === "ventas" ? "Dashboard Ventas" : "Automind"}
           </span>
           {/* Logo marca derecha */}
           <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.75"
@@ -773,7 +773,7 @@ function App() {
             usuarioActual={tenant.usuarioActual}
             initialSelId={editVehicleId}
             onRowsChange={() => setRowsVersion(v => v + 1)} />}
-          {view === "ventas" && <CRMClientes  rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} />}
+          {view === "ventas" && <VentasDashboardView onGoToCRM={() => setView("crm")} />}
           {view === "crm"    && <CRMClientes  rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} />}
           {view === "config" && (
             <div className="page">
