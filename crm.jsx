@@ -1503,7 +1503,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>
 
             {/* ══ DOCUMENTACIÓN ══ */}
 
@@ -1618,7 +1617,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>
 
             {/* ══ PERFILAMIENTO ══ */}
 
@@ -1677,7 +1675,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>
 
             {/* ══ VEHÍCULO DE INTERÉS ══ */}
             <Sec ico={ICO_AUTO} titulo="Vehículo de interés">
@@ -1707,7 +1704,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                 </Fld>
               )}
             </Sec>
-            </>
 
             {/* ══ PRUEBA DE MANEJO ══ */}
             <Sec ico="🚗" titulo="Prueba de manejo">
@@ -1761,7 +1757,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>
 
             {/* ══ COTIZACIÓN ══ */}
             <Sec ico={ICO_AUTO} titulo="Selección de unidad y cotización">
@@ -1914,7 +1909,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>
 
             {/* ══ FORMA DE PAGO ══ */}
             <Sec ico="💳" titulo="Forma de pago general">
@@ -1934,7 +1928,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                 </div>
               </Fld>
             </Sec>
-            </>
 
             {/* ══ SOLICITUD DE CRÉDITO ══ */}
             {form.formaPagoCot !== "Crédito" && (
@@ -1943,7 +1936,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                 Cambia la forma de pago en la pestaña <em>Cotización</em> para activar crédito.
               </div>
             )}
-            </>
 
             {/* ══ APROBACIONES ══ */}
 
@@ -2210,7 +2202,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             })()}
 
 
-            </>
 
             {/* ══ PAGO ══ */}
             <Sec ico="💵" titulo="Confirmación de pago">
@@ -2251,7 +2242,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   placeholder="Observaciones del pago, condiciones especiales…" />
               </Fld>
             </Sec>
-            </>
 
             {/* ══ ENTREGA ══ */}
             <Sec ico="🚚" titulo="Entrega de la unidad">
@@ -2366,7 +2356,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             })()}
 
 
-            </>
 
             {/* ══ HISTORIAL ══ */}
             <div style={{ padding:"16px 20px" }}>
@@ -2467,7 +2456,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                 </button>
               </div>
             </div>
-            </>
 
             {/* ══ Seguimiento comercial (siempre visible) ══ */}
             <Sec ico={ICO_PROCESO} titulo="Seguimiento comercial">
