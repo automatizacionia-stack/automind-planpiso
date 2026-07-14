@@ -1457,6 +1457,52 @@ function ExpedienteHeader({ form, onChangeEstado }) {
   );
 }
 
+/* ── Motor de auto-avance de etapa ──────────────────────────────────────── */
+function calcularEtapaSugerida(f) {
+  if (!f) return null;
+  var etapas = ETAPAS_CRM; // ["Prospección","Perfilamiento","Presentación","Cotización","Expediente","Pago","Crédito","Cierre"]
+  var idxActual = etapas.indexOf(f.etapa || "Prospección");
+  var maxIdx = idxActual; // nunca retrocede
+
+  /* ── Helpers ── */
+  var docOk = function(d) { return !!(d && (d.storageKey || d.dataUrl)); };
+
+  /* Prospección → Perfilamiento: nombre + (tel o email) */
+  if (f.nombre && f.nombre.trim() && (f.tel || f.email))
+    maxIdx = Math.max(maxIdx, 1);
+
+  /* Perfilamiento → Presentación: canal + interes + presupuesto */
+  if (maxIdx >= 1 && f.canal && f.interes && Number(f.presupuesto) > 0)
+    maxIdx = Math.max(maxIdx, 2);
+
+  /* Presentación → Cotización: prueba de manejo realizada */
+  if (maxIdx >= 2 && f.pruebaManejo && f.fechaPrueba)
+    maxIdx = Math.max(maxIdx, 3);
+
+  /* Cotización → Expediente: unidad seleccionada + precio de venta */
+  if (maxIdx >= 3 && f.unidadDesc && Number(f.precioVenta) > 0)
+    maxIdx = Math.max(maxIdx, 4);
+
+  /* Expediente → Pago: al menos 1 documento subido */
+  var docsOk = [f.docId, f.docLicencia, f.docDomicilio].filter(docOk).length;
+  if (maxIdx >= 4 && docsOk >= 1)
+    maxIdx = Math.max(maxIdx, 5);
+
+  /* Pago → Crédito (si aplica crédito) o directo a Cierre (contado) */
+  if (maxIdx >= 5) {
+    if (f.formaPagoCot === "Contado")
+      maxIdx = Math.max(maxIdx, 7); // Contado → salta Crédito, va a Cierre
+    else if (f.formaPagoCot === "Crédito")
+      maxIdx = Math.max(maxIdx, 6); // Crédito → siguiente paso
+  }
+
+  /* Crédito → Cierre: crédito aprobado */
+  if (maxIdx >= 6 && f.e6Estado === "Aprobado")
+    maxIdx = Math.max(maxIdx, 7);
+
+  return maxIdx !== idxActual ? etapas[maxIdx] : null; // null = sin cambio
+}
+
 function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const primer = defaultSelId
     ? (clientes.find(c => c.id === defaultSelId) || clientes[0])
@@ -1477,6 +1523,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const [notaHistorial,   setNotaHistorial]   = React.useState("");
   const autoSaveTimerRef = React.useRef(null);
   const [autoGuardando, setAutoGuardando] = React.useState(false);
+  const [etapaAvanzada, setEtapaAvanzada] = React.useState(null); /* toast de auto-avance */
 
   /* Auto-seleccionar cuando llega un cliente recién creado */
   React.useEffect(() => {
@@ -1495,6 +1542,23 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
       if (c) setForm({ ...c });
     }
   }, [clientes]);
+
+  /* Auto-avance de etapa cuando se cumplen requisitos */
+  React.useEffect(() => {
+    if (!form) return;
+    var siguiente = calcularEtapaSugerida(form);
+    if (!siguiente) return;
+    /* Avanzar sin disparar el dirty general para no contaminar auto-save */
+    setForm(function(prev) { return prev ? Object.assign({}, prev, { etapa: siguiente }) : prev; });
+    setEtapaAvanzada(siguiente);
+    setDirty(true);
+    setTimeout(function() { setEtapaAvanzada(null); }, 3500);
+  }, [form && form.nombre, form && form.tel, form && form.email,
+      form && form.canal, form && form.interes, form && form.presupuesto,
+      form && form.pruebaManejo, form && form.fechaPrueba,
+      form && form.unidadDesc, form && form.precioVenta,
+      form && form.docId, form && form.docLicencia, form && form.docDomicilio,
+      form && form.formaPagoCot, form && form.e6Estado]);
 
   /* Auto-guardado: 1.5 s después del último cambio */
   React.useEffect(() => {
@@ -1701,6 +1765,18 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </div>
             </div>
             <div className="inv-form-actions">
+              {etapaAvanzada && (
+                <span style={{ fontSize:12, color:"#1f9d57", fontWeight:700,
+                  display:"flex", alignItems:"center", gap:5,
+                  background:"#f0fdf4", border:"1px solid #bbf7d0",
+                  borderRadius:6, padding:"3px 10px", animation:"fadeIn .3s" }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                    strokeLinecap="round" strokeLinejoin="round" width="12" height="12">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Etapa avanzó: {etapaAvanzada}
+                </span>
+              )}
               {autoGuardando && (
                 <span style={{ fontSize:12, color:"var(--muted)", display:"flex", alignItems:"center", gap:5 }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
