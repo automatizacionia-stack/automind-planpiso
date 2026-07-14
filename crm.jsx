@@ -4221,9 +4221,9 @@ function CRMClientes({ rows, kpis, usuarios }) {
           onUpdate={onClienteUpdate}
         />
       )}
-      {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={setSeleccionado} />}
-      {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
-      {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
+      {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={function(c){ setEditorSelId(c.id); setVista("editor"); }} />}
+      {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={function(c){ setEditorSelId(c.id); setVista("editor"); }} />}
+      {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={function(c){ setEditorSelId(c.id); setVista("editor"); }} />}
 
       {/* Estado cargando / vacío / error */}
       {cargando && (
