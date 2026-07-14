@@ -3259,7 +3259,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
   const [clientesData, setClientesData] = React.useState([]);
   const [cargando,     setCargando]     = React.useState(false);
   const [errorCrm,     setErrorCrm]     = React.useState(null);
-  const [vista, setVista]           = React.useState("proceso");
+  const [vista, setVista]           = React.useState("editor");
   const [seleccionado, setSeleccionado] = React.useState(null);
   const [busqueda, setBusqueda]     = React.useState("");
   const [filtroAsesor, setFiltroAsesor] = React.useState("Todos");
@@ -3408,7 +3408,6 @@ function CRMClientes({ rows, kpis, usuarios }) {
         alignItems:"center", flexWrap:"wrap" }}>
         {/* Tabs de vista */}
         <div style={{ display:"flex", gap:6, background:"var(--bg)", borderRadius:9, padding:4 }}>
-          <TabBtn id="proceso"  label="Proceso de Venta" />
           <TabBtn id="editor"   label="Editor" />
           <TabBtn id="kanban"   label="Kanban" />
           <TabBtn id="lista"    label="Lista" />
@@ -3451,7 +3450,6 @@ function CRMClientes({ rows, kpis, usuarios }) {
       {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
-      {vista === "proceso"  && <ProcesoView  clientes={clientesData} onOpen={function(id){ setEditorSelId(id); setVista("editor"); }} />}
 
       {/* Estado cargando / vacío / error */}
       {cargando && (
