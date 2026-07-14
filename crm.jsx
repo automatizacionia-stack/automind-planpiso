@@ -76,6 +76,235 @@ function Ini({ nombre, bg }) {
 }
 
 /* ── Stats top bar ────────────────────────────────────────────────────── */
+/* ── Dashboard de Ventas ──────────────────────────────────────────────── */
+function DashboardVentas({ clientes, onOpen }) {
+  var hoy   = new Date();
+  var total  = clientes.length;
+
+  /* KPIs */
+  var urgentes   = clientes.filter(function(c){ return _dsc(c.uc) > 3; });
+  var avanzados  = clientes.filter(function(c){ return ["Cotización","Expediente","Pago","Crédito","Cierre"].includes(c.etapa); });
+  var nuevos     = clientes.filter(function(c){
+    if (!c.uc) return false;
+    var d = new Date(c.uc); var diff = (hoy - d) / 864e5; return diff <= 7;
+  });
+
+  /* Embudo */
+  var porEtapa = ETAPAS_CRM.map(function(e){
+    return { etapa: e, count: clientes.filter(function(c){ return c.etapa === e; }).length };
+  });
+  var maxEtapa = Math.max.apply(null, porEtapa.map(function(e){ return e.count; }).concat([1]));
+
+  /* Canal */
+  var CANALES = ["Digital","Piso","Referido","Marketplace","Otro"];
+  var CANAL_COLOR = { "Digital":"#3b82f6","Piso":"#8b5cf6","Referido":"#22c55e","Marketplace":"#f59e0b","Otro":"#94a3b8" };
+  var porCanal = CANALES.map(function(c){
+    return { canal: c, count: clientes.filter(function(x){ return x.canal === c; }).length, color: CANAL_COLOR[c] };
+  }).filter(function(c){ return c.count > 0; });
+  var totalCanal = porCanal.reduce(function(s,c){ return s + c.count; }, 0) || 1;
+
+  /* Por asesor */
+  var asesoresUniq = [];
+  clientes.forEach(function(c){ if (c.asesor && !asesoresUniq.includes(c.asesor)) asesoresUniq.push(c.asesor); });
+  var porAsesor = asesoresUniq.map(function(a){
+    var mis = clientes.filter(function(c){ return c.asesor === a; });
+    return {
+      asesor:    a,
+      total:     mis.length,
+      avanzados: mis.filter(function(c){ return ["Cotización","Expediente","Pago","Crédito","Cierre"].includes(c.etapa); }).length,
+      urgentes:  mis.filter(function(c){ return _dsc(c.uc) > 3; }).length,
+    };
+  }).sort(function(a,b){ return b.total - a.total; });
+
+  /* Estilos reutilizables */
+  var CARD = { background:"var(--card)", border:"1px solid var(--line)", borderRadius:10, padding:"20px 24px" };
+  var LABEL = { fontSize:11, fontWeight:700, color:"var(--muted)", textTransform:"uppercase", letterSpacing:".07em", marginBottom:6 };
+
+  function Kpi({ label, value, color, sub }) {
+    return (
+      <div style={{ ...CARD, minWidth:0 }}>
+        <div style={LABEL}>{label}</div>
+        <div style={{ fontSize:32, fontWeight:800, lineHeight:1, color: color || "var(--ink)", marginBottom: sub ? 6 : 0 }}>{value}</div>
+        {sub && <div style={{ fontSize:12, color:"var(--muted)", marginTop:4 }}>{sub}</div>}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding:"24px 32px", maxWidth:1280, margin:"0 auto", display:"flex", flexDirection:"column", gap:18 }}>
+
+      {/* ── Fila 1: KPIs ── */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16 }}>
+        <Kpi label="Clientes activos" value={total} />
+        <Kpi label="Seguimiento urgente" value={urgentes.length}
+          color={urgentes.length > 0 ? "#e0492f" : "#1f9d57"}
+          sub={urgentes.length > 0 ? "Sin contacto > 3 días" : "Todos al día"} />
+        <Kpi label="En etapa avanzada" value={avanzados.length}
+          color={avanzados.length > 0 ? "#1f9d57" : "var(--muted)"}
+          sub="Cotización → Cierre" />
+        <Kpi label="Actividad reciente" value={nuevos.length}
+          color="#2f6fed"
+          sub="Contacto últimos 7 días" />
+      </div>
+
+      {/* ── Fila 2: Embudo + Canal ── */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 340px", gap:16 }}>
+
+        {/* Embudo por etapa */}
+        <div style={CARD}>
+          <div style={{ ...LABEL, marginBottom:16 }}>Embudo de ventas</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {porEtapa.map(function(item){
+              var cfg = ETAPA_CFG[item.etapa] || { bg:"#e5e7eb", txt:"#374151", dot:"#9ca3af" };
+              var pct = maxEtapa > 0 ? Math.round((item.count / maxEtapa) * 100) : 0;
+              return (
+                <div key={item.etapa} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ width:108, fontSize:12, fontWeight:600, color:cfg.txt, textAlign:"right",
+                    flexShrink:0 }}>{item.etapa}</div>
+                  <div style={{ flex:1, height:24, background:"var(--bg)", borderRadius:6, overflow:"hidden",
+                    border:"1px solid var(--line)" }}>
+                    <div style={{ height:"100%", width: pct + "%", background:cfg.bg, borderRadius:6,
+                      borderRight: item.count > 0 ? ("3px solid " + cfg.dot) : "none",
+                      transition:"width .4s", display:"flex", alignItems:"center", paddingLeft:8,
+                      minWidth: item.count > 0 ? 32 : 0 }}>
+                      {item.count > 0 && (
+                        <span style={{ fontSize:11, fontWeight:700, color:cfg.txt }}>{item.count}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ width:28, fontSize:12, fontWeight:700, color: item.count > 0 ? cfg.txt : "var(--muted)",
+                    textAlign:"right", flexShrink:0 }}>{item.count}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Por canal */}
+        <div style={CARD}>
+          <div style={{ ...LABEL, marginBottom:16 }}>Canal de origen</div>
+          {porCanal.length === 0 ? (
+            <div style={{ color:"var(--muted)", fontSize:13 }}>Sin datos</div>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {porCanal.map(function(item){
+                var pct = Math.round((item.count / totalCanal) * 100);
+                return (
+                  <div key={item.canal}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                      <span style={{ fontSize:12, fontWeight:600, color:"var(--ink)" }}>{item.canal}</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:item.color }}>{item.count} <span style={{ fontWeight:400, color:"var(--muted)" }}>({pct}%)</span></span>
+                    </div>
+                    <div style={{ height:6, background:"var(--bg)", borderRadius:3, overflow:"hidden",
+                      border:"1px solid var(--line)" }}>
+                      <div style={{ height:"100%", width: pct + "%", background:item.color,
+                        borderRadius:3, transition:"width .4s" }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Fila 3: Por asesor + Urgentes ── */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 380px", gap:16 }}>
+
+        {/* Tabla por asesor */}
+        <div style={CARD}>
+          <div style={{ ...LABEL, marginBottom:14 }}>Rendimiento por asesor</div>
+          {porAsesor.length === 0 ? (
+            <div style={{ color:"var(--muted)", fontSize:13 }}>Sin asesores asignados</div>
+          ) : (
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+              <thead>
+                <tr style={{ borderBottom:"2px solid var(--line)" }}>
+                  {["Asesor","Total","Avanzados","Urgentes"].map(function(h){
+                    return <th key={h} style={{ padding:"6px 10px", textAlign: h==="Asesor" ? "left" : "center",
+                      fontSize:11, fontWeight:700, color:"var(--muted)", textTransform:"uppercase",
+                      letterSpacing:".06em" }}>{h}</th>;
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {porAsesor.map(function(row, i){
+                  return (
+                    <tr key={row.asesor} style={{ borderBottom:"1px solid var(--line)",
+                      background: i % 2 === 0 ? "transparent" : "var(--bg)" }}>
+                      <td style={{ padding:"9px 10px", fontWeight:600, color:"var(--ink)" }}>
+                        {row.asesor.split(" ").slice(0,2).join(" ")}
+                      </td>
+                      <td style={{ padding:"9px 10px", textAlign:"center", fontWeight:700 }}>{row.total}</td>
+                      <td style={{ padding:"9px 10px", textAlign:"center" }}>
+                        <span style={{ color:"#1f9d57", fontWeight:700 }}>{row.avanzados}</span>
+                      </td>
+                      <td style={{ padding:"9px 10px", textAlign:"center" }}>
+                        {row.urgentes > 0
+                          ? <span style={{ color:"#e0492f", fontWeight:700 }}>{row.urgentes}</span>
+                          : <span style={{ color:"#1f9d57" }}>—</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Lista urgentes */}
+        <div style={CARD}>
+          <div style={{ ...LABEL, marginBottom:14 }}>
+            Seguimiento urgente
+            {urgentes.length > 0 && (
+              <span style={{ marginLeft:8, background:"#fef2f2", color:"#e0492f",
+                border:"1px solid #fecaca", borderRadius:999, padding:"1px 8px",
+                fontSize:10, fontWeight:800 }}>{urgentes.length}</span>
+            )}
+          </div>
+          {urgentes.length === 0 ? (
+            <div style={{ color:"#1f9d57", fontSize:13, fontWeight:600 }}>✓ Todos los clientes al día</div>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:320, overflowY:"auto" }}>
+              {urgentes.slice(0, 12).map(function(c){
+                var dias = _dsc(c.uc);
+                return (
+                  <div key={c.id} onClick={function(){ onOpen(c); }}
+                    style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 10px",
+                      borderRadius:7, border:"1px solid var(--line)", cursor:"pointer",
+                      background:"var(--bg)", transition:"background .12s" }}
+                    onMouseOver={function(e){ e.currentTarget.style.background="rgba(239,68,68,.06)"; }}
+                    onMouseOut={function(e){ e.currentTarget.style.background="var(--bg)"; }}>
+                    <div style={{ width:32, height:32, borderRadius:"50%",
+                      background:"rgba(239,68,68,.12)", color:"#e0492f",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:12, fontWeight:800, flexShrink:0 }}>
+                      {(c.nombre||"?").charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:"var(--ink)",
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {c.nombre || "Sin nombre"}
+                      </div>
+                      <div style={{ fontSize:11, color:"var(--muted)" }}>{c.etapa}</div>
+                    </div>
+                    <div style={{ fontSize:11, fontWeight:700, color:"#e0492f",
+                      background:"#fef2f2", border:"1px solid #fecaca",
+                      borderRadius:6, padding:"2px 7px", flexShrink:0 }}>
+                      {dias}d
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 function StatsBar({ clientes }) {
   const total      = clientes.length;
   const urgentes   = clientes.filter(c => _dsc(c.uc) > 3).length;
@@ -3240,7 +3469,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
   const [clientesData, setClientesData] = React.useState([]);
   const [cargando,     setCargando]     = React.useState(false);
   const [errorCrm,     setErrorCrm]     = React.useState(null);
-  const [vista, setVista]           = React.useState("editor");
+  const [vista, setVista]           = React.useState("dashboard");
   const [seleccionado, setSeleccionado] = React.useState(null);
   const [busqueda, setBusqueda]     = React.useState("");
   const [filtroAsesor, setFiltroAsesor] = React.useState("Todos");
@@ -3382,13 +3611,14 @@ function CRMClientes({ rows, kpis, usuarios }) {
       </div>
 
       {/* KPIs — solo en vistas secundarias */}
-      {vista !== "editor" && <StatsBar clientes={clientesData} />}
+      {vista !== "editor" && vista !== "dashboard" && <StatsBar clientes={clientesData} />}
 
       {/* Controles */}
       <div style={{ display:"flex", gap:10, marginBottom: vista === "editor" ? 12 : 16,
         alignItems:"center", flexWrap:"wrap" }}>
         {/* Tabs de vista */}
         <div style={{ display:"flex", gap:6, background:"var(--bg)", borderRadius:9, padding:4 }}>
+          <TabBtn id="dashboard" label="Dashboard" />
           <TabBtn id="editor"   label="Editor" />
           <TabBtn id="kanban"   label="Kanban" />
           <TabBtn id="lista"    label="Lista" />
@@ -3428,6 +3658,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
           onUpdate={onClienteUpdate}
         />
       )}
+      {vista === "dashboard" && <DashboardVentas clientes={clientesData} onOpen={function(c){ setSeleccionado(c); setVista("editor"); }} />}
       {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
       {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
