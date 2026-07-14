@@ -1389,7 +1389,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
       .finally(function(){ setCargandoHist(false); });
   }, [selId]);
 
-  /* Reset al cambiar de cliente */
+  /* Reset tab al cambiar de cliente */
   React.useEffect(function() {
     setHistorial([]);
     setNotaHistorial("");
@@ -1478,10 +1478,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
           {/* ── Stepper de etapas ── */}
           <EtapaStepper etapaActual={form.etapa || "Prospección"} onCambiar={v => set("etapa", v)} />
 
-
           <div className="inv-form-scroll">
 
-            {/* ══ DATOS DEL CLIENTE ══ */}
+            {/* ══ TAB: DATOS DEL CLIENTE ══ */}
 
             {/* § DATOS BÁSICOS */}
             <Sec ico={ICO_PERSONA} titulo="Datos del cliente">
@@ -1504,7 +1503,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
 
 
-            {/* ══ DOCUMENTACIÓN ══ */}
+            {/* ══ TAB: DOCUMENTACIÓN ══ */}
 
             <Sec ico={ICO_DOC} titulo="Documentos del cliente">
               <div style={{ gridColumn:"1/-1" }}>
@@ -1618,7 +1617,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
 
 
-            {/* ══ PERFILAMIENTO ══ */}
+            {/* ══ TAB: PERFILAMIENTO ══ */}
 
             <Sec ico={ICO_PIN} titulo="Origen del prospecto">
               <Fld label="Canal">
@@ -1676,7 +1675,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
 
 
-            {/* ══ VEHÍCULO DE INTERÉS ══ */}
+            {/* ══ TAB: VEHÍCULO DE INTERÉS ══ */}
             <Sec ico={ICO_AUTO} titulo="Vehículo de interés">
               <Fld label="Vehículo de interés" full>
                 <input className="ef-input" style={IS} value={form.interes || ""}
@@ -1705,7 +1704,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               )}
             </Sec>
 
-            {/* ══ PRUEBA DE MANEJO ══ */}
+            {/* ══ TAB: PRUEBA DE MANEJO ══ */}
             <Sec ico="🚗" titulo="Prueba de manejo">
               <Fld label="¿Se realizó prueba?" full>
                 <div style={{ display:"flex", gap:8 }}>
@@ -1758,7 +1757,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
 
 
-            {/* ══ COTIZACIÓN ══ */}
+            {/* ══ TAB: COTIZACIÓN ══ */}
             <Sec ico={ICO_AUTO} titulo="Selección de unidad y cotización">
               <Fld label="Unidad seleccionada" full>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -1910,7 +1909,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
 
 
-            {/* ══ FORMA DE PAGO ══ */}
+            {/* ══ TAB: FORMA DE PAGO ══ */}
             <Sec ico="💳" titulo="Forma de pago general">
               <Fld label="Forma de pago" full>
                 <div style={{ display:"flex", gap:8 }}>
@@ -1929,7 +1928,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
             </Sec>
 
-            {/* ══ SOLICITUD DE CRÉDITO ══ */}
+            {/* ══ TAB: SOLICITUD DE CRÉDITO ══ */}
             {form.formaPagoCot !== "Crédito" && (
               <div style={{ padding:"32px", textAlign:"center", color:"var(--muted)", fontSize:14 }}>
                 Este cliente tiene operación de <strong>contado</strong>.<br/>
@@ -1937,7 +1936,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </div>
             )}
 
-            {/* ══ APROBACIONES ══ */}
+            {/* ══ TAB: APROBACIONES ══ */}
 
             {/* § E5 — APROBACIÓN DE GERENTE */}
             {(function() {
@@ -2048,7 +2047,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               );
             })()}
 
-            {/* ══ E6: Proceso de crédito (solo cuando es Crédito) ══ */}
+            {/* El E6 también va al tab credito */}
             {form.formaPagoCot === "Crédito" && (function() {
               var ICO_BANK = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M3 10l9-7 9 7"/><line x1="12" y1="10" x2="12" y2="21"/></svg>);
               var ESTADOS_E6 = ["Pendiente","En revisión","Aprobado","Rechazado","Condicional"];
@@ -2203,7 +2202,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
 
 
-            {/* ══ PAGO ══ */}
+            {/* ══ TAB: PAGO ══ */}
             <Sec ico="💵" titulo="Confirmación de pago">
               <Fld label="Método de pago">
                 <select className="ef-select" style={IS}
@@ -2243,7 +2242,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
             </Sec>
 
-            {/* ══ ENTREGA ══ */}
+            {/* ══ TAB: ENTREGA ══ */}
             <Sec ico="🚚" titulo="Entrega de la unidad">
               <Fld label="Fecha de entrega">
                 <input type="date" className="ef-input" style={IS}
@@ -2357,7 +2356,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
 
 
-            {/* ══ HISTORIAL ══ */}
+            {/* ══ TAB: HISTORIAL ══ */}
             <div style={{ padding:"16px 20px" }}>
               <div style={{ display:"flex", justifyContent:"space-between",
                 alignItems:"center", marginBottom:12 }}>
@@ -2457,55 +2456,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </div>
             </div>
 
-            {/* ══ Seguimiento comercial (siempre visible) ══ */}
-            <Sec ico={ICO_PROCESO} titulo="Seguimiento comercial">
-              <Fld label="Etapa">
-                <select className="ef-select" style={IS} value={form.etapa || "Prospección"} onChange={e => set("etapa", e.target.value)}>
-                  {ETAPAS_CRM.map(e => <option key={e}>{e}</option>)}
-                </select>
-              </Fld>
-              <Fld label="Probabilidad de cierre">
-                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                  <input type="number" min="0" max="100" className="ef-input"
-                    style={{ ...IS, width:72 }}
-                    value={form.prob || 0}
-                    onChange={e => set("prob", Math.min(100, Math.max(0, Number(e.target.value))))} />
-                  <div style={{ flex:1, height:6, background:"var(--line)", borderRadius:3, overflow:"hidden" }}>
-                    <div style={{
-                      height:"100%", borderRadius:3, transition:"width .3s",
-                      width:(form.prob || 0) + "%",
-                      background:(form.prob||0) >= 70 ? "#22c55e" : (form.prob||0) >= 40 ? "#d99613" : "#e0492f",
-                    }} />
-                  </div>
-                  <span style={{ fontSize:12, fontWeight:700, minWidth:30,
-                    color:(form.prob||0) >= 70 ? "#1f9d57" : (form.prob||0) >= 40 ? "#d99613" : "#e0492f" }}>
-                    {form.prob || 0}%
-                  </span>
-                </div>
-              </Fld>
-              <Fld label="Asesor asignado" full>
-                <select className="ef-select" style={IS} value={form.asesor || ""} onChange={e => set("asesor", e.target.value)}>
-                  {asesoresOpc.map(a => <option key={a}>{a}</option>)}
-                </select>
-              </Fld>
-              <Fld label="Próxima acción" full>
-                <input className="ef-input" style={IS} value={form.prox || ""} onChange={e => set("prox", e.target.value)} />
-              </Fld>
-              <Fld label="Fecha próxima acción">
-                <input type="date" className="ef-input" style={IS} value={form.fprox || ""} onChange={e => set("fprox", e.target.value)} />
-              </Fld>
-              <Fld label="Último contacto">
-                <input type="date" className="ef-input" style={IS} value={form.uc || ""} onChange={e => set("uc", e.target.value)} />
-              </Fld>
-              <Fld label="Notas" full>
-                <textarea className="ef-input"
-                  style={{ ...IS, minHeight:76, resize:"vertical" }}
-                  value={form.notas || ""}
-                  onChange={e => set("notas", e.target.value)} />
-              </Fld>
-            </Sec>
-
-
+            {/* ══ TAB PERFIL: asesor/prox/notas (duplicado al final como "catch-all") ══ */}
 
           </div> {/* fin inv-form-scroll */}
         </div>
@@ -3255,161 +3206,4 @@ function CRMClientes({ rows, kpis, usuarios }) {
         window.alert(
           "⚠️ Error al guardar el cliente en la base de datos:\n\n" +
           (e.message || String(e)) +
-          "\n\nPosible causa: falta ejecutar las migraciones SQL en Supabase.\n" +
-          "Corre el archivo supabase_crm_setup_completo.sql en Supabase → SQL Editor."
-        );
-        return; /* no agregar a la lista si no se guardó */
-      }
-    }
-    setClientesData(prev => [nuevo, ...prev]);
-    setMostrarNuevo(false);
-    setPendingData(null);
-    setSeleccionado(nuevo);
-    setEditorSelId(nuevo.id);
-    setVista("editor");
-  }
-
-  async function onClienteUpdate(updated) {
-    /* Actualizar estado local optimistamente */
-    setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
-    /* Persistir en Supabase */
-    var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
-    if (!agencyId || !window.DB) return;
-    try {
-      await window.DB.saveCliente(agencyId, updated);
-    } catch(e) {
-      console.error("[CRM] Error guardando cliente:", e);
-      /* Revertir estado local */
-      setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
-      window.alert("Error al guardar: " + (e.message || e));
-    }
-  }
-
-  const TabBtn = ({ id, label, badge }) => (
-    <button onClick={() => setVista(id)} style={{
-      padding:"6px 14px", borderRadius:7, fontSize:13, fontWeight:600, border:"none",
-      cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"all .15s",
-      background: vista === id ? "var(--accent)" : "var(--card)",
-      color:       vista === id ? "#fff"         : "var(--muted)",
-      boxShadow:   vista === id ? "0 2px 8px rgba(47,111,237,.22)" : "none",
-    }}>
-      {label}
-      {badge > 0 && (
-        <span style={{ background: vista === id ? "rgba(255,255,255,.25)" : "#fee2e2",
-          color: vista === id ? "#fff" : "#991b1b",
-          fontSize:10, fontWeight:700, padding:"1px 6px", borderRadius:20 }}>
-          {badge}
-        </span>
-      )}
-    </button>
-  );
-
-  return (
-    <div style={{ padding: vista === "editor" ? "24px 28px 0" : "24px 28px", maxWidth:1400, margin:"0 auto" }}>
-
-      {/* Encabezado */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
-        <div>
-          <h1 style={{ margin:"0 0 3px", fontSize:22, fontWeight:800 }}>CRM de Clientes</h1>
-          <p style={{ margin:0, color:"var(--muted)", fontSize:14 }}>
-            Pipeline de ventas · <span style={{ color:"#8b5cf6", fontWeight:600 }}>Datos de ejemplo</span>
-          </p>
-        </div>
-        <button className="btn primary" style={{ display:"flex", alignItems:"center", gap:7 }}
-          onClick={() => setMostrarNuevo(true)}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"
-            strokeLinejoin="round" width="15" height="15"><path d="M12 5v14M5 12h14"/></svg>
-          Nuevo cliente
-        </button>
-      </div>
-
-      {/* KPIs — solo en vistas secundarias */}
-      {vista !== "editor" && <StatsBar clientes={clientesData} />}
-
-      {/* Controles */}
-      <div style={{ display:"flex", gap:10, marginBottom: vista === "editor" ? 12 : 16,
-        alignItems:"center", flexWrap:"wrap" }}>
-        {/* Tabs de vista */}
-        <div style={{ display:"flex", gap:6, background:"var(--bg)", borderRadius:9, padding:4 }}>
-          <TabBtn id="proceso"  label="Proceso de Venta" />
-          <TabBtn id="editor"   label="Editor" />
-          <TabBtn id="kanban"   label="Kanban" />
-          <TabBtn id="lista"    label="Lista" />
-          <TabBtn id="urgentes" label="Urgentes" badge={urgentesCount} />
-        </div>
-
-        {/* Búsqueda y filtro asesor — solo para vistas que no tienen buscador propio */}
-        {vista !== "editor" && (
-          <>
-            <div style={{ flex:1, minWidth:180 }}>
-              <div style={{ position:"relative" }}>
-                <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", color:"var(--muted)" }}>
-                  {I.search({ width:14, height:14 })}
-                </span>
-                <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
-                  placeholder="Buscar por nombre, vehículo, ciudad…"
-                  style={{ width:"100%", padding:"7px 10px 7px 32px", border:"1px solid var(--line)",
-                    borderRadius:7, fontSize:13, background:"var(--card)", color:"var(--ink)",
-                    outline:"none", fontFamily:"inherit" }} />
-              </div>
-            </div>
-            <select value={filtroAsesor} onChange={e => setFiltroAsesor(e.target.value)}
-              style={{ padding:"7px 10px", border:"1px solid var(--line)", borderRadius:7,
-                fontSize:13, background:"var(--card)", color:"var(--ink)", fontFamily:"inherit",
-                cursor:"pointer", outline:"none" }}>
-              {asesores.map(a => <option key={a}>{a}</option>)}
-            </select>
-          </>
-
-      </div>
-
-      {/* Contenido de la vista */}
-      {vista === "editor"   && (
-        <ClienteEditor
-          clientes={clientesData}
-          defaultSelId={editorSelId}
-          onUpdate={onClienteUpdate}
-        />
-      )}
-      {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={setSeleccionado} />}
-      {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
-      {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
-      {vista === "proceso"  && <ProcesoView  clientes={clientesData} onOpen={function(id){ setEditorSelId(id); setVista("editor"); }} />}
-
-      {/* Estado cargando / vacío / error */}
-      {cargando && (
-        <div style={{ textAlign:"center", padding:"48px 0", color:"var(--muted)", fontSize:14 }}>
-          Cargando clientes…
-        </div>
-      )}
-      {!cargando && errorCrm && (
-        <div style={{ marginTop:16, padding:"12px 16px", background:"#fff5f5",
-          border:"1px solid #fecaca", borderRadius:8, fontSize:13, color:"#991b1b" }}>
-          {errorCrm}
-        </div>
-      )}
-      {!cargando && !errorCrm && clientesData.length === 0 && (
-        <div style={{ textAlign:"center", padding:"64px 20px", color:"var(--muted)" }}>
-          <div style={{ fontSize:40, marginBottom:10 }}>&#128101;</div>
-          <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>Sin clientes aún</div>
-          <div style={{ fontSize:13 }}>Crea el primer cliente con el botón "Nuevo cliente".</div>
-        </div>
-      )}
-
-      {/* Drawer de detalle */}
-      <ClienteDrawer c={seleccionado} onClose={() => setSeleccionado(null)} />
-
-      {/* Modal nuevo cliente (con prefill opcional desde Plan Piso) */}
-      {mostrarNuevo && (
-        <NuevoClienteModal
-          asesores={asesores}
-          onClose={() => { setMostrarNuevo(false); setPendingData(null); }}
-          onCreate={crearCliente}
-          initialData={pendingData}
-        />
-      )}
-    </div>
-  );
-}
-
-Object.assign(window, { CRMClientes });
+          "\n\nPosible causa: falta ejecutar l
