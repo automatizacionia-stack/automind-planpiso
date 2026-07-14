@@ -2675,7 +2675,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             })()}
 
 
-            </>) /* fin credito content */ ) /* fin ternario Contado/Credito */ } /* fin tab credito */
+            </>) }
 
             {/* ══ TAB: APROBACIONES ══ */}
             {tabActivo === "aprob" && (<>
