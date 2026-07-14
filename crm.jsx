@@ -1040,8 +1040,8 @@ function DocUpload({ label, sublabel, docType, value, onChange, onExtract, nombr
                       var nomColor = st === "exacto" ? "#059669" : st === "similar" ? "#d97706" : "#e0492f";
                       var nomBg    = st === "exacto" ? "#f0fdf4"  : st === "similar" ? "#fffbeb"  : "#fef2f2";
                       var nomTxt   = st === "exacto" ? "coincide"
-                                   : st === "similar" ? "coincidencia parcial — verificar"
-                                   : "no coincide con "" + nombreReferencia + """;
+                                   : st === "similar" ? "coincidencia parcial - verificar"
+                                   : "diferente al nombre registrado (" + nombreReferencia + ")";
                       filas.push({ label:"Nombre", valor:nombreExtraido, color:nomColor, bg:nomBg,
                         icon: st === "exacto" ? "✓" : st === "similar" ? "⚠" : "✗", txt:nomTxt });
                     }
