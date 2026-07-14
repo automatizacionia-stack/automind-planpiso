@@ -2031,128 +2031,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
             {/* ══ TAB: SOLICITUD DE CRÉDITO ══ */}
             {tabActivo === "credito" && (<>
-            {form.formaPagoCot !== "Crédito" && (
-              <div style={{ padding:"32px", textAlign:"center", color:"var(--muted)", fontSize:14 }}>
-                Este cliente tiene operación de <strong>contado</strong>.<br/>
-                Cambia la forma de pago en la pestaña <em>Cotización</em> para activar crédito.
-              </div>
-            )}
-            </>) /* fin tab credito — el E6 IIFE lo llenará debajo si aplica */}
-
-            {/* ══ TAB: APROBACIONES ══ */}
-            {tabActivo === "aprob" && (<>
-
-            {/* § E5 — APROBACIÓN DE GERENTE */}
             {(function() {
-              var estado   = form.e5Estado || "Pendiente";
-              var tipoPago = form.formaPagoCot || "No definido";
-              var ICO_CHK  = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>);
-              var COLOR_E5 = {
-                "Pendiente":            { bg:"rgba(156,163,175,.12)", txt:"#6b7280", dot:"#9ca3af" },
-                "Enviado a aprobación": { bg:"rgba(59,130,246,.10)",  txt:"#3b82f6", dot:"#3b82f6" },
-                "Aprobado":             { bg:"rgba(34,197,94,.12)",   txt:"#16a34a", dot:"#22c55e" },
-                "Rechazado":            { bg:"rgba(239,68,68,.10)",   txt:"#dc2626", dot:"#ef4444" },
-              };
-              var cfg = COLOR_E5[estado] || COLOR_E5["Pendiente"];
-              function accion(nuevoEstado, quien) {
-                set("e5Estado",      nuevoEstado);
-                set("e5AprobadoPor", quien || "");
-                set("e5Fecha",       new Date().toISOString());
-              }
-              var montoStr = tipoPago === "Crédito" ? "" : "";
-              return (
-                <Sec ico={ICO_CHK} titulo="Aprobación de gerente (E5)" defaultOpen>
-                  <Fld label="Tipo de pago solicitado" full>
-                    <div style={{
-                      padding:"8px 12px", borderRadius:7, border:"1px solid var(--line)",
-                      background:"var(--bg)", fontSize:13, display:"flex", alignItems:"center", gap:8,
-                    }}>
-                      <span style={{ fontSize:16 }}>{tipoPago === "Crédito" ? "💳" : "💵"}</span>
-                      <span style={{ fontWeight:600, color:"var(--ink)" }}>{tipoPago}</span>
-                      {tipoPago === "Crédito" && form.plazoMeses > 0 && (
-                        <span style={{ fontSize:12, color:"var(--muted)" }}>
-                          {" · "}{form.plazoMeses} meses{" · Enganche $"}{Number(form.enganche || 0).toLocaleString("es-MX")}
-                        </span>
-                      )}
-                      {tipoPago !== "Crédito" && form.precioVenta > 0 && (
-                        <span style={{ fontSize:12, color:"var(--muted)" }}>
-                          {" · $"}{Number(form.precioVenta).toLocaleString("es-MX")}{" de contado"}
-                        </span>
-                      )}
-                    </div>
-                  </Fld>
-                  <Fld label="Estado de aprobación" full>
-                    <div style={{
-                      padding:"8px 12px", borderRadius:7, border:"1px solid var(--line)",
-                      background:cfg.bg, display:"flex", alignItems:"center", gap:8,
-                    }}>
-                      <span style={{ width:8, height:8, borderRadius:"50%", background:cfg.dot, flexShrink:0 }} />
-                      <span style={{ fontWeight:700, fontSize:13, color:cfg.txt }}>{estado}</span>
-                      {form.e5AprobadoPor && (
-                        <span style={{ fontSize:12, color:"var(--muted)", marginLeft:"auto" }}>
-                          {form.e5AprobadoPor}
-                          {form.e5Fecha && (" · " + new Date(form.e5Fecha).toLocaleDateString("es-MX"))}
-                        </span>
-                      )}
-                    </div>
-                  </Fld>
-                  {(estado === "Pendiente" || estado === "Rechazado") && (
-                    <Fld label="Acción del asesor" full>
-                      <button type="button"
-                        onClick={() => accion("Enviado a aprobación", "")}
-                        style={{
-                          padding:"8px 18px", borderRadius:8, border:"1px solid #3b82f6",
-                          background:"rgba(59,130,246,.08)", color:"#3b82f6",
-                          fontSize:13, fontWeight:600, cursor:"pointer",
-                        }}>
-                        Enviar a aprobación del gerente
-                      </button>
-                    </Fld>
-                  )}
-                  {estado === "Enviado a aprobación" && (
-                    <Fld label="Decisión del gerente" full>
-                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                        <button type="button" onClick={() => accion("Aprobado", "Gerente")}
-                          style={{
-                            padding:"8px 20px", borderRadius:8, border:"1px solid #22c55e",
-                            background:"rgba(34,197,94,.10)", color:"#16a34a",
-                            fontSize:13, fontWeight:600, cursor:"pointer",
-                          }}>Aprobar</button>
-                        <button type="button" onClick={() => accion("Rechazado", "Gerente")}
-                          style={{
-                            padding:"8px 20px", borderRadius:8, border:"1px solid #ef4444",
-                            background:"rgba(239,68,68,.08)", color:"#dc2626",
-                            fontSize:13, fontWeight:600, cursor:"pointer",
-                          }}>Rechazar</button>
-                      </div>
-                    </Fld>
-                  )}
-                  {estado === "Aprobado" && (
-                    <Fld label="Siguiente paso" full>
-                      <div style={{
-                        padding:"8px 12px", borderRadius:7, fontSize:13,
-                        background:"rgba(34,197,94,.08)", border:"1px solid rgba(34,197,94,.3)",
-                        color:"#15803d", fontWeight:500,
-                      }}>
-                        {tipoPago === "Crédito"
-                          ? "→ E6: Proceso de crédito (Servicios Financieros)"
-                          : "→ E7: Validación de expediente"}
-                      </div>
-                    </Fld>
-                  )}
-                  <Fld label="Observaciones" full>
-                    <textarea className="ef-input"
-                      style={{ ...IS, minHeight:56, resize:"vertical" }}
-                      value={form.e5Notas || ""}
-                      onChange={e => set("e5Notas", e.target.value)}
-                      placeholder="Motivo de rechazo, condiciones especiales, instrucciones al asesor..." />
-                  </Fld>
-                </Sec>
-              );
-            })()}
-
-            {/* El E6 también va al tab credito */}
-            {tabActivo === "credito" && form.formaPagoCot === "Crédito" && (function() {
               var ICO_BANK = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M3 10l9-7 9 7"/><line x1="12" y1="10" x2="12" y2="21"/></svg>);
               var ESTADOS_E6 = ["Pendiente","En revisión","Aprobado","Rechazado","Condicional"];
               var COLOR_E6 = {
@@ -2305,7 +2184,122 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             })()}
 
 
+            </>) /* fin tab credito */}
+
+            {/* ══ TAB: APROBACIONES ══ */}
+            {tabActivo === "aprob" && (<>
+
+            {/* § E5 — APROBACIÓN DE GERENTE */}
+            {(function() {
+              var estado   = form.e5Estado || "Pendiente";
+              var tipoPago = form.formaPagoCot || "No definido";
+              var ICO_CHK  = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>);
+              var COLOR_E5 = {
+                "Pendiente":            { bg:"rgba(156,163,175,.12)", txt:"#6b7280", dot:"#9ca3af" },
+                "Enviado a aprobación": { bg:"rgba(59,130,246,.10)",  txt:"#3b82f6", dot:"#3b82f6" },
+                "Aprobado":             { bg:"rgba(34,197,94,.12)",   txt:"#16a34a", dot:"#22c55e" },
+                "Rechazado":            { bg:"rgba(239,68,68,.10)",   txt:"#dc2626", dot:"#ef4444" },
+              };
+              var cfg = COLOR_E5[estado] || COLOR_E5["Pendiente"];
+              function accion(nuevoEstado, quien) {
+                set("e5Estado",      nuevoEstado);
+                set("e5AprobadoPor", quien || "");
+                set("e5Fecha",       new Date().toISOString());
+              }
+              var montoStr = tipoPago === "Crédito" ? "" : "";
+              return (
+                <Sec ico={ICO_CHK} titulo="Aprobación de gerente (E5)" defaultOpen>
+                  <Fld label="Tipo de pago solicitado" full>
+                    <div style={{
+                      padding:"8px 12px", borderRadius:7, border:"1px solid var(--line)",
+                      background:"var(--bg)", fontSize:13, display:"flex", alignItems:"center", gap:8,
+                    }}>
+                      <span style={{ fontSize:16 }}>{tipoPago === "Crédito" ? "💳" : "💵"}</span>
+                      <span style={{ fontWeight:600, color:"var(--ink)" }}>{tipoPago}</span>
+                      {tipoPago === "Crédito" && form.plazoMeses > 0 && (
+                        <span style={{ fontSize:12, color:"var(--muted)" }}>
+                          {" · "}{form.plazoMeses} meses{" · Enganche $"}{Number(form.enganche || 0).toLocaleString("es-MX")}
+                        </span>
+                      )}
+                      {tipoPago !== "Crédito" && form.precioVenta > 0 && (
+                        <span style={{ fontSize:12, color:"var(--muted)" }}>
+                          {" · $"}{Number(form.precioVenta).toLocaleString("es-MX")}{" de contado"}
+                        </span>
+                      )}
+                    </div>
+                  </Fld>
+                  <Fld label="Estado de aprobación" full>
+                    <div style={{
+                      padding:"8px 12px", borderRadius:7, border:"1px solid var(--line)",
+                      background:cfg.bg, display:"flex", alignItems:"center", gap:8,
+                    }}>
+                      <span style={{ width:8, height:8, borderRadius:"50%", background:cfg.dot, flexShrink:0 }} />
+                      <span style={{ fontWeight:700, fontSize:13, color:cfg.txt }}>{estado}</span>
+                      {form.e5AprobadoPor && (
+                        <span style={{ fontSize:12, color:"var(--muted)", marginLeft:"auto" }}>
+                          {form.e5AprobadoPor}
+                          {form.e5Fecha && (" · " + new Date(form.e5Fecha).toLocaleDateString("es-MX"))}
+                        </span>
+                      )}
+                    </div>
+                  </Fld>
+                  {(estado === "Pendiente" || estado === "Rechazado") && (
+                    <Fld label="Acción del asesor" full>
+                      <button type="button"
+                        onClick={() => accion("Enviado a aprobación", "")}
+                        style={{
+                          padding:"8px 18px", borderRadius:8, border:"1px solid #3b82f6",
+                          background:"rgba(59,130,246,.08)", color:"#3b82f6",
+                          fontSize:13, fontWeight:600, cursor:"pointer",
+                        }}>
+                        Enviar a aprobación del gerente
+                      </button>
+                    </Fld>
+                  )}
+                  {estado === "Enviado a aprobación" && (
+                    <Fld label="Decisión del gerente" full>
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                        <button type="button" onClick={() => accion("Aprobado", "Gerente")}
+                          style={{
+                            padding:"8px 20px", borderRadius:8, border:"1px solid #22c55e",
+                            background:"rgba(34,197,94,.10)", color:"#16a34a",
+                            fontSize:13, fontWeight:600, cursor:"pointer",
+                          }}>Aprobar</button>
+                        <button type="button" onClick={() => accion("Rechazado", "Gerente")}
+                          style={{
+                            padding:"8px 20px", borderRadius:8, border:"1px solid #ef4444",
+                            background:"rgba(239,68,68,.08)", color:"#dc2626",
+                            fontSize:13, fontWeight:600, cursor:"pointer",
+                          }}>Rechazar</button>
+                      </div>
+                    </Fld>
+                  )}
+                  {estado === "Aprobado" && (
+                    <Fld label="Siguiente paso" full>
+                      <div style={{
+                        padding:"8px 12px", borderRadius:7, fontSize:13,
+                        background:"rgba(34,197,94,.08)", border:"1px solid rgba(34,197,94,.3)",
+                        color:"#15803d", fontWeight:500,
+                      }}>
+                        {tipoPago === "Crédito"
+                          ? "→ E6: Proceso de crédito (Servicios Financieros)"
+                          : "→ E7: Validación de expediente"}
+                      </div>
+                    </Fld>
+                  )}
+                  <Fld label="Observaciones" full>
+                    <textarea className="ef-input"
+                      style={{ ...IS, minHeight:56, resize:"vertical" }}
+                      value={form.e5Notas || ""}
+                      onChange={e => set("e5Notas", e.target.value)}
+                      placeholder="Motivo de rechazo, condiciones especiales, instrucciones al asesor..." />
+                  </Fld>
+                </Sec>
+              );
+            })()}
+
             </>) /* fin tab aprob */}
+
 
             {/* ══ TAB: PAGO ══ */}
             {tabActivo === "pago" && (<>
