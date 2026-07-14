@@ -774,6 +774,255 @@ function _dataUrlToBlob(dataUrl) {
   return new Blob([buf], { type: mime });
 }
 
+/* ── Abrir documento en ventana nueva (dataUrl o storageKey) ────────────── */
+async function _abrirDocVentana(doc) {
+  if (!doc) return;
+  if (doc.dataUrl) {
+    var w = window.open("", "_blank");
+    if (!w) { alert("Permite ventanas emergentes para ver el documento."); return; }
+    if (doc.type === "application/pdf") {
+      w.document.write('<html><body style="margin:0"><iframe src="' + doc.dataUrl + '" style="width:100%;height:100vh;border:none;"></iframe></body></html>');
+    } else {
+      w.document.write('<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="' + doc.dataUrl + '" style="max-width:100%;max-height:100vh;display:block;"></body></html>');
+    }
+    w.document.close();
+    return;
+  }
+  if (doc.storageKey && window.DB && window.DB.storage) {
+    try {
+      var res = await window.DB.storage.from("expedientes").createSignedUrl(doc.storageKey, 600);
+      if (res.data && res.data.signedUrl) { window.open(res.data.signedUrl, "_blank"); return; }
+    } catch(e) {}
+  }
+  alert("No se puede abrir el documento. Intenta guardarlo primero.");
+}
+
+/* ── Carga simple de documento (sin OCR): facturas, comprobantes ─────────── */
+function DocSimpleUpload({ label, sublabel, value, onChange }) {
+  const [subiendo, setSubiendo] = React.useState(false);
+  const inputRef = React.useRef(null);
+
+  async function _upload(file, dataUrl) {
+    try {
+      if (!window.DB || !window.DB.storage) return null;
+      var ext = file.type === "application/pdf" ? "pdf" : file.type === "image/png" ? "png" : "jpg";
+      var key = "clientes/pago/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+      var blob = _dataUrlToBlob(dataUrl);
+      var { error } = await window.DB.storage.from("expedientes").upload(key, blob, { contentType: file.type, upsert: false });
+      if (error) throw error;
+      return key;
+    } catch(e) { console.warn("DocSimpleUpload:", e.message); return null; }
+  }
+
+  function handleFile(file) {
+    if (!file) return;
+    var ok = ["image/jpeg","image/jpg","image/png","application/pdf"];
+    if (!ok.includes(file.type)) { alert("Formato no permitido. Usa JPG, PNG o PDF."); return; }
+    var reader = new FileReader();
+    reader.onload = async function(ev) {
+      var dataUrl = ev.target.result;
+      var fd = { name: file.name, type: file.type, dataUrl: dataUrl, cargadoEn: new Date().toISOString() };
+      onChange(fd);
+      setSubiendo(true);
+      var key = await _upload(file, dataUrl);
+      setSubiendo(false);
+      if (key) onChange(Object.assign({}, fd, { storageKey: key }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  var isSaved = !!(value && value.storageKey && !value.dataUrl);
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline" }}>
+        <span style={{ fontSize:12, fontWeight:700, color:"var(--ink-2)" }}>{label}</span>
+        {sublabel && <span style={{ fontSize:10, color:"var(--muted)" }}>{sublabel}</span>}
+      </div>
+      {value ? (
+        <div style={{ border:"1px solid var(--line)", borderRadius:9, background:"var(--bg)" }}>
+          <div style={{ padding:"11px 14px", display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ width:36, height:36, borderRadius:7, flexShrink:0, fontSize:20,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              background: isSaved ? "#d1fae5" : "#eff6ff", color: isSaved ? "#059669" : "#2f6fed" }}>
+              {value.type === "application/pdf" ? "📄" : "🖼"}
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)",
+                overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value.name}</div>
+              <div style={{ fontSize:11, color: isSaved ? "#059669" : "var(--muted)", marginTop:2 }}>
+                {subiendo ? "Subiendo…" : isSaved ? "Guardado en expediente" : "Pendiente de guardar"}
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+              <button type="button" onClick={() => _abrirDocVentana(value)}
+                style={{ fontSize:11, fontWeight:700, padding:"5px 10px", borderRadius:6,
+                  border:"1px solid var(--accent)", background:"var(--accent)", color:"#fff", cursor:"pointer",
+                  display:"flex", alignItems:"center", gap:4 }}>
+                🖨 Ver / Imprimir
+              </button>
+              <button type="button" onClick={() => onChange(null)}
+                style={{ fontSize:11, fontWeight:600, padding:"5px 8px", borderRadius:6,
+                  border:"none", background:"#fee2e2", color:"#b91c1c", cursor:"pointer" }}>
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => inputRef.current && inputRef.current.click()}
+          onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = "var(--accent)"; }}
+          onDragLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; }}
+          onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = "var(--line)";
+            var f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) handleFile(f); }}
+          style={{ border:"2px dashed var(--line)", borderRadius:9, padding:"18px 16px",
+            display:"flex", flexDirection:"column", alignItems:"center", gap:8,
+            cursor:"pointer", background:"var(--bg)", transition:"border-color .15s" }}>
+          <div style={{ fontSize:22 }}>📎</div>
+          <div style={{ fontSize:12, color:"var(--muted)", textAlign:"center", lineHeight:1.5 }}>
+            Arrastra o <span style={{ color:"var(--accent)", fontWeight:700 }}>selecciona</span> el archivo
+            <br/><span style={{ fontSize:10 }}>PDF · JPG · PNG</span>
+          </div>
+          <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display:"none" }}
+            onChange={e => { var f = e.target.files && e.target.files[0]; if (f) handleFile(f); e.target.value = ""; }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Imprimir expediente completo del cliente ────────────────────────────── */
+function imprimirExpediente(form) {
+  if (!form) return;
+  var fmtDate = function(iso) {
+    if (!iso) return "—";
+    return new Date(iso + "T12:00:00").toLocaleDateString("es-MX",
+      { day:"2-digit", month:"long", year:"numeric" });
+  };
+  var fmtMon = function(n) {
+    if (!n) return "—";
+    return Number(n).toLocaleString("es-MX", { style:"currency", currency:"MXN", minimumFractionDigits:0 });
+  };
+  var row = function(lbl, val) {
+    if (!val || val === "—") return "";
+    return '<tr><td style="color:#64748b;font-size:12px;padding:5px 10px 5px 0;width:180px;vertical-align:top">' + lbl + '</td>'
+         + '<td style="font-size:13px;font-weight:600;padding:5px 0;color:#0f172a">' + val + '</td></tr>';
+  };
+  var docCheck = function(doc, lbl) {
+    var ok = !!(doc && (doc.storageKey || doc.dataUrl));
+    return '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;'
+      + (ok ? 'background:#d1fae5;color:#065f46' : 'background:#fee2e2;color:#991b1b') + '">'
+      + (ok ? "✓" : "✗") + " " + lbl + "</span>";
+  };
+  var etapa = form.etapa || "Prospección";
+  var now   = new Date().toLocaleDateString("es-MX", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
+
+  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">'
+    + '<title>Expediente — ' + (form.nombre || "Cliente") + '</title>'
+    + '<style>'
+    + 'body{font-family:system-ui,sans-serif;margin:0;padding:24px 32px;color:#0f172a;font-size:13px;line-height:1.5}'
+    + 'h1{margin:0;font-size:20px;font-weight:800;color:#0f172a}'
+    + 'h2{margin:18px 0 6px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;border-bottom:1px solid #e2e8f0;padding-bottom:4px}'
+    + 'table{border-collapse:collapse;width:100%}'
+    + '.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}'
+    + '.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 32px}'
+    + '.docs{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}'
+    + '@media print{body{padding:16px 20px}button{display:none!important}'
+    + '@page{size:A4;margin:15mm 15mm 15mm 15mm}}'
+    + '</style></head><body>'
+
+    /* Header */
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #0f172a">'
+    +   '<div>'
+    +     '<h1>' + (form.nombre || "Cliente") + '</h1>'
+    +     '<div style="color:#64748b;font-size:12px;margin-top:4px">'
+    +       (form.tipo || "Persona física") + ' &nbsp;·&nbsp; Etapa: <strong>' + etapa + '</strong>'
+    +       (form.estadoGeneral ? ' &nbsp;·&nbsp; ' + form.estadoGeneral : '')
+    +     '</div>'
+    +   '</div>'
+    +   '<div style="text-align:right">'
+    +     '<div style="font-size:11px;color:#94a3b8">Generado el</div>'
+    +     '<div style="font-size:12px;font-weight:600">' + now + '</div>'
+    +   '</div>'
+    + '</div>'
+
+    /* Datos de contacto */
+    + '<h2>Datos de contacto</h2>'
+    + '<div class="grid"><table>'
+    + row("Teléfono", form.tel)
+    + row("Email", form.email)
+    + row("Ciudad / Estado", [form.ciudad, form.estado].filter(Boolean).join(", ") || null)
+    + row("Canal origen", form.canal)
+    + '</table><table>'
+    + row("CURP", form.curp)
+    + row("RFC", form.rfc)
+    + row("Fecha nacimiento", form.fechaNac)
+    + row("Licencia", form.numLicencia ? (form.numLicencia + (form.vigenciaLic ? " (vig: " + form.vigenciaLic + ")" : "")) : null)
+    + '</table></div>'
+
+    /* Vehículo y cotización */
+    + (form.unidadDesc ? ('<h2>Vehículo cotizado</h2>'
+    + '<div class="grid"><table>'
+    + row("Unidad", form.unidadDesc)
+    + row("Precio lista", fmtMon(form.precioLista))
+    + row("Precio venta", fmtMon(form.precioVenta))
+    + '</table><table>'
+    + row("Forma de pago", form.formaPagoCot)
+    + row("Enganche", fmtMon(form.enganche))
+    + row("Plazo", form.plazoMeses ? (form.plazoMeses + " meses") : null)
+    + '</table></div>') : '')
+
+    /* Pago */
+    + (form.pagoMetodo ? ('<h2>Pago</h2>'
+    + '<div class="grid"><table>'
+    + row("Método", form.pagoMetodo)
+    + row("Fecha", fmtDate(form.pagoFecha))
+    + '</table><table>'
+    + row("Monto", fmtMon(form.pagoMonto))
+    + row("Referencia / Folio", form.pagoReferencia)
+    + '</table></div>'
+    + (form.pagoNotas ? '<div style="margin-top:6px;font-size:12px;color:#64748b">Notas: ' + form.pagoNotas + '</div>' : '')) : '')
+
+    /* Documentos */
+    + '<h2>Documentos del cliente</h2>'
+    + '<div class="docs">'
+    + docCheck(form.docId,         "INE / Identificación")
+    + docCheck(form.docLicencia,   "Licencia de conducir")
+    + docCheck(form.docDomicilio,  "Comprobante domicilio")
+    + docCheck(form.docFactura,    "Factura del vehículo")
+    + docCheck(form.docComprobante,"Comprobante de pago")
+    + (form.e8ContratoUrl ? '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46">✓ Contrato firmado</span>' : '')
+    + '</div>'
+
+    /* Crédito */
+    + (form.e6Estado && form.e6Estado !== "Pendiente" ? ('<h2>Proceso de crédito</h2>'
+    + '<div class="grid"><table>'
+    + row("Estado", form.e6Estado)
+    + row("Institución", form.e6Institucion)
+    + '</table><table>'
+    + row("Monto aprobado", fmtMon(form.e6MontoAprobado))
+    + row("Mensualidad", fmtMon(form.e6MensualidadReal))
+    + '</table></div>') : '')
+
+    /* Notas */
+    + (form.notas ? ('<h2>Notas generales</h2>'
+    + '<div style="font-size:12px;color:#374151;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">'
+    + form.notas + '</div>') : '')
+
+    /* Print button */
+    + '<div style="margin-top:28px;text-align:center">'
+    + '<button onclick="window.print()" style="padding:10px 28px;border-radius:8px;border:none;'
+    + 'background:#1e3a5f;color:#fff;font-size:13px;font-weight:700;cursor:pointer">🖨 Imprimir</button>'
+    + '</div>'
+    + '</body></html>';
+
+  var w = window.open("", "_blank");
+  if (!w) { alert("Permite ventanas emergentes para imprimir."); return; }
+  w.document.write(html);
+  w.document.close();
+  setTimeout(function() { w.focus(); }, 300);
+}
+
 /* ── Zona de carga de documento con extracción IA ────────────────────────── */
 function DocUpload({ label, sublabel, docType, value, onChange, onExtract, nombreReferencia }) {
   const [dragging,    setDragging]    = React.useState(false);
@@ -1715,6 +1964,8 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
       /* ── Subir documentos pendientes a Storage antes de guardar ── */
       var formToSave = Object.assign({}, form, { _prev: { etapa: form.etapa, estadoGeneral: form.estadoGeneral, asesor: form.asesor } });
       var docCampos = [
+        { key:"docFactura",    label:"Factura"      },
+        { key:"docComprobante", label:"Comprobante"  },
         { key:"docId",        label:"INE"          },
         { key:"docLicencia",  label:"Licencia"     },
         { key:"docDomicilio", label:"Comprobante"  },
@@ -1906,6 +2157,13 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                 </span>
               )}
               {saved && !autoGuardando && <span style={{ fontSize:12, color:"#1f9d57", fontWeight:600 }}>✓ Guardado</span>}
+              <button type="button"
+                onClick={() => imprimirExpediente(form)}
+                style={{ fontSize:12, fontWeight:600, padding:"5px 11px", borderRadius:6,
+                  border:"1px solid var(--line)", background:"var(--bg)", color:"var(--ink)",
+                  cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
+                🖨 Expediente
+              </button>
               <button className="btn primary" onClick={handleSave} disabled={!dirty || autoGuardando}
                 style={{ opacity:(dirty && !autoGuardando) ? 1 : .45,
                   cursor:(dirty && !autoGuardando) ? "pointer" : "not-allowed" }}>
@@ -2795,6 +3053,24 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
             {/* ══ TAB: PAGO ══ */}
             {tabActivo === "pago" && (<>
+            <Sec ico="📂" titulo="Documentos de caja" defaultOpen>
+              <div style={{ gridColumn:"1/-1" }}>
+                <DocSimpleUpload
+                  label="Factura del vehículo"
+                  sublabel="Factura fiscal · PDF o imagen"
+                  value={form.docFactura || null}
+                  onChange={v => set("docFactura", v)}
+                />
+              </div>
+              <div style={{ gridColumn:"1/-1", marginTop:4 }}>
+                <DocSimpleUpload
+                  label="Comprobante de pago"
+                  sublabel="Transferencia · cheque · recibo"
+                  value={form.docComprobante || null}
+                  onChange={v => set("docComprobante", v)}
+                />
+              </div>
+            </Sec>
             <Sec ico="💵" titulo="Confirmación de pago" defaultOpen>
               <Fld label="Método de pago">
                 <select className="ef-select" style={IS}
