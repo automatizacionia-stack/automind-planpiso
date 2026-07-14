@@ -690,6 +690,21 @@ function DocUpload({ label, sublabel, docType, value, onChange, onExtract }) {
               {!subiendoDoc && value.storageKey && (
                 <span style={{ fontSize:10, color:"#059669", fontWeight:700 }}>✓ guardado</span>
               )}
+              {(value.dataUrl || value.storageKey) && (
+                <button onClick={async function() {
+                  if (value.dataUrl) {
+                    window.open(value.dataUrl, "_blank");
+                  } else if (value.storageKey && window.DB && window.DB.storage) {
+                    try {
+                      var r = await window.DB.storage
+                        .from("expedientes")
+                        .createSignedUrl(value.storageKey, 3600);
+                      if (r.error) throw r.error;
+                      window.open(r.data.signedUrl, "_blank");
+                    } catch(e) { alert("No se pudo abrir: " + (e.message || e)); }
+                  }
+                }} style={{ ...btnBase, color:"var(--accent)", fontWeight:700 }}>Ver</button>
+              )}
               <button onClick={() => onChange(null)} style={{ ...btnBase, color:"#e0492f" }}>Quitar</button>
               <button onClick={() => inputRef.current && inputRef.current.click()}
                 style={{ ...btnBase, color:"var(--muted)" }}>Reemplazar</button>
