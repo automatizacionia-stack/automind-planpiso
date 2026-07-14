@@ -773,7 +773,7 @@ function App() {
             usuarioActual={tenant.usuarioActual}
             initialSelId={editVehicleId}
             onRowsChange={() => setRowsVersion(v => v + 1)} />}
-          {view === "ventas" && <ProcesoVenta rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} />}
+          {view === "ventas" && <CRMClientes  rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} />}
           {view === "crm"    && <CRMClientes  rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} />}
           {view === "config" && (
             <div className="page">
