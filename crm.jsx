@@ -63,17 +63,6 @@ function DiasTag({ dias }) {
   );
 }
 
-function ProbBar({ valor }) {
-  const color = valor >= 70 ? "#22c55e" : valor >= 40 ? "#d99613" : "#e0492f";
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-      <div style={{ flex:1, height:5, background:"var(--line)", borderRadius:3, overflow:"hidden" }}>
-        <div style={{ height:"100%", width:valor + "%", background:color, borderRadius:3, transition:"width .4s" }} />
-      </div>
-      <span style={{ fontSize:11, fontWeight:700, color, minWidth:28 }}>{valor}%</span>
-    </div>
-  );
-}
 
 function Ini({ nombre, bg }) {
   const iniciales = nombre.split(" ").slice(0,2).map(w => w[0] || "").join("").toUpperCase();
@@ -91,7 +80,6 @@ function StatsBar({ clientes }) {
   const total      = clientes.length;
   const urgentes   = clientes.filter(c => _dsc(c.uc) > 3).length;
   const enCierre   = clientes.filter(c => ["Cierre","Pago","Expediente"].includes(c.etapa)).length;
-  const probProm   = total > 0 ? Math.round(clientes.reduce((s, c) => s + c.prob, 0) / total) : 0;
 
   const stat = (label, value, color) => (
     <div className="dkpi">
@@ -105,7 +93,6 @@ function StatsBar({ clientes }) {
       {stat("Total clientes",     total)}
       {stat("Seguimiento urgente",urgentes,   urgentes > 0 ? "#e0492f" : "#1f9d57")}
       {stat("En etapa avanzada",  enCierre,   enCierre > 0 ? "#1f9d57" : "var(--muted)")}
-      {stat("Prob. promedio",     probProm + "%", probProm >= 60 ? "#1f9d57" : probProm >= 35 ? "#d99613" : "#e0492f")}
     </div>
   );
 }
@@ -142,7 +129,6 @@ function KanbanCard({ c, onClick }) {
           <span style={{ fontSize:10, color:"var(--muted)" }}>{c.asesor.split(" ")[0]}</span>
         </div>
       </div>
-      <ProbBar valor={c.prob} />
     </div>
   );
 }
@@ -324,17 +310,6 @@ function ListaGrid({ clientes, onOpen }) {
 
                   {/* Prob */}
                   <td style={{ padding:"5px 11px", ...tdB }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                      <div style={{ flex:1, height:4, background:"var(--line)", borderRadius:3,
-                        overflow:"hidden", minWidth:32 }}>
-                        <div style={{ height:"100%", width: c.prob + "%", borderRadius:3,
-                          background: c.prob >= 70 ? "#22c55e" : c.prob >= 40 ? "#d99613" : "#e0492f" }} />
-                      </div>
-                      <span style={{ fontSize:10, fontWeight:700, minWidth:26, textAlign:"right",
-                        color: c.prob >= 70 ? "#1f9d57" : c.prob >= 40 ? "#d99613" : "#e0492f" }}>
-                        {c.prob}%
-                      </span>
-                    </div>
                   </td>
 
                   {/* Asesor */}
@@ -2569,25 +2544,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   {ETAPAS_CRM.map(e => <option key={e}>{e}</option>)}
                 </select>
               </Fld>
-              <Fld label="Probabilidad de cierre">
-                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                  <input type="number" min="0" max="100" className="ef-input"
-                    style={{ ...IS, width:72 }}
-                    value={form.prob || 0}
-                    onChange={e => set("prob", Math.min(100, Math.max(0, Number(e.target.value))))} />
-                  <div style={{ flex:1, height:6, background:"var(--line)", borderRadius:3, overflow:"hidden" }}>
-                    <div style={{
-                      height:"100%", borderRadius:3, transition:"width .3s",
-                      width:(form.prob || 0) + "%",
-                      background:(form.prob||0) >= 70 ? "#22c55e" : (form.prob||0) >= 40 ? "#d99613" : "#e0492f",
-                    }} />
-                  </div>
-                  <span style={{ fontSize:12, fontWeight:700, minWidth:30,
-                    color:(form.prob||0) >= 70 ? "#1f9d57" : (form.prob||0) >= 40 ? "#d99613" : "#e0492f" }}>
-                    {form.prob || 0}%
-                  </span>
-                </div>
-              </Fld>
               <Fld label="Asesor asignado" full>
                 <select className="ef-select" style={IS} value={form.asesor || ""} onChange={e => set("asesor", e.target.value)}>
                   {asesoresOpc.map(a => <option key={a}>{a}</option>)}
@@ -2692,12 +2648,7 @@ function ClienteDrawer({ c, onClose }) {
           </span>
         </div>
 
-        {/* Probabilidad */}
-        <div style={{ padding:"14px 20px", borderBottom:"1px solid var(--line)" }}>
-          <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)", textTransform:"uppercase",
-            letterSpacing:".06em", marginBottom:8 }}>Probabilidad de cierre</div>
-          <ProbBar valor={c.prob} />
-        </div>
+
 
         {/* Datos de contacto */}
         <div style={{ padding:"14px 20px", borderBottom:"1px solid var(--line)" }}>
