@@ -1271,6 +1271,8 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const [cargandoHist,    setCargandoHist]    = React.useState(false);
   const [filtroHistorial, setFiltroHistorial] = React.useState("");
   const [notaHistorial,   setNotaHistorial]   = React.useState("");
+  const autoSaveTimerRef = React.useRef(null);
+  const [autoGuardando, setAutoGuardando] = React.useState(false);
 
   /* Auto-seleccionar cuando llega un cliente recién creado */
   React.useEffect(() => {
@@ -1290,10 +1292,30 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
     }
   }, [clientes]);
 
+  /* Auto-guardado: 1.5 s después del último cambio */
+  React.useEffect(() => {
+    if (!dirty || !form) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async function() {
+      setAutoGuardando(true);
+      await handleSave();
+      setAutoGuardando(false);
+    }, 1500);
+    return function() {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [form, dirty]);
+
   const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setDirty(true); setSaved(false); };
 
-  function selectCliente(id) {
-    if (dirty && !window.confirm("Tienes cambios sin guardar. ¿Descartar?")) return;
+  async function selectCliente(id) {
+    if (dirty && form) {
+      // Guardar inmediatamente antes de cambiar de cliente
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      setAutoGuardando(true);
+      await handleSave();
+      setAutoGuardando(false);
+    }
     const c = clientes.find(x => x.id === id);
     setSelId(id);
     setForm(c ? { ...c } : null);
@@ -1475,9 +1497,19 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </div>
             </div>
             <div className="inv-form-actions">
-              {saved && <span style={{ fontSize:12, color:"#1f9d57", fontWeight:600 }}>✓ Guardado</span>}
-              <button className="btn primary" onClick={handleSave} disabled={!dirty}
-                style={{ opacity:dirty ? 1 : .45, cursor:dirty ? "pointer" : "not-allowed" }}>
+              {autoGuardando && (
+                <span style={{ fontSize:12, color:"var(--muted)", display:"flex", alignItems:"center", gap:5 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                    strokeLinecap="round" style={{ animation:"spin .8s linear infinite" }}>
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                  </svg>
+                  Guardando…
+                </span>
+              )}
+              {saved && !autoGuardando && <span style={{ fontSize:12, color:"#1f9d57", fontWeight:600 }}>✓ Guardado</span>}
+              <button className="btn primary" onClick={handleSave} disabled={!dirty || autoGuardando}
+                style={{ opacity:(dirty && !autoGuardando) ? 1 : .45,
+                  cursor:(dirty && !autoGuardando) ? "pointer" : "not-allowed" }}>
                 Guardar
               </button>
             </div>
