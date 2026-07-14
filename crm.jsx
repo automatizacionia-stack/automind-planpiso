@@ -1481,7 +1481,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
           <div className="inv-form-scroll">
 
-            {/* ══ TAB: DATOS DEL CLIENTE ══ */}
+            {/* ══ DATOS DEL CLIENTE ══ */}
 
             {/* § DATOS BÁSICOS */}
             <Sec ico={ICO_PERSONA} titulo="Datos del cliente">
@@ -1503,9 +1503,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>) /* fin tab datos */}
+            </>
 
-            {/* ══ TAB: DOCUMENTACIÓN ══ */}
+            {/* ══ DOCUMENTACIÓN ══ */}
 
             <Sec ico={ICO_DOC} titulo="Documentos del cliente">
               <div style={{ gridColumn:"1/-1" }}>
@@ -1618,9 +1618,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>) /* fin tab docs */}
+            </>
 
-            {/* ══ TAB: PERFILAMIENTO ══ */}
+            {/* ══ PERFILAMIENTO ══ */}
 
             <Sec ico={ICO_PIN} titulo="Origen del prospecto">
               <Fld label="Canal">
@@ -1677,9 +1677,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>) /* fin tab perfil */}
+            </>
 
-            {/* ══ TAB: VEHÍCULO DE INTERÉS ══ */}
+            {/* ══ VEHÍCULO DE INTERÉS ══ */}
             <Sec ico={ICO_AUTO} titulo="Vehículo de interés">
               <Fld label="Vehículo de interés" full>
                 <input className="ef-input" style={IS} value={form.interes || ""}
@@ -1707,9 +1707,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                 </Fld>
               )}
             </Sec>
-            </>) /* fin tab vehiculo */}
+            </>
 
-            {/* ══ TAB: PRUEBA DE MANEJO ══ */}
+            {/* ══ PRUEBA DE MANEJO ══ */}
             <Sec ico="🚗" titulo="Prueba de manejo">
               <Fld label="¿Se realizó prueba?" full>
                 <div style={{ display:"flex", gap:8 }}>
@@ -1761,9 +1761,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>) /* fin tab prueba */}
+            </>
 
-            {/* ══ TAB: COTIZACIÓN ══ */}
+            {/* ══ COTIZACIÓN ══ */}
             <Sec ico={ICO_AUTO} titulo="Selección de unidad y cotización">
               <Fld label="Unidad seleccionada" full>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -1914,9 +1914,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>) /* fin tab cot */}
+            </>
 
-            {/* ══ TAB: FORMA DE PAGO ══ */}
+            {/* ══ FORMA DE PAGO ══ */}
             <Sec ico="💳" titulo="Forma de pago general">
               <Fld label="Forma de pago" full>
                 <div style={{ display:"flex", gap:8 }}>
@@ -1934,18 +1934,18 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                 </div>
               </Fld>
             </Sec>
-            </>) /* fin tab fpago */}
+            </>
 
-            {/* ══ TAB: SOLICITUD DE CRÉDITO ══ */}
+            {/* ══ SOLICITUD DE CRÉDITO ══ */}
             {form.formaPagoCot !== "Crédito" && (
               <div style={{ padding:"32px", textAlign:"center", color:"var(--muted)", fontSize:14 }}>
                 Este cliente tiene operación de <strong>contado</strong>.<br/>
                 Cambia la forma de pago en la pestaña <em>Cotización</em> para activar crédito.
               </div>
             )}
-            </>) /* fin tab credito — el E6 IIFE lo llenará debajo si aplica */}
+            </>
 
-            {/* ══ TAB: APROBACIONES ══ */}
+            {/* ══ APROBACIONES ══ */}
 
             {/* § E5 — APROBACIÓN DE GERENTE */}
             {(function() {
@@ -2210,9 +2210,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             })()}
 
 
-            </>) /* fin tab aprob */}
+            </>
 
-            {/* ══ TAB: PAGO ══ */}
+            {/* ══ PAGO ══ */}
             <Sec ico="💵" titulo="Confirmación de pago">
               <Fld label="Método de pago">
                 <select className="ef-select" style={IS}
@@ -2251,9 +2251,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   placeholder="Observaciones del pago, condiciones especiales…" />
               </Fld>
             </Sec>
-            </>) /* fin tab pago */}
+            </>
 
-            {/* ══ TAB: ENTREGA ══ */}
+            {/* ══ ENTREGA ══ */}
             <Sec ico="🚚" titulo="Entrega de la unidad">
               <Fld label="Fecha de entrega">
                 <input type="date" className="ef-input" style={IS}
@@ -2366,9 +2366,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             })()}
 
 
-            </>) /* fin tab entrega */}
+            </>
 
-            {/* ══ TAB: HISTORIAL ══ */}
+            {/* ══ HISTORIAL ══ */}
             <div style={{ padding:"16px 20px" }}>
               <div style={{ display:"flex", justifyContent:"space-between",
                 alignItems:"center", marginBottom:12 }}>
