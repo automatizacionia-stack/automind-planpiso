@@ -1257,7 +1257,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const [showUnitPicker, setShowUnitPicker] = React.useState(false);
   const [e8Subiendo, setE8Subiendo] = React.useState(false);
   const [e8ErrSub,   setE8ErrSub]   = React.useState('');
-  const [tabActivo,       setTabActivo]       = React.useState("datos");
   const [historial,       setHistorial]       = React.useState([]);
   const [cargandoHist,    setCargandoHist]    = React.useState(false);
   const [filtroHistorial, setFiltroHistorial] = React.useState("");
@@ -1379,20 +1378,19 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
     setDirty(true);
   }
 
-  /* Cargar historial cuando se abre el tab o cambia el cliente */
+  /* Cargar historial al cambiar de cliente */
   React.useEffect(function() {
-    if (tabActivo !== "historial" || !selId) return;
+    if (!selId) return;
     if (!window.DB || !window.DB.getClienteHistorial) return;
     setCargandoHist(true);
     window.DB.getClienteHistorial(selId)
       .then(function(d){ setHistorial(d || []); })
       .catch(function(e){ console.warn("[hist]", e.message); })
       .finally(function(){ setCargandoHist(false); });
-  }, [tabActivo, selId]);
+  }, [selId]);
 
-  /* Reset tab al cambiar de cliente */
+  /* Reset al cambiar de cliente */
   React.useEffect(function() {
-    setTabActivo("datos");
     setHistorial([]);
     setNotaHistorial("");
   }, [selId]);
@@ -1480,55 +1478,10 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
           {/* ── Stepper de etapas ── */}
           <EtapaStepper etapaActual={form.etapa || "Prospección"} onCambiar={v => set("etapa", v)} />
 
-          {/* ── Barra de pestañas ── */}
-          {(function(){
-            var TABS = [
-              { id:"datos",    lbl:"Datos",         ico:"👤" },
-              { id:"perfil",   lbl:"Perfilamiento",  ico:"🎯" },
-              { id:"vehiculo", lbl:"Vehículo",       ico:"🚗" },
-              { id:"prueba",   lbl:"Prueba manejo",  ico:"🛣" },
-              { id:"cot",      lbl:"Cotización",     ico:"💰" },
-              { id:"fpago",    lbl:"Forma de pago",  ico:"💳" },
-              { id:"credito",  lbl:"Crédito",        ico:"🏦" },
-              { id:"docs",     lbl:"Documentación",  ico:"📄" },
-              { id:"aprob",    lbl:"Aprobaciones",   ico:"✅" },
-              { id:"pago",     lbl:"Pago",           ico:"💵" },
-              { id:"entrega",  lbl:"Entrega",        ico:"🚚" },
-              { id:"historial",lbl:"Historial",      ico:"📋" },
-            ];
-            return (
-              <div style={{
-                display:"flex", gap:2, padding:"6px 16px", overflowX:"auto",
-                background:"var(--bg)", borderBottom:"1px solid var(--line)", flexShrink:0,
-                scrollbarWidth:"none",
-              }}>
-                {TABS.map(function(t){
-                  var isAct = tabActivo === t.id;
-                  return (
-                    <button key={t.id} type="button"
-                      onClick={function(){ setTabActivo(t.id); }}
-                      style={{
-                        display:"flex", alignItems:"center", gap:4,
-                        padding:"5px 10px", borderRadius:7, border:"none",
-                        fontSize:12, fontWeight: isAct ? 700 : 500,
-                        cursor:"pointer", whiteSpace:"nowrap", transition:"all .15s",
-                        background: isAct ? "var(--accent)"    : "transparent",
-                        color:      isAct ? "#fff"              : "var(--muted)",
-                      }}>
-                      <span style={{ fontSize:13 }}>{t.ico}</span>
-                      {t.lbl}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })()}
 
-          {/* ── Contenido de la pestaña activa ── */}
           <div className="inv-form-scroll">
 
             {/* ══ TAB: DATOS DEL CLIENTE ══ */}
-            {tabActivo === "datos" && (<>
 
             {/* § DATOS BÁSICOS */}
             <Sec ico={ICO_PERSONA} titulo="Datos del cliente">
@@ -1553,7 +1506,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab datos */}
 
             {/* ══ TAB: DOCUMENTACIÓN ══ */}
-            {tabActivo === "docs" && (<>
 
             <Sec ico={ICO_DOC} titulo="Documentos del cliente">
               <div style={{ gridColumn:"1/-1" }}>
@@ -1669,7 +1621,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab docs */}
 
             {/* ══ TAB: PERFILAMIENTO ══ */}
-            {tabActivo === "perfil" && (<>
 
             <Sec ico={ICO_PIN} titulo="Origen del prospecto">
               <Fld label="Canal">
@@ -1729,7 +1680,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab perfil */}
 
             {/* ══ TAB: VEHÍCULO DE INTERÉS ══ */}
-            {tabActivo === "vehiculo" && (<>
             <Sec ico={ICO_AUTO} titulo="Vehículo de interés">
               <Fld label="Vehículo de interés" full>
                 <input className="ef-input" style={IS} value={form.interes || ""}
@@ -1760,7 +1710,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab vehiculo */}
 
             {/* ══ TAB: PRUEBA DE MANEJO ══ */}
-            {tabActivo === "prueba" && (<>
             <Sec ico="🚗" titulo="Prueba de manejo">
               <Fld label="¿Se realizó prueba?" full>
                 <div style={{ display:"flex", gap:8 }}>
@@ -1815,7 +1764,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab prueba */}
 
             {/* ══ TAB: COTIZACIÓN ══ */}
-            {tabActivo === "cot" && (<>
             <Sec ico={ICO_AUTO} titulo="Selección de unidad y cotización">
               <Fld label="Unidad seleccionada" full>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -1969,7 +1917,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab cot */}
 
             {/* ══ TAB: FORMA DE PAGO ══ */}
-            {tabActivo === "fpago" && (<>
             <Sec ico="💳" titulo="Forma de pago general">
               <Fld label="Forma de pago" full>
                 <div style={{ display:"flex", gap:8 }}>
@@ -1990,7 +1937,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab fpago */}
 
             {/* ══ TAB: SOLICITUD DE CRÉDITO ══ */}
-            {tabActivo === "credito" && (<>
             {form.formaPagoCot !== "Crédito" && (
               <div style={{ padding:"32px", textAlign:"center", color:"var(--muted)", fontSize:14 }}>
                 Este cliente tiene operación de <strong>contado</strong>.<br/>
@@ -2000,7 +1946,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab credito — el E6 IIFE lo llenará debajo si aplica */}
 
             {/* ══ TAB: APROBACIONES ══ */}
-            {tabActivo === "aprob" && (<>
 
             {/* § E5 — APROBACIÓN DE GERENTE */}
             {(function() {
@@ -2111,8 +2056,8 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               );
             })()}
 
-            {/* El E6 también va al tab credito */}
-            {tabActivo === "credito" && form.formaPagoCot === "Crédito" && (function() {
+            {/* ══ E6: Proceso de crédito (solo cuando es Crédito) ══ */}
+            {form.formaPagoCot === "Crédito" && (function() {
               var ICO_BANK = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M3 10l9-7 9 7"/><line x1="12" y1="10" x2="12" y2="21"/></svg>);
               var ESTADOS_E6 = ["Pendiente","En revisión","Aprobado","Rechazado","Condicional"];
               var COLOR_E6 = {
@@ -2268,7 +2213,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab aprob */}
 
             {/* ══ TAB: PAGO ══ */}
-            {tabActivo === "pago" && (<>
             <Sec ico="💵" titulo="Confirmación de pago">
               <Fld label="Método de pago">
                 <select className="ef-select" style={IS}
@@ -2310,7 +2254,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab pago */}
 
             {/* ══ TAB: ENTREGA ══ */}
-            {tabActivo === "entrega" && (<>
             <Sec ico="🚚" titulo="Entrega de la unidad">
               <Fld label="Fecha de entrega">
                 <input type="date" className="ef-input" style={IS}
@@ -2426,7 +2369,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </>) /* fin tab entrega */}
 
             {/* ══ TAB: HISTORIAL ══ */}
-            {tabActivo === "historial" && (<>
             <div style={{ padding:"16px 20px" }}>
               <div style={{ display:"flex", justifyContent:"space-between",
                 alignItems:"center", marginBottom:12 }}>
@@ -2525,10 +2467,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                 </button>
               </div>
             </div>
-            </>) /* fin tab historial */}
+            </>
 
-            {/* ══ TAB PERFIL: asesor/prox/notas (duplicado al final como "catch-all") ══ */}
-            {tabActivo === "perfil" && (
+            {/* ══ Seguimiento comercial (siempre visible) ══ */}
             <Sec ico={ICO_PROCESO} titulo="Seguimiento comercial">
               <Fld label="Etapa">
                 <select className="ef-select" style={IS} value={form.etapa || "Prospección"} onChange={e => set("etapa", e.target.value)}>
@@ -2576,7 +2517,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
             </Sec>
 
-            )} {/* fin tabActivo perfil → seguimiento comercial */}
+
 
           </div> {/* fin inv-form-scroll */}
         </div>
@@ -3431,7 +3372,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
               {asesores.map(a => <option key={a}>{a}</option>)}
             </select>
           </>
-        )}
+
       </div>
 
       {/* Contenido de la vista */}
