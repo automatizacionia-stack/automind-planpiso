@@ -3078,4 +3078,415 @@ function ProcesoView({ clientes, onOpen }) {
             color: filtDocsPend ? "#dc2626" : "var(--muted)", cursor:"pointer" }}>
             <input type="checkbox" checked={filtDocsPend}
               onChange={function(e){ setFiltDocsPend(e.target.checked); }}
-              style={{ accentColor:"#dc2626" }} /
+              style={{ accentColor:"#dc2626" }} />
+            Docs incompletos
+          </label>
+        </div>
+
+        {/* Filtros — fila 2: fechas + contador */}
+        <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+          <span style={{ fontSize:11, color:"var(--muted)" }}>Creado desde:</span>
+          <input type="date" value={filtDesde} onChange={function(e){ setFiltDesde(e.target.value); }}
+            style={{ ...inputSt, fontSize:11 }} />
+          <span style={{ fontSize:11, color:"var(--muted)" }}>hasta:</span>
+          <input type="date" value={filtHasta} onChange={function(e){ setFiltHasta(e.target.value); }}
+            style={{ ...inputSt, fontSize:11 }} />
+          <span style={{ fontSize:11, color:"var(--muted)", marginLeft:8 }}>
+            {sorted.length === clientes.length
+              ? sorted.length + " clientes"
+              : sorted.length + " de " + clientes.length + " clientes"}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Tabla ───────────────────────────────────────── */}
+      <div style={{ flex:1, overflow:"auto" }}>
+        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+          <thead style={{ position:"sticky", top:0, zIndex:2 }}>
+            <tr style={{ background:"var(--card)", borderBottom:"2px solid var(--line)" }}>
+              <th style={{ ...th, width:36, textAlign:"center" }}>#</th>
+              <Hdr col="nombre"   label="Nombre" />
+              <th style={th}>Teléfono / Email</th>
+              <Hdr col="asesor"   label="Vendedor" />
+              <th style={th}>Vehículo</th>
+              <Hdr col="formaPago" label="Operación" center />
+              <Hdr col="etapa"    label="Etapa" />
+              <Hdr col="uc"       label="Últ. contacto" center />
+              <Hdr col="docsPend" label="Docs" center />
+              <th style={th}>Próxima actividad</th>
+              <Hdr col="estatus"  label="Expediente" />
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.length === 0 ? (
+              <tr>
+                <td colSpan={11} style={{ textAlign:"center", padding:"60px 20px",
+                  color:"var(--muted)", fontSize:13 }}>
+                  No hay clientes con los filtros aplicados.
+                </td>
+              </tr>
+            ) : sorted.map(function(c, idx) {
+              var estatus  = calcEstatus(c);
+              var docsPend = calcDocsPend(c);
+              var diasSC   = _dsc(c.uc);
+              var eColor   = SEM_COLOR[estatus];
+              var tp       = tipoPagoCliente(c);
+              var vehiculo = c.unidadDesc || c.interes || "—";
+
+              return (
+                <tr key={c.id} onClick={function(){ onOpen(c.id); }}
+                  style={{ borderBottom:"1px solid var(--line)", cursor:"pointer" }}
+                  onMouseOver={function(e){ e.currentTarget.style.background = "var(--hover,#f9fafb)"; }}
+                  onMouseOut={function(e){ e.currentTarget.style.background = ""; }}>
+
+                  {/* # */}
+                  <td style={{ padding:"10px 6px", textAlign:"center",
+                    color:"var(--muted)", fontSize:11, width:36 }}>{idx + 1}</td>
+
+                  {/* Nombre */}
+                  <td style={{ padding:"10px 12px 10px 4px", minWidth:180 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                      <Ini nombre={c.nombre} />
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontWeight:600, color:"var(--ink)",
+                          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:180 }}>
+                          {c.nombre}
+                        </div>
+                        <div style={{ fontSize:10, color:"var(--muted)", marginTop:1 }}>
+                          {c.tipo === "Persona moral" ? "PM" : "PF"}
+                          {c.vinVinculado ? " · VIN …" + c.vinVinculado.slice(-6) : ""}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Tel / Email */}
+                  <td style={{ padding:"10px 12px", minWidth:150 }}>
+                    {c.tel   && <div style={{ fontWeight:500, color:"var(--ink)" }}>{c.tel}</div>}
+                    {c.email && <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>{c.email}</div>}
+                    {!c.tel && !c.email && <span style={{ color:"var(--muted)" }}>—</span>}
+                  </td>
+
+                  {/* Vendedor */}
+                  <td style={{ padding:"10px 12px", whiteSpace:"nowrap", color:"var(--ink)" }}>
+                    {c.asesor
+                      ? <span>{c.asesor.split(" ").slice(0,2).join(" ")}</span>
+                      : <span style={{ color:"var(--muted)" }}>—</span>}
+                  </td>
+
+                  {/* Vehículo */}
+                  <td style={{ padding:"10px 12px", maxWidth:200 }}>
+                    <div style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                      fontWeight:500, color:"var(--ink)" }}>{vehiculo}</div>
+                    {c.unidadDesc && c.interes && c.unidadDesc !== c.interes && (
+                      <div style={{ fontSize:10, color:"var(--muted)", marginTop:1,
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {c.interes}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Tipo operación */}
+                  <td style={{ padding:"10px 6px", textAlign:"center" }}>
+                    {tp ? (
+                      <span style={{
+                        fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:999,
+                        background: tp === "Crédito" ? "#dbeafe" : "#f0fdf4",
+                        color:      tp === "Crédito" ? "#1d4ed8" : "#166534",
+                        border:"1px solid " + (tp === "Crédito" ? "#93c5fd" : "#86efac"),
+                      }}>{tp}</span>
+                    ) : <span style={{ color:"var(--muted)" }}>—</span>}
+                  </td>
+
+                  {/* Etapa */}
+                  <td style={{ padding:"10px 12px" }}>
+                    <EtapaBadge etapa={c.etapa} />
+                  </td>
+
+                  {/* Último contacto */}
+                  <td style={{ padding:"10px 6px", textAlign:"center" }}>
+                    <DiasTag dias={diasSC} />
+                  </td>
+
+                  {/* Docs pendientes */}
+                  <td style={{ padding:"10px 6px", textAlign:"center" }}>
+                    {docsPend === 0 ? (
+                      <span style={{ fontSize:12, color:"#22c55e", fontWeight:700 }}>✓</span>
+                    ) : (
+                      <span style={{
+                        fontSize:11, fontWeight:700, padding:"2px 7px", borderRadius:999,
+                        background:"#fee2e2", color:"#991b1b", border:"1px solid #fecaca",
+                      }}>{docsPend} pend.</span>
+                    )}
+                  </td>
+
+                  {/* Próxima actividad */}
+                  <td style={{ padding:"10px 12px", maxWidth:220 }}>
+                    {c.prox ? (
+                      <div>
+                        <div style={{ overflow:"hidden", textOverflow:"ellipsis",
+                          whiteSpace:"nowrap", color:"var(--ink)" }}>{c.prox}</div>
+                        {c.fprox && (
+                          <div style={{ fontSize:10, color:"var(--muted)", marginTop:1 }}>
+                            {_fmtFechaCRM(c.fprox)}
+                          </div>
+                        )}
+                      </div>
+                    ) : <span style={{ color:"var(--muted)" }}>—</span>}
+                  </td>
+
+                  {/* Estatus expediente */}
+                  <td style={{ padding:"10px 12px" }}>
+                    <span style={{
+                      fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:999,
+                      background: eColor + "20", color: eColor,
+                      border:"1px solid " + eColor + "55",
+                    }}>
+                      {SEM_LABEL[estatus]}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function CRMClientes({ rows, kpis, usuarios }) {
+  const [clientesData, setClientesData] = React.useState([]);
+  const [cargando,     setCargando]     = React.useState(false);
+  const [errorCrm,     setErrorCrm]     = React.useState(null);
+  const [vista, setVista]           = React.useState("proceso");
+  const [seleccionado, setSeleccionado] = React.useState(null);
+  const [busqueda, setBusqueda]     = React.useState("");
+  const [filtroAsesor, setFiltroAsesor] = React.useState("Todos");
+  const [mostrarNuevo, setMostrarNuevo] = React.useState(false);
+  const [pendingData, setPendingData]   = React.useState(null);
+  const [editorSelId, setEditorSelId]   = React.useState(null);
+
+  /* Detectar prefill desde Plan Piso al montar */
+  React.useEffect(() => {
+    const pending = window.AUTOMIND && window.AUTOMIND._pendingNuevoCliente;
+    if (pending) {
+      window.AUTOMIND._pendingNuevoCliente = null;
+      setPendingData(pending);
+      setMostrarNuevo(true);
+    }
+  }, []);
+
+  /* Cargar clientes reales desde Supabase */
+  React.useEffect(() => {
+    var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
+    if (!agencyId || !window.DB) return;
+    setCargando(true);
+    setErrorCrm(null);
+    window.DB.getClientes(agencyId)
+      .then(function(lista) { setClientesData(lista); })
+      .catch(function(err)  { console.error("[CRM] Error cargando clientes:", err); setErrorCrm("No se pudieron cargar los clientes."); })
+      .finally(function()   { setCargando(false); });
+  }, []);
+
+  const asesores = ["Todos", ...Array.from(new Set(clientesData.map(c => c.asesor)))];
+
+  const clientes = clientesData.filter(c => {
+    const q = busqueda.toLowerCase();
+    const matchBusq = !q ||
+      c.nombre.toLowerCase().includes(q) ||
+      c.interes.toLowerCase().includes(q) ||
+      c.ciudad.toLowerCase().includes(q);
+    const matchAsesor = filtroAsesor === "Todos" || c.asesor === filtroAsesor;
+    return matchBusq && matchAsesor;
+  });
+
+  const urgentesCount = clientesData.filter(c => _dsc(c.uc) > 3).length;
+
+  async function crearCliente(datos) {
+    const hoy = new Date().toISOString().slice(0, 10);
+    var nuevo = {
+      id: "c" + Date.now(),
+      nombre: datos.nombre.trim(),
+      tel: datos.tel, email: datos.email, tipo: datos.tipo, canal: datos.canal,
+      fuente: datos.fuente, interes: datos.interes,
+      presupuesto: Number(datos.presupuesto) || 0,
+      formaPago: datos.formaPago, uso: datos.uso,
+      etapa: "Prospección", asesor: datos.asesor || "Sin asignar",
+      prob: 10, uc: hoy, ciudad: datos.ciudad, estado: datos.estado,
+      prox: "Primer contacto", fprox: hoy, notas: "",
+      vinVinculado: datos.vinVinculado || null,
+      inventarioId: datos.inventarioId || null,
+    };
+    /* Guardar en Supabase — reemplaza ID temporal con UUID real */
+    var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
+    if (agencyId && window.DB) {
+      try {
+        var guardado = await window.DB.saveCliente(agencyId, nuevo);
+        nuevo = Object.assign({}, guardado, {
+          vinVinculado: datos.vinVinculado || null,
+          inventarioId: datos.inventarioId || null,
+        });
+      } catch(e) {
+        console.error("[CRM] Error guardando cliente:", e);
+        window.alert(
+          "⚠️ Error al guardar el cliente en la base de datos:\n\n" +
+          (e.message || String(e)) +
+          "\n\nPosible causa: falta ejecutar las migraciones SQL en Supabase.\n" +
+          "Corre el archivo supabase_crm_setup_completo.sql en Supabase → SQL Editor."
+        );
+        return; /* no agregar a la lista si no se guardó */
+      }
+    }
+    setClientesData(prev => [nuevo, ...prev]);
+    setMostrarNuevo(false);
+    setPendingData(null);
+    setSeleccionado(nuevo);
+    setEditorSelId(nuevo.id);
+    setVista("editor");
+  }
+
+  async function onClienteUpdate(updated) {
+    /* Actualizar estado local optimistamente */
+    setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
+    /* Persistir en Supabase */
+    var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
+    if (!agencyId || !window.DB) return;
+    try {
+      await window.DB.saveCliente(agencyId, updated);
+    } catch(e) {
+      console.error("[CRM] Error guardando cliente:", e);
+      /* Revertir estado local */
+      setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
+      window.alert("Error al guardar: " + (e.message || e));
+    }
+  }
+
+  const TabBtn = ({ id, label, badge }) => (
+    <button onClick={() => setVista(id)} style={{
+      padding:"6px 14px", borderRadius:7, fontSize:13, fontWeight:600, border:"none",
+      cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"all .15s",
+      background: vista === id ? "var(--accent)" : "var(--card)",
+      color:       vista === id ? "#fff"         : "var(--muted)",
+      boxShadow:   vista === id ? "0 2px 8px rgba(47,111,237,.22)" : "none",
+    }}>
+      {label}
+      {badge > 0 && (
+        <span style={{ background: vista === id ? "rgba(255,255,255,.25)" : "#fee2e2",
+          color: vista === id ? "#fff" : "#991b1b",
+          fontSize:10, fontWeight:700, padding:"1px 6px", borderRadius:20 }}>
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+
+  return (
+    <div style={{ padding: vista === "editor" ? "24px 28px 0" : "24px 28px", maxWidth:1400, margin:"0 auto" }}>
+
+      {/* Encabezado */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+        <div>
+          <h1 style={{ margin:"0 0 3px", fontSize:22, fontWeight:800 }}>CRM de Clientes</h1>
+          <p style={{ margin:0, color:"var(--muted)", fontSize:14 }}>
+            Pipeline de ventas · <span style={{ color:"#8b5cf6", fontWeight:600 }}>Datos de ejemplo</span>
+          </p>
+        </div>
+        <button className="btn primary" style={{ display:"flex", alignItems:"center", gap:7 }}
+          onClick={() => setMostrarNuevo(true)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"
+            strokeLinejoin="round" width="15" height="15"><path d="M12 5v14M5 12h14"/></svg>
+          Nuevo cliente
+        </button>
+      </div>
+
+      {/* KPIs — solo en vistas secundarias */}
+      {vista !== "editor" && <StatsBar clientes={clientesData} />}
+
+      {/* Controles */}
+      <div style={{ display:"flex", gap:10, marginBottom: vista === "editor" ? 12 : 16,
+        alignItems:"center", flexWrap:"wrap" }}>
+        {/* Tabs de vista */}
+        <div style={{ display:"flex", gap:6, background:"var(--bg)", borderRadius:9, padding:4 }}>
+          <TabBtn id="proceso"  label="Proceso de Venta" />
+          <TabBtn id="editor"   label="Editor" />
+          <TabBtn id="kanban"   label="Kanban" />
+          <TabBtn id="lista"    label="Lista" />
+          <TabBtn id="urgentes" label="Urgentes" badge={urgentesCount} />
+        </div>
+
+        {/* Búsqueda y filtro asesor — solo para vistas que no tienen buscador propio */}
+        {vista !== "editor" && (
+          <>
+            <div style={{ flex:1, minWidth:180 }}>
+              <div style={{ position:"relative" }}>
+                <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", color:"var(--muted)" }}>
+                  {I.search({ width:14, height:14 })}
+                </span>
+                <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                  placeholder="Buscar por nombre, vehículo, ciudad…"
+                  style={{ width:"100%", padding:"7px 10px 7px 32px", border:"1px solid var(--line)",
+                    borderRadius:7, fontSize:13, background:"var(--card)", color:"var(--ink)",
+                    outline:"none", fontFamily:"inherit" }} />
+              </div>
+            </div>
+            <select value={filtroAsesor} onChange={e => setFiltroAsesor(e.target.value)}
+              style={{ padding:"7px 10px", border:"1px solid var(--line)", borderRadius:7,
+                fontSize:13, background:"var(--card)", color:"var(--ink)", fontFamily:"inherit",
+                cursor:"pointer", outline:"none" }}>
+              {asesores.map(a => <option key={a}>{a}</option>)}
+            </select>
+          </>
+        )}
+      </div>
+
+      {/* Contenido de la vista */}
+      {vista === "editor"   && (
+        <ClienteEditor
+          clientes={clientesData}
+          defaultSelId={editorSelId}
+          onUpdate={onClienteUpdate}
+        />
+      )}
+      {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={setSeleccionado} />}
+      {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={setSeleccionado} />}
+      {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={setSeleccionado} />}
+      {vista === "proceso"  && <ProcesoView  clientes={clientesData} onOpen={function(id){ setEditorSelId(id); setVista("editor"); }} />}
+
+      {/* Estado cargando / vacío / error */}
+      {cargando && (
+        <div style={{ textAlign:"center", padding:"48px 0", color:"var(--muted)", fontSize:14 }}>
+          Cargando clientes…
+        </div>
+      )}
+      {!cargando && errorCrm && (
+        <div style={{ marginTop:16, padding:"12px 16px", background:"#fff5f5",
+          border:"1px solid #fecaca", borderRadius:8, fontSize:13, color:"#991b1b" }}>
+          {errorCrm}
+        </div>
+      )}
+      {!cargando && !errorCrm && clientesData.length === 0 && (
+        <div style={{ textAlign:"center", padding:"64px 20px", color:"var(--muted)" }}>
+          <div style={{ fontSize:40, marginBottom:10 }}>&#128101;</div>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>Sin clientes aún</div>
+          <div style={{ fontSize:13 }}>Crea el primer cliente con el botón "Nuevo cliente".</div>
+        </div>
+      )}
+
+      {/* Drawer de detalle */}
+      <ClienteDrawer c={seleccionado} onClose={() => setSeleccionado(null)} />
+
+      {/* Modal nuevo cliente (con prefill opcional desde Plan Piso) */}
+      {mostrarNuevo && (
+        <NuevoClienteModal
+          asesores={asesores}
+          onClose={() => { setMostrarNuevo(false); setPendingData(null); }}
+          onCreate={crearCliente}
+          initialData={pendingData}
+        />
+      )}
+    </div>
+  );
+}
+
+Object.assign(window, { CRMClientes });
