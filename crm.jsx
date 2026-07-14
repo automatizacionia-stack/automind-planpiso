@@ -671,6 +671,45 @@ function ClienteListItem({ c, active, onClick }) {
   );
 }
 
+/* ── Helpers de validación de documentos ─────────────────────────────────── */
+function _normNombre(s) {
+  if (!s) return "";
+  return s.toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function _nombreCoincide(extraido, referencia) {
+  var a = _normNombre(extraido);
+  var b = _normNombre(referencia);
+  if (!a || !b) return "sin_datos";
+  if (a === b) return "exacto";
+  var wa = a.split(" ").filter(Boolean);
+  var wb = b.split(" ").filter(Boolean);
+  var coinciden = wa.filter(function(w) { return wb.includes(w); }).length;
+  var umbral = Math.max(2, Math.floor(Math.min(wa.length, wb.length) * 0.6));
+  return coinciden >= umbral ? "similar" : "diferente";
+}
+
+function _parseVigencia(s) {
+  if (!s) return null;
+  /* DD/MM/AAAA */
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  /* DD/MM/AA */
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (m) {
+    var yr = Number(m[3]);
+    return new Date(yr + (yr < 50 ? 2000 : 1900), Number(m[2]) - 1, Number(m[1]));
+  }
+  /* AAAA-MM-DD */
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return null;
+}
+
 /* ── Etiquetas legibles de campos extraídos ──────────────────────────────── */
 const CAMPO_LABEL = {
   nombre:"Nombre", apellidoPaterno:"Apellido paterno", apellidoMaterno:"Apellido materno",
@@ -736,7 +775,7 @@ function _dataUrlToBlob(dataUrl) {
 }
 
 /* ── Zona de carga de documento con extracción IA ────────────────────────── */
-function DocUpload({ label, sublabel, docType, value, onChange, onExtract }) {
+function DocUpload({ label, sublabel, docType, value, onChange, onExtract, nombreReferencia }) {
   const [dragging,    setDragging]    = React.useState(false);
   const [extrayendo,  setExtrayendo]  = React.useState(false);
   const [campos,      setCampos]      = React.useState(null);   // null | {} | {k:v}
@@ -986,6 +1025,81 @@ function DocUpload({ label, sublabel, docType, value, onChange, onExtract }) {
                       );
                     })}
                   </div>
+                  {/* ── Validación del documento ── */}
+                  {nombreReferencia && (function() {
+                    /* Nombre completo extraído (puede venir junto o separado) */
+                    var nombreExtraido = campos.nombre || "";
+                    if (campos.apellidoPaterno || campos.apellidoMaterno)
+                      nombreExtraido = [campos.nombre, campos.apellidoPaterno, campos.apellidoMaterno].filter(Boolean).join(" ");
+
+                    var filas = [];
+
+                    /* ── Nombre ── */
+                    if (nombreExtraido) {
+                      var st = _nombreCoincide(nombreExtraido, nombreReferencia);
+                      var nomColor = st === "exacto" ? "#059669" : st === "similar" ? "#d97706" : "#e0492f";
+                      var nomBg    = st === "exacto" ? "#f0fdf4"  : st === "similar" ? "#fffbeb"  : "#fef2f2";
+                      var nomTxt   = st === "exacto" ? "coincide"
+                                   : st === "similar" ? "coincidencia parcial — verificar"
+                                   : "no coincide con "" + nombreReferencia + """;
+                      filas.push({ label:"Nombre", valor:nombreExtraido, color:nomColor, bg:nomBg,
+                        icon: st === "exacto" ? "✓" : st === "similar" ? "⚠" : "✗", txt:nomTxt });
+                    }
+
+                    /* ── Vigencia (licencia) ── */
+                    if (campos.vigencia) {
+                      var fecha = _parseVigencia(campos.vigencia);
+                      if (fecha) {
+                        var dias = Math.round((fecha - new Date()) / 86400000);
+                        var vigColor = dias < 0 ? "#e0492f" : dias < 30 ? "#d97706" : "#059669";
+                        var vigBg    = dias < 0 ? "#fef2f2"  : dias < 30 ? "#fffbeb"  : "#f0fdf4";
+                        var vigIcon  = dias < 0 ? "✗" : dias < 30 ? "⚠" : "✓";
+                        var vigTxt   = dias < 0
+                          ? "vencida hace " + Math.abs(dias) + " días — no válida"
+                          : dias === 0 ? "vence hoy"
+                          : dias < 30 ? "vence en " + dias + " días — por renovar"
+                          : "vigente por " + Math.round(dias / 30.44) + " mes" + (Math.round(dias / 30.44) !== 1 ? "es" : "");
+                        filas.push({ label:"Vigencia", valor:campos.vigencia,
+                          color:vigColor, bg:vigBg, icon:vigIcon, txt:vigTxt });
+                      }
+                    }
+
+                    /* ── Comprobante: antigüedad del recibo ── */
+                    if (docType === "domicilio" && campos.fechaDocumento) {
+                      filas.push({ label:"Período", valor:campos.fechaDocumento,
+                        color:"#2f6fed", bg:"#eff6ff", icon:"ℹ", txt:"verificar que sea reciente (≤ 3 meses)" });
+                    }
+
+                    if (filas.length === 0) return null;
+
+                    return (
+                      <div style={{ margin:"10px 14px", padding:"10px 14px", borderRadius:9,
+                        background:"var(--bg)", border:"1px solid var(--line)" }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:"var(--muted)",
+                          textTransform:"uppercase", letterSpacing:".07em", marginBottom:8 }}>
+                          Validación del documento
+                        </div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                          {filas.map(function(r, i) {
+                            return (
+                              <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:8,
+                                padding:"7px 10px", borderRadius:7, background:r.bg,
+                                border:"1px solid " + r.color + "33" }}>
+                                <span style={{ fontWeight:800, color:r.color, fontSize:13,
+                                  lineHeight:"18px", flexShrink:0, minWidth:14 }}>{r.icon}</span>
+                                <div style={{ fontSize:12, lineHeight:"18px", minWidth:0 }}>
+                                  <span style={{ color:"var(--muted)", fontWeight:600 }}>{r.label}: </span>
+                                  <span style={{ fontWeight:700, color:"var(--ink)" }}>{r.valor}</span>
+                                  <span style={{ color:r.color, fontWeight:600 }}> — {r.txt}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Aplicar */}
                   <div style={{ padding:"9px 14px", borderTop:"1px solid #a7f3d0", background:"#f0fdf4" }}>
                     <button onClick={aplicar}
@@ -1884,6 +1998,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   value={form.docId || null}
                   onChange={v => set("docId", v)}
                   onExtract={campos => aplicarCampos(campos, "id")}
+                  nombreReferencia={form.nombre || ""}
                 />
               </div>
               <div style={{ gridColumn:"1/-1", marginTop:4 }}>
@@ -1894,6 +2009,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   value={form.docLicencia || null}
                   onChange={v => set("docLicencia", v)}
                   onExtract={campos => aplicarCampos(campos, "licencia")}
+                  nombreReferencia={form.nombre || ""}
                 />
               </div>
               <div style={{ gridColumn:"1/-1", marginTop:4 }}>
@@ -1904,6 +2020,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   value={form.docDomicilio || null}
                   onChange={v => set("docDomicilio", v)}
                   onExtract={campos => aplicarCampos(campos, "domicilio")}
+                  nombreReferencia={form.nombre || ""}
                 />
               </div>
 
