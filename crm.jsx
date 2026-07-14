@@ -2598,21 +2598,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
             </Sec>
 
-            {/* § UNIDAD VINCULADA — ya mostrado en tab vehiculo, omitir aquí */}
-            {false && form.vinVinculado && (
-              <Sec ico={ICO_LINK} titulo="Unidad vinculada (Plan Piso)">
-                <Fld label="VIN" full>
-                  <div style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
-                    background:"var(--bg)", borderRadius:8, border:"1px solid var(--line)" }}>
-                    {ICO_AUTO}
-                    <code style={{ fontSize:13, fontWeight:700, color:"var(--ink)", letterSpacing:.5 }}>
-                      {form.vinVinculado}
-                    </code>
-                  </div>
-                </Fld>
-              </Sec>
-            )}
-
             )} {/* fin tabActivo perfil → seguimiento comercial */}
 
           </div> {/* fin inv-form-scroll */}
