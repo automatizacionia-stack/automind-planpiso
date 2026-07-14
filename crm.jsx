@@ -1856,7 +1856,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
             {/* ══ TAB: COTIZACIÓN ══ */}
             {tabActivo === "cot" && (<>
-            <Sec ico={ICO_AUTO} titulo="Selección de unidad y cotización">
+            <Sec ico={ICO_AUTO} titulo="Selección de unidad y cotización" defaultOpen>
               <Fld label="Unidad seleccionada" full>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   {form.unidadDesc ? (
