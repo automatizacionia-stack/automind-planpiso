@@ -1,20 +1,20 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Automind Â· Plan Piso â€” SemÃ¡foro</title>
+<title>Automind · Plan Piso — Semáforo</title>
 <!-- Capturar hash ANTES de que Supabase lo procese y lo limpie -->
 <script>window.__initialHash = window.location.hash;</script>
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<!-- ConfiguraciÃ³n del proyecto (URL + anon key) â€” editar config.js -->
+<!-- Configuración del proyecto (URL + anon key) — editar config.js -->
 <script src="config.js?v=20260618h"></script>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<!-- PDF.js â€” renderiza PDFs a canvas para extracciÃ³n IA en el CRM -->
+<!-- PDF.js — renderiza PDFs a canvas para extracción IA en el CRM -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 :root{
@@ -91,11 +91,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .bm-foot{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:9px 10px;border-radius:9px;font-size:13px;font-weight:600;color:var(--ink-2);transition:background .12s;}
 .bm-foot:hover{background:var(--bg);color:var(--accent);}
 .nav{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
-/* Grupos de secciÃ³n â€” contenedor con glass card */
+/* Grupos de sección — contenedor con glass card */
 .nav-group{display:flex;flex-direction:column;gap:1px;border-radius:11px;padding:4px;border:1px solid transparent;margin-bottom:2px;}
 .nav-group[data-s="plan"]{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.18);}
 .nav-group[data-s="ventas"]{background:rgba(124,58,237,.18);border-color:rgba(124,58,237,.40);}
-/* Label de secciÃ³n dentro del grupo */
+/* Label de sección dentro del grupo */
 .nav-section{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:7px 8px 5px;display:flex;align-items:center;gap:7px;color:rgba(255,255,255,.55);}
 .nav-group[data-s="ventas"] .nav-section{color:rgba(192,167,255,.95);}
 /* Items */
@@ -244,17 +244,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dkpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
 .dkpi-value{font-size:24px;font-weight:700;line-height:1;color:var(--ink);}
 .dkpi-sub{font-size:11px;color:var(--muted);margin-top:4px;}
-/* Dashboard â€” layout grids */
+/* Dashboard — layout grids */
 .dkpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:10px;}
 .d-grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:10px;}
 .d-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-/* Dashboard â€” list rows */
+/* Dashboard — list rows */
 .drow{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line-2);}
 .drow:last-child{border-bottom:none;}
-/* Dashboard â€” mini bar */
+/* Dashboard — mini bar */
 .dbar{flex:1;background:var(--bg);border-radius:3px;overflow:hidden;}
 .dbar-fill{height:100%;border-radius:3px;}
-/* KPI grid â€” entrada escalonada */
+/* KPI grid — entrada escalonada */
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 .dkpi-grid>*,.mini-grid>*{animation:fadeUp 280ms var(--ease-out) both;}
 .dkpi-grid>*:nth-child(1),.mini-grid>*:nth-child(1){animation-delay:0ms;}
@@ -265,9 +265,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* Feedback banners (success / error) */
 .fb-ok{background:#e7f5ed;color:#0f7a40;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;}
 .fb-err{background:#fcebe7;color:#e0492f;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;}
-/* Alertas â€” columna de toggle (Vendedor / Gerente / Director) */
+/* Alertas — columna de toggle (Vendedor / Gerente / Director) */
 .alert-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
-/* Alertas â€” header de la tabla de reglas */
+/* Alertas — header de la tabla de reglas */
 .alert-hd{display:flex;align-items:center;gap:0;padding:12px 24px;background:var(--bg);border-bottom:1px solid var(--line);font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
 
 /* ---------- Vehicle list ---------- */
@@ -619,12 +619,12 @@ select.cf-input{cursor:pointer;}
 .dv-nombre{font-size:14px;font-weight:700;color:var(--ink);}
 .dv-email{font-size:12px;color:var(--muted);}
 
-/* Dashboard list â€” add vendedor column */
+/* Dashboard list — add vendedor column */
 .vrow{grid-template-columns:2.5fr 1fr 90px 90px 110px 70px 100px 120px;}
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════
    Editor de inventario (Registro de Inventario)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ══════════════════════════════════════ */
 .inv-editor-shell{display:flex;height:100%;overflow:hidden;background:var(--bg);}
 
 /* Panel izquierdo */
@@ -636,7 +636,7 @@ select.cf-input{cursor:pointer;}
 .inv-list-body{flex:1;overflow-y:auto;}
 .inv-list-foot{padding:8px 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--line-2);text-align:center;}
 
-/* Ãtem de lista */
+/* Ítem de lista */
 .vie-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-bottom:1px solid var(--line-2);text-align:left;transition:background .1s;border-radius:0;}
 .vie-item:hover{background:var(--bg);}
 .vie-item.active{background:color-mix(in srgb,var(--accent) 12%,#fff);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 30%,transparent);}
@@ -694,7 +694,7 @@ select.ef-input{cursor:pointer;}
 .ef-calc-val.neg{color:#bb3018;}
 .ef-calc-val.warn{color:#9a6a06;}
 
-/* SecciÃ³n jerarquÃ­a en editor */
+/* Sección jerarquía en editor */
 .jq-wrap{background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:18px 20px;}
 .jq-chain{display:flex;flex-direction:column;gap:0;margin-top:14px;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
 .jq-nivel{padding:10px 14px;}
@@ -706,7 +706,7 @@ select.ef-input{cursor:pointer;}
 .jq-email{font-size:12px;color:var(--accent);}
 .jq-arrow{text-align:center;color:var(--muted);font-size:14px;padding:3px 0;background:var(--line-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
 
-/* Estado vacÃ­o */
+/* Estado vacío */
 .inv-empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--muted);text-align:center;padding:40px;background:var(--bg);}
 .inv-empty-icon{width:72px;height:72px;border-radius:20px;background:color-mix(in srgb,var(--accent) 10%,#fff);display:grid;place-items:center;color:var(--accent);margin-bottom:4px;}
 .inv-empty-state h3{font-size:17px;font-weight:700;color:var(--ink);margin:0;}
@@ -747,7 +747,7 @@ select.ef-input{cursor:pointer;}
 .cf-derived-name{font-size:13.5px;font-weight:700;color:var(--ink);}
 .cf-derived-email{font-size:12px;color:var(--accent);}
 
-/* â”€â”€ Financieras â”€â”€ */
+/* ── Financieras ── */
 .fin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
 .fin-card{background:var(--card);border:1.5px solid var(--line);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:14px;transition:border-color .15s,box-shadow .15s;}
 .fin-card:hover{border-color:var(--accent);box-shadow:0 4px 18px -8px rgba(47,111,237,.18);}
@@ -771,12 +771,12 @@ select.ef-input{cursor:pointer;}
 .fin-toggle{font-size:12px;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;padding:3px 8px;border-radius:6px;transition:background .12s;}
 .fin-toggle:hover{background:color-mix(in srgb,var(--accent) 10%,#fff);}
 
-/* â”€â”€ Crear contraseÃ±a (invite flow) â”€â”€ */
+/* ── Crear contraseña (invite flow) ── */
 .pwd-rules{display:flex;flex-direction:column;gap:5px;margin-top:8px;}
 .pwd-rule{font-size:12px;color:var(--muted);transition:color .2s;}
 .pwd-rule.ok{color:#1f9d57;font-weight:600;}
 
-/* â”€â”€ MÃ³dulo Registro de usuarios â”€â”€ */
+/* ── Módulo Registro de usuarios ── */
 .usr-shell{padding:var(--pad);display:flex;flex-direction:column;gap:24px;}
 .usr-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
 .usr-list{background:var(--card);border-radius:var(--radius);border:1px solid var(--line);overflow:hidden;}
@@ -791,7 +791,7 @@ select.ef-input{cursor:pointer;}
 .usr-status-badge.pendiente{background:#fbf2da;color:#9a6a06;}
 .usr-status-badge.dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.7;}
 
-/* Drawer de invitaciÃ³n */
+/* Drawer de invitación */
 .inv-drawer-scrim{position:fixed;inset:0;background:rgba(10,16,40,.28);z-index:100;animation:fadeIn .18s;}
 .inv-drawer{position:fixed;right:0;top:0;bottom:0;width:440px;background:var(--card);z-index:101;display:flex;flex-direction:column;box-shadow:-18px 0 60px -16px rgba(10,16,40,.22);animation:slideIn .22s ease;}
 .inv-drawer-head{display:flex;align-items:center;justify-content:space-between;padding:22px 24px 18px;border-bottom:1px solid var(--line);}
@@ -818,7 +818,7 @@ select.ef-input{cursor:pointer;}
 
 
 
-/* â”€â”€ Workspace Selector â”€â”€ */
+/* ── Workspace Selector ── */
 .ws-fullpage{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);}
 .ws-fp-header{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--card);border-bottom:1px solid var(--line);}
 .ws-fp-body{flex:1;display:flex;flex-direction:column;align-items:center;padding:48px 24px;}
@@ -856,13 +856,13 @@ select.ef-input{cursor:pointer;}
 .ws-switcher-portal{position:fixed;bottom:24px;left:calc(var(--sb-w) + 12px);z-index:200;}
 
 
-/* â”€â”€ EdiciÃ³n inline en grid â”€â”€ */
+/* ── Edición inline en grid ── */
 .editable-cell{cursor:cell;}
 .editable-cell:hover{background:color-mix(in srgb,var(--accent) 5%,#fff) !important;}
 .cell-edit-input{position:absolute;inset:0;width:100%;height:100%;border:2px solid var(--accent);border-radius:4px;padding:0 8px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink);outline:none;z-index:10;}
 
 
-/* â”€â”€ MenÃº contextual de fila â”€â”€ */
+/* ── Menú contextual de fila ── */
 .row-ctx-menu{position:fixed;z-index:500;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px -8px rgba(10,16,40,.28);padding:6px;min-width:170px;animation:bmIn .12s ease;}
 .ctx-item{display:flex;align-items:center;gap:9px;width:100%;padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--ink-2);border-radius:7px;transition:background .1s;}
 .ctx-item:hover{background:var(--bg);color:var(--ink);}
@@ -872,7 +872,7 @@ select.ef-input{cursor:pointer;}
 .del-modal-scrim{position:fixed;inset:0;background:rgba(10,16,40,.24);z-index:1000;}
 
 
-/* â”€â”€ Grupo colapsable â”€â”€ */
+/* ── Grupo colapsable ── */
 .vgroup.collapsible{display:flex;align-items:center;gap:8px;width:100%;text-align:left;cursor:pointer;padding:10px 20px;background:var(--bg);border-top:1px solid var(--line);border-bottom:1px solid var(--line-2);transition:background .12s;}
 .vgroup.collapsible:hover{background:color-mix(in srgb,var(--sol) 6%,#f3f5fb);}
 .vg-chevron{display:grid;place-items:center;color:var(--muted);transition:transform .2s var(--ease-out);flex-shrink:0;}
@@ -881,15 +881,15 @@ select.ef-input{cursor:pointer;}
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   RESPONSIVE â€” Desktop zoom + Mobile (â‰¤768px / â‰¤480px)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — Desktop zoom + Mobile (≤768px / ≤480px)
+   ══════════════════════════════════════════════════════════════ */
 
-/* â”€â”€ Desktop: evitar que zoom del navegador corte contenido â”€â”€ */
+/* ── Desktop: evitar que zoom del navegador corte contenido ── */
 html{overflow-x:auto;}
 .shell{min-width:860px;}
 
-/* â”€â”€ Mobile header (hamburguesa + tÃ­tulo) â€” oculto en desktop â”€â”€ */
+/* ── Mobile header (hamburguesa + título) — oculto en desktop ── */
 .mobile-header{
   display:none;align-items:center;gap:12px;
   padding:0 14px;height:52px;flex:0 0 52px;
@@ -903,7 +903,7 @@ html{overflow-x:auto;}
 .hamburger-btn:hover{background:var(--bg);}
 .mobile-title{font-size:15px;font-weight:700;color:var(--ink);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-/* â”€â”€ Sidebar: overlay en mobile â”€â”€ */
+/* ── Sidebar: overlay en mobile ── */
 .sidebar-scrim{
   display:none;position:fixed;inset:0;
   background:rgba(10,16,40,.55);z-index:198;
@@ -919,7 +919,7 @@ html{overflow-x:auto;}
 }
 .sidebar-close-btn:hover{background:rgba(255,255,255,.2);}
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• BREAKPOINT â‰¤ 768px â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ════════════════ BREAKPOINT ≤ 768px ════════════════ */
 @media(max-width:768px){
   /* Shell */
   html{overflow-x:hidden;}
@@ -947,12 +947,12 @@ html{overflow-x:auto;}
   /* Main ocupa todo el ancho */
   .main{min-width:0;}
 
-  /* Padding de pÃ¡gina */
+  /* Padding de página */
   .page{padding:16px 14px 80px;}
   .page-head h1{font-size:22px;margin-bottom:8px;}
   .page-sub{font-size:13.5px;}
 
-  /* â”€â”€ Grids responsive â”€â”€ */
+  /* ── Grids responsive ── */
   .sem-grid{grid-template-columns:1fr 1fr;}
   .mini-grid{grid-template-columns:1fr 1fr;}
   .dkpi-grid{grid-template-columns:1fr 1fr;}
@@ -961,7 +961,7 @@ html{overflow-x:auto;}
   .two-col{grid-template-columns:1fr;}
   .cf-row{grid-template-columns:1fr;}
 
-  /* â”€â”€ Vehicle list: tarjeta compacta â”€â”€ */
+  /* ── Vehicle list: tarjeta compacta ── */
   .vrow.vhead{display:none !important;}
   .vgroup.collapsible{padding:8px 14px;font-size:13px;}
   button.vrow{
@@ -976,23 +976,23 @@ html{overflow-x:auto;}
     margin-bottom:5px;
     align-items:start;
   }
-  /* Nombre del vehÃ­culo: fila completa */
+  /* Nombre del vehículo: fila completa */
   button.vrow>*:nth-child(1){grid-column:1/-1;grid-row:1;}
-  /* DÃ­as en piso: col 1 fila 2 */
+  /* Días en piso: col 1 fila 2 */
   button.vrow>*:nth-child(2){grid-column:1;grid-row:2;font-size:12.5px;text-align:left !important;}
   /* % Plan: col 2 fila 2, alineado derecha */
   button.vrow>*:nth-child(5){grid-column:2;grid-row:2;font-size:12.5px;text-align:right !important;}
-  /* Ocultar columnas menos crÃ­ticas */
+  /* Ocultar columnas menos críticas */
   button.vrow>*:nth-child(3),
   button.vrow>*:nth-child(4),
   button.vrow>*:nth-child(6),
   button.vrow>*:nth-child(7){display:none;}
 
-  /* â”€â”€ Drawer full width â”€â”€ */
+  /* ── Drawer full width ── */
   .drawer{width:100%;max-width:100%;padding:20px 18px 28px;}
   .dr-grid{grid-template-columns:1fr 1fr;}
 
-  /* â”€â”€ Login apilado â”€â”€ */
+  /* ── Login apilado ── */
   .login-shell{flex-direction:column;}
   .login-side{width:100%;flex:0 0 auto;padding:28px 24px;min-height:auto;}
   .login-hero{margin:18px 0;}
@@ -1002,7 +1002,7 @@ html{overflow-x:auto;}
   .login-main{padding:20px 16px;}
   .login-card{padding:28px 20px;border-radius:14px;}
 
-  /* â”€â”€ Colaboradores: scroll horizontal â”€â”€ */
+  /* ── Colaboradores: scroll horizontal ── */
   .cl-head,.cl-row{
     grid-template-columns:2fr 1fr 44px;
     font-size:12.5px;
@@ -1010,29 +1010,29 @@ html{overflow-x:auto;}
   .cl-head>*:nth-child(n+4):not(:last-child),
   .cl-row>*:nth-child(n+4):not(:last-child){display:none;}
 
-  /* â”€â”€ Importar: stepper compacto â”€â”€ */
+  /* ── Importar: stepper compacto ── */
   .imp-step-item>span:not(.imp-step-num){display:none;}
   .imp-step-line{min-width:16px;}
 
-  /* â”€â”€ DB toolbar â”€â”€ */
+  /* ── DB toolbar ── */
   .db-toolbar{gap:8px;}
   .search{min-width:0;flex:1;}
   .db-legend{display:none;}
 
-  /* â”€â”€ Workspace selector â”€â”€ */
+  /* ── Workspace selector ── */
   .ws-panel{width:100%;max-width:100%;border-radius:0;}
 
-  /* â”€â”€ Mini KPIs â”€â”€ */
+  /* ── Mini KPIs ── */
   .mk-value{font-size:17px;}
   .sh-num{font-size:40px;}
 
-  /* â”€â”€ Formulario del inventario editor: split view apilado â”€â”€ */
+  /* ── Formulario del inventario editor: split view apilado ── */
   .inv-editor-shell{flex-direction:column;}
   .inv-list-panel{width:100%;flex:0 0 auto;max-height:200px;border-right:none;border-bottom:1.5px solid var(--line);}
   .inv-detail-panel{flex:1;overflow-y:auto;}
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• BREAKPOINT â‰¤ 480px â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ════════════════ BREAKPOINT ≤ 480px ════════════════ */
 @media(max-width:480px){
   .sem-grid{grid-template-columns:1fr;}
   .mini-grid{grid-template-columns:1fr 1fr;}
@@ -1045,7 +1045,7 @@ html{overflow-x:auto;}
   .mk-value{font-size:16px;}
   .login-card{padding:22px 16px;}
   .login-hero h1{font-size:22px;}
-  /* Sem hero mÃ¡s compacto */
+  /* Sem hero más compacto */
   .sem-hero{padding:14px 16px;}
 }
 
@@ -1075,7 +1075,7 @@ function __errBlock(title, lines, stack) {
   d.appendChild(pre);
 }
 window.onerror = function(msg, src, line, col, err) {
-  __errBlock('Error detectado', [String(msg), 'Archivo: ' + src + ' Â· LÃ­nea: ' + line],
+  __errBlock('Error detectado', [String(msg), 'Archivo: ' + src + ' · Línea: ' + line],
     err && err.stack ? err.stack : '');
 };
 window.addEventListener('unhandledrejection', function(e) {
@@ -1112,7 +1112,7 @@ window.addEventListener('unhandledrejection', function(e) {
 <script type="text/babel" src="workspace-selector.jsx?v=20260707a"></script>
 <script type="text/babel" src="alertas.jsx?v=20260706e"></script>
 <script type="text/babel" src="ventas.jsx?v=20260710b"></script>
-<script type="text/babel" src="crm.jsx?v=20260714n"></script>
+<script type="text/babel" src="crm.jsx?v=20260714o"></script>
 <script type="text/babel" src="super-admin.jsx?v=20260710d"></script>
 <script type="text/babel" src="app.jsx?v=20260714g"></script>
 <script type="text/babel">

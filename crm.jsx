@@ -1374,7 +1374,7 @@ function ExpedienteResumen({ form }) {
 /* ── Stepper de etapas ────────────────────────────────────────────────────── */
 function EtapaStepper({ etapaActual, onCambiar, formaPagoCot }) {
   var idx = ETAPAS_CRM.indexOf(etapaActual);
-  var esContado = formaPagoCot === "Contado";
+  var esNoCredito = formaPagoCot !== "Crédito"; /* No definido + Contado bloquean */
   return (
     <div style={{
       padding:"14px 20px 10px",
@@ -1389,7 +1389,7 @@ function EtapaStepper({ etapaActual, onCambiar, formaPagoCot }) {
           var completada = i < idx;
           var activa     = i === idx;
           var futura     = i > idx;
-          var esNA       = esContado && etapa === "Crédito";
+          var esNA       = esNoCredito && etapa === "Crédito";
           var cfg        = ETAPA_CFG[etapa] || { dot:"#9ca3af", bg:"#f3f4f6", txt:"#6b7280" };
           var dotBorder  = esNA ? "#d1d5db" : activa ? cfg.dot : completada ? "#1f9d57" : "var(--line)";
           var dotBg      = esNA ? "#f3f4f6" : activa ? cfg.dot : completada ? "#1f9d57" : "var(--card)";
@@ -1959,7 +1959,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                         borderLeft: isAct ? "3px solid var(--accent)" : "3px solid transparent",
                       }}>
                       {(function() {
-                        var esCredNA = form && t.id === "credito" && form.formaPagoCot === "Contado";
+                        var esCredNA = form && t.id === "credito" && form.formaPagoCot !== "Crédito";
                         return (<>
                           <span style={{ fontSize:14, lineHeight:1, flexShrink:0,
                             opacity: esCredNA ? 0.4 : 1 }}>{esCredNA ? "🔒" : t.ico}</span>
@@ -2459,7 +2459,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                     </div>
                   )}
                 </div>
-                {form.formaPagoCot === "Contado" && (
+                {form.formaPagoCot !== "Crédito" && (
                   <div style={{ fontSize:11, fontWeight:700, color:"#166534",
                     background:"#dcfce7", border:"1px solid #86efac",
                     borderRadius:20, padding:"4px 10px", whiteSpace:"nowrap" }}>
@@ -2490,7 +2490,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
             {/* ══ TAB: SOLICITUD DE CRÉDITO ══ */}
             {tabActivo === "credito" && (
-              form.formaPagoCot === "Contado" ? (
+              form.formaPagoCot !== "Crédito" ? (
                 /* ── Bloqueo: pago en efectivo — crédito no aplica ── */
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
                   justifyContent:"center", gap:20, padding:"48px 32px", textAlign:"center",
@@ -2503,8 +2503,8 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                       marginBottom:8 }}>Crédito no aplica</div>
                     <div style={{ fontSize:13, color:"var(--muted)", maxWidth:340,
                       lineHeight:1.55 }}>
-                      La forma de pago confirmada en cotización es <strong>Efectivo (Contado)</strong>.
-                      Esta sección no es requerida para este cliente.
+                      La forma de pago no está configurada como <strong>Crédito</strong>.
+                      Esta sección solo aplica cuando el cliente financia con una institución bancaria.
                     </div>
                   </div>
                   <div style={{ padding:"14px 20px", borderRadius:10,
