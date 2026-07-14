@@ -617,6 +617,18 @@
       docId:       row.doc_id_key  ? { name: row.doc_id_nombre  || "", storageKey: row.doc_id_key  } : null,
       docLicencia: row.doc_lic_key ? { name: row.doc_lic_nombre || "", storageKey: row.doc_lic_key } : null,
       docDomicilio:row.doc_dom_key ? { name: row.doc_dom_nombre || "", storageKey: row.doc_dom_key } : null,
+      // Estado general del proceso comercial
+      estadoGeneral:  row.estado_general    || "Activo",
+      // Pago
+      pagoMetodo:     row.pago_metodo       || "",
+      pagoFecha:      row.pago_fecha        || "",
+      pagoReferencia: row.pago_referencia   || "",
+      pagoMonto:      Number(row.pago_monto) || 0,
+      pagoNotas:      row.pago_notas        || "",
+      // Entrega
+      entregaFecha:   row.entrega_fecha     || "",
+      entregaKm:      row.entrega_km        || "",
+      entregaNotas:   row.entrega_notas     || "",
     };
   }
 
@@ -697,6 +709,18 @@
       doc_lic_nombre: c.docLicencia ? (c.docLicencia.name       || null) : null,
       doc_dom_key:    c.docDomicilio? (c.docDomicilio.storageKey|| null) : null,
       doc_dom_nombre: c.docDomicilio? (c.docDomicilio.name      || null) : null,
+      // Estado general
+      estado_general:   c.estadoGeneral  || "Activo",
+      // Pago
+      pago_metodo:      c.pagoMetodo     || null,
+      pago_fecha:       c.pagoFecha      || null,
+      pago_referencia:  c.pagoReferencia || null,
+      pago_monto:       Number(c.pagoMonto) || null,
+      pago_notas:       c.pagoNotas      || null,
+      // Entrega
+      entrega_fecha:    c.entregaFecha   || null,
+      entrega_km:       c.entregaKm      || null,
+      entrega_notas:    c.entregaNotas   || null,
       workspace_id:         agencyId,
       agency_id:            parentId,
     };
@@ -718,17 +742,64 @@
     if (isNew) {
       const { data, error } = await client.from("clientes").insert(row).select().single();
       if (error) throw new Error(error.message);
-      return clienteFromDbRow(data);
+      var saved = clienteFromDbRow(data);
+      addClienteHistorial(saved.id, agencyId, "nota", "Cliente registrado en el sistema");
+      return saved;
     } else {
+      // Leer datos anteriores para detectar cambios significativos
+      var prevData = clienteData._prev || {};
       const { data, error } = await client.from("clientes").upsert({ id: clienteData.id, ...row }).select().single();
       if (error) throw new Error(error.message);
-      return clienteFromDbRow(data);
+      var saved = clienteFromDbRow(data);
+      // Auto-log cambios relevantes
+      if (prevData.etapa && prevData.etapa !== saved.etapa) {
+        addClienteHistorial(saved.id, agencyId, "etapa",
+          "Etapa actualizada: " + prevData.etapa + " → " + saved.etapa);
+      }
+      if (prevData.estadoGeneral && prevData.estadoGeneral !== saved.estadoGeneral) {
+        addClienteHistorial(saved.id, agencyId, "estado",
+          "Estado actualizado: " + prevData.estadoGeneral + " → " + saved.estadoGeneral);
+      }
+      if (prevData.asesor !== saved.asesor && saved.asesor) {
+        addClienteHistorial(saved.id, agencyId, "vendedor",
+          "Vendedor asignado: " + saved.asesor);
+      }
+      return saved;
     }
   }
 
   async function deleteCliente(id) {
     const { error } = await client.from("clientes").delete().eq("id", id);
     if (error) throw new Error(error.message);
+  }
+
+  /* ── Historial de actividad del cliente ───────────────────── */
+
+  async function getClienteHistorial(clienteId) {
+    var { data, error } = await client
+      .from("cliente_historial")
+      .select("*")
+      .eq("cliente_id", clienteId)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) { console.warn("[historial]", error.message); return []; }
+    return data || [];
+  }
+
+  async function addClienteHistorial(clienteId, workspaceId, tipoEvento, descripcion) {
+    try {
+      var { data: authData } = await client.auth.getUser();
+      var nombreUsuario = (authData && authData.user && authData.user.email) ? authData.user.email : "Sistema";
+      await client.from("cliente_historial").insert({
+        cliente_id:     clienteId,
+        workspace_id:   workspaceId,
+        tipo_evento:    tipoEvento,
+        descripcion:    descripcion,
+        usuario_nombre: nombreUsuario,
+      });
+    } catch(e) {
+      console.warn("[historial] No se pudo registrar:", e.message);
+    }
   }
 
   /* ── Super Admin: Audit log ────────────────────────────────── */
@@ -952,6 +1023,8 @@
     loadAgencyWorkspaces,
     logSuperAdminAction,
     loadAuditLog,
+    getClienteHistorial,
+    addClienteHistorial,
     storage: client.storage,
   };
 })();

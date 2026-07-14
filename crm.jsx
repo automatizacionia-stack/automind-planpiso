@@ -1156,6 +1156,116 @@ function EtapaStepper({ etapaActual, onCambiar }) {
 }
 
 /* ── Editor split‑panel de clientes (espejo de inventario‑editor) ────────── */
+
+/* ── Cabecera del expediente individual ────────────────────────────────── */
+function ExpedienteHeader({ form, onChangeEstado }) {
+  var items    = _buildExpedienteItems(form);
+  var total    = items.length;
+  var done     = items.filter(function(x){ return x.ok; }).length;
+  var pct      = total > 0 ? Math.round((done / total) * 100) : 0;
+  var docsPend = items.filter(function(x){ return !x.ok && !x.manual; }).length;
+
+  var ESTADOS  = ["Activo","En espera","Detenido","Cancelado","Venta completada"];
+  var ESTADO_CLR = {
+    "Activo":           { bg:"rgba(34,197,94,.12)",  txt:"#16a34a", dot:"#22c55e" },
+    "En espera":        { bg:"rgba(234,179,8,.12)",   txt:"#854d0e", dot:"#eab308" },
+    "Detenido":         { bg:"rgba(107,114,128,.12)", txt:"#4b5563", dot:"#6b7280" },
+    "Cancelado":        { bg:"rgba(239,68,68,.10)",   txt:"#dc2626", dot:"#ef4444" },
+    "Venta completada": { bg:"rgba(59,130,246,.10)",  txt:"#1d4ed8", dot:"#3b82f6" },
+  };
+  var est    = form.estadoGeneral || "Activo";
+  var clrEst = ESTADO_CLR[est] || ESTADO_CLR["Activo"];
+  var pctColor = pct >= 80 ? "#22c55e" : pct >= 50 ? "#eab308" : "#ef4444";
+
+  return (
+    <div style={{
+      padding:"14px 20px 12px", background:"var(--card)",
+      borderBottom:"1px solid var(--line)", flexShrink:0,
+    }}>
+      {/* Fila 1: nombre + estado + pct */}
+      <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:8 }}>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:16, fontWeight:700, color:"var(--ink)",
+            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+            {form.nombre || "Nuevo cliente"}
+          </div>
+          <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>
+            {form.tipo || "Persona física"}
+            {form.tel   ? " · " + form.tel   : ""}
+            {form.email ? " · " + form.email : ""}
+          </div>
+        </div>
+        <select value={est}
+          onChange={function(e){ onChangeEstado(e.target.value); }}
+          style={{
+            padding:"4px 10px", borderRadius:7, fontSize:12, fontWeight:700,
+            border:"1px solid " + clrEst.dot,
+            background:clrEst.bg, color:clrEst.txt,
+            cursor:"pointer", outline:"none", flexShrink:0,
+          }}>
+          {ESTADOS.map(function(s){ return <option key={s} value={s}>{s}</option>; })}
+        </select>
+      </div>
+
+      {/* Fila 2: pills de info rápida */}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:10 }}>
+        {form.asesor && (
+          <span style={{ fontSize:11, padding:"2px 8px", borderRadius:5,
+            background:"var(--bg)", border:"1px solid var(--line)", color:"var(--muted)" }}>
+            👤 {form.asesor}
+          </span>
+        )}
+        {(form.unidadDesc || form.interes) && (
+          <span style={{ fontSize:11, padding:"2px 8px", borderRadius:5,
+            background:"var(--bg)", border:"1px solid var(--line)", color:"var(--ink)", fontWeight:600 }}>
+            🚗 {form.unidadDesc || form.interes}
+          </span>
+        )}
+        {form.formaPagoCot && form.formaPagoCot !== "No definido" ? (
+          <span style={{
+            fontSize:11, padding:"2px 8px", borderRadius:5, fontWeight:700,
+            background: form.formaPagoCot === "Crédito" ? "rgba(59,130,246,.12)" : "rgba(34,197,94,.12)",
+            color:      form.formaPagoCot === "Crédito" ? "#1d4ed8"              : "#15803d",
+          }}>
+            {form.formaPagoCot === "Crédito" ? "💳 Crédito" : "💵 Contado"}
+          </span>
+        ) : null}
+        {form.etapa && (
+          <span style={{ fontSize:11, padding:"2px 8px", borderRadius:5,
+            background:"rgba(37,99,235,.10)", color:"#1d4ed8",
+            fontWeight:600 }}>
+            {form.etapa}
+          </span>
+        )}
+        {docsPend > 0 && (
+          <span style={{ fontSize:11, padding:"2px 8px", borderRadius:5,
+            background:"rgba(239,68,68,.10)", color:"#dc2626", fontWeight:700 }}>
+            ⚠️ {docsPend} doc{docsPend > 1 ? "s" : ""} pendiente{docsPend > 1 ? "s" : ""}
+          </span>
+        )}
+        {form.prox && (
+          <span style={{ fontSize:11, padding:"2px 8px", borderRadius:5,
+            background:"var(--bg)", border:"1px solid var(--line)", color:"var(--muted)" }}>
+            📅 {form.prox}
+            {form.fprox ? " · " + new Date(form.fprox + "T12:00:00").toLocaleDateString("es-MX",{ day:"numeric", month:"short" }) : ""}
+          </span>
+        )}
+      </div>
+
+      {/* Fila 3: barra de avance */}
+      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+        <span style={{ fontSize:11, color:"var(--muted)", flexShrink:0 }}>Avance</span>
+        <div style={{ flex:1, height:5, background:"var(--line)", borderRadius:3, overflow:"hidden" }}>
+          <div style={{ height:"100%", width:pct+"%", background:pctColor,
+            borderRadius:3, transition:"width .4s ease" }} />
+        </div>
+        <span style={{ fontSize:11, fontWeight:700, color:pctColor, minWidth:32 }}>{pct}%</span>
+        <span style={{ fontSize:11, color:"var(--muted)" }}>{done}/{total} ítems</span>
+      </div>
+    </div>
+  );
+}
+
 function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const primer = defaultSelId
     ? (clientes.find(c => c.id === defaultSelId) || clientes[0])
@@ -1169,6 +1279,11 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
   const [showUnitPicker, setShowUnitPicker] = React.useState(false);
   const [e8Subiendo, setE8Subiendo] = React.useState(false);
   const [e8ErrSub,   setE8ErrSub]   = React.useState('');
+  const [tabActivo,       setTabActivo]       = React.useState("datos");
+  const [historial,       setHistorial]       = React.useState([]);
+  const [cargandoHist,    setCargandoHist]    = React.useState(false);
+  const [filtroHistorial, setFiltroHistorial] = React.useState("");
+  const [notaHistorial,   setNotaHistorial]   = React.useState("");
 
   /* Auto-seleccionar cuando llega un cliente recién creado */
   React.useEffect(() => {
@@ -1202,7 +1317,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
     if (!form) return;
     try {
       /* ── Subir documentos pendientes a Storage antes de guardar ── */
-      var formToSave = Object.assign({}, form);
+      var formToSave = Object.assign({}, form, { _prev: { etapa: form.etapa, estadoGeneral: form.estadoGeneral, asesor: form.asesor } });
       var docCampos = [
         { key:"docId",        label:"INE"          },
         { key:"docLicencia",  label:"Licencia"     },
@@ -1286,6 +1401,34 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
     setDirty(true);
   }
 
+  /* Cargar historial cuando se abre el tab o cambia el cliente */
+  React.useEffect(function() {
+    if (tabActivo !== "historial" || !selId) return;
+    if (!window.DB || !window.DB.getClienteHistorial) return;
+    setCargandoHist(true);
+    window.DB.getClienteHistorial(selId)
+      .then(function(d){ setHistorial(d || []); })
+      .catch(function(e){ console.warn("[hist]", e.message); })
+      .finally(function(){ setCargandoHist(false); });
+  }, [tabActivo, selId]);
+
+  /* Reset tab al cambiar de cliente */
+  React.useEffect(function() {
+    setTabActivo("datos");
+    setHistorial([]);
+    setNotaHistorial("");
+  }, [selId]);
+
+  /* Historial filtrado */
+  var historialItems = filtroHistorial
+    ? historial.filter(function(h){ return h.tipo_evento === filtroHistorial; })
+    : historial;
+
+  /* Guardar referencia previa para auto-log de cambios */
+  var _prev = form ? {
+    etapa: form.etapa, estadoGeneral: form.estadoGeneral, asesor: form.asesor
+  } : {};
+
   const filtrados = q
     ? clientes.filter(c => [c.nombre, c.tel, c.email, c.interes, c.ciudad, c.asesor]
         .join(" ").toLowerCase().includes(q.toLowerCase()))
@@ -1336,6 +1479,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
       {form ? (
         <div className="inv-form-panel">
 
+          {/* Barra fija: título + guardar */}
           <div className="inv-form-head">
             <div style={{ minWidth:0 }}>
               <div className="inv-form-vin">{form.nombre || "Nuevo cliente"}</div>
@@ -1352,15 +1496,63 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </div>
           </div>
 
+          {/* ── Header del expediente (siempre visible) ── */}
+          <ExpedienteHeader form={form} onChangeEstado={function(v){ set("estadoGeneral", v); }} />
+
           {/* ── Stepper de etapas ── */}
           <EtapaStepper etapaActual={form.etapa || "Prospección"} onCambiar={v => set("etapa", v)} />
 
-          {/* ── Resumen de expediente (siempre visible) ── */}
-          <ExpedienteResumen form={form} />
+          {/* ── Barra de pestañas ── */}
+          {(function(){
+            var TABS = [
+              { id:"datos",    lbl:"Datos",         ico:"👤" },
+              { id:"perfil",   lbl:"Perfilamiento",  ico:"🎯" },
+              { id:"vehiculo", lbl:"Vehículo",       ico:"🚗" },
+              { id:"prueba",   lbl:"Prueba manejo",  ico:"🛣" },
+              { id:"cot",      lbl:"Cotización",     ico:"💰" },
+              { id:"fpago",    lbl:"Forma de pago",  ico:"💳" },
+              { id:"credito",  lbl:"Crédito",        ico:"🏦" },
+              { id:"docs",     lbl:"Documentación",  ico:"📄" },
+              { id:"aprob",    lbl:"Aprobaciones",   ico:"✅" },
+              { id:"pago",     lbl:"Pago",           ico:"💵" },
+              { id:"entrega",  lbl:"Entrega",        ico:"🚚" },
+              { id:"historial",lbl:"Historial",      ico:"📋" },
+            ];
+            return (
+              <div style={{
+                display:"flex", gap:2, padding:"6px 16px", overflowX:"auto",
+                background:"var(--bg)", borderBottom:"1px solid var(--line)", flexShrink:0,
+                scrollbarWidth:"none",
+              }}>
+                {TABS.map(function(t){
+                  var isAct = tabActivo === t.id;
+                  return (
+                    <button key={t.id} type="button"
+                      onClick={function(){ setTabActivo(t.id); }}
+                      style={{
+                        display:"flex", alignItems:"center", gap:4,
+                        padding:"5px 10px", borderRadius:7, border:"none",
+                        fontSize:12, fontWeight: isAct ? 700 : 500,
+                        cursor:"pointer", whiteSpace:"nowrap", transition:"all .15s",
+                        background: isAct ? "var(--accent)"    : "transparent",
+                        color:      isAct ? "#fff"              : "var(--muted)",
+                      }}>
+                      <span style={{ fontSize:13 }}>{t.ico}</span>
+                      {t.lbl}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
+          {/* ── Contenido de la pestaña activa ── */}
           <div className="inv-form-scroll">
 
-            {/* § DATOS DEL CLIENTE */}
+            {/* ══ TAB: DATOS DEL CLIENTE ══ */}
+            {tabActivo === "datos" && (<>
+
+            {/* § DATOS BÁSICOS */}
             <Sec ico={ICO_PERSONA} titulo="Datos del cliente">
               <Fld label="Nombre completo" req full>
                 <input className="ef-input" style={IS} value={form.nombre || ""} onChange={e => set("nombre", e.target.value)} />
@@ -1379,7 +1571,12 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
             </Sec>
 
-            {/* § DOCUMENTOS DEL CLIENTE */}
+
+            </>) /* fin tab datos */}
+
+            {/* ══ TAB: DOCUMENTACIÓN ══ */}
+            {tabActivo === "docs" && (<>
+
             <Sec ico={ICO_DOC} titulo="Documentos del cliente">
               <div style={{ gridColumn:"1/-1" }}>
                 <DocUpload
@@ -1441,7 +1638,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               )}
             </Sec>
 
-            {/* § EXPEDIENTE (campos OCR) */}
+            {/* § DATOS OCR DEL EXPEDIENTE */}
             <Sec ico="🪪" titulo="Datos del expediente">
               <Fld label="CURP" full>
                 <input className="ef-input" style={{...IS, fontFamily:"monospace", letterSpacing:1}} value={form.curp || ""}
@@ -1490,7 +1687,12 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
             </Sec>
 
-            {/* § ORIGEN */}
+
+            </>) /* fin tab docs */}
+
+            {/* ══ TAB: PERFILAMIENTO ══ */}
+            {tabActivo === "perfil" && (<>
+
             <Sec ico={ICO_PIN} titulo="Origen del prospecto">
               <Fld label="Canal">
                 <select className="ef-select" style={IS} value={form.canal || "Digital"} onChange={e => set("canal", e.target.value)}>
@@ -1508,29 +1710,79 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
             </Sec>
 
-            {/* § PERFIL COMERCIAL */}
-            <Sec ico={ICO_AUTO} titulo="Perfil comercial">
-              <Fld label="Vehículo de interés" full>
-                <input className="ef-input" style={IS} value={form.interes || ""} onChange={e => set("interes", e.target.value)} placeholder="Marca, modelo, año" />
+            {/* § PERFIL COMERCIAL — solo preferencias de contacto */}
+            <Sec ico={ICO_AUTO} titulo="Preferencias de compra">
+              <Fld label="Canal de origen">
+                <div style={{ padding:"8px 10px", borderRadius:7, border:"1px solid var(--line)",
+                  background:"var(--bg)", fontSize:13, color:"var(--ink)" }}>
+                  {form.canal || "—"}{form.fuente ? " · " + form.fuente : ""}
+                </div>
               </Fld>
-              <Fld label="Presupuesto estimado">
+              <Fld label="Forma de pago preferida" full>
+                <div style={{ display:"flex", gap:8 }}>
+                  {["No definido","Contado","Crédito"].map(function(op){
+                    return (
+                      <button key={op} type="button" onClick={function(){ set("formaPago", op); }}
+                        style={{
+                          padding:"6px 16px", borderRadius:8, fontSize:13, fontWeight:600,
+                          border:"1px solid var(--line)", cursor:"pointer",
+                          background: form.formaPago === op ? "var(--accent)" : "var(--card)",
+                          color:      form.formaPago === op ? "#fff"           : "var(--muted)",
+                        }}>{op}</button>
+                    );
+                  })}
+                </div>
+              </Fld>
+              <Fld label="Presupuesto estimado ($)">
                 <input type="number" className="ef-input" style={IS}
                   value={form.presupuesto || ""}
-                  onChange={e => set("presupuesto", Number(e.target.value))} />
-              </Fld>
-              <Fld label="Forma de pago">
-                <select className="ef-select" style={IS} value={form.formaPago || "No definido"} onChange={e => set("formaPago", e.target.value)}>
-                  {["No definido","Contado","Crédito"].map(o => <option key={o}>{o}</option>)}
-                </select>
+                  onChange={e => set("presupuesto", Number(e.target.value))}
+                  placeholder="0" />
               </Fld>
               <Fld label="Uso del vehículo">
-                <select className="ef-select" style={IS} value={form.uso || "Personal"} onChange={e => set("uso", e.target.value)}>
+                <select className="ef-select" style={IS} value={form.uso || "Personal"}
+                  onChange={e => set("uso", e.target.value)}>
                   {["Personal","Trabajo","Familiar"].map(o => <option key={o}>{o}</option>)}
                 </select>
               </Fld>
             </Sec>
 
-            {/* § E3 — PRUEBA DE MANEJO */}
+
+            </>) /* fin tab perfil */}
+
+            {/* ══ TAB: VEHÍCULO DE INTERÉS ══ */}
+            {tabActivo === "vehiculo" && (<>
+            <Sec ico={ICO_AUTO} titulo="Vehículo de interés">
+              <Fld label="Vehículo de interés" full>
+                <input className="ef-input" style={IS} value={form.interes || ""}
+                  onChange={e => set("interes", e.target.value)}
+                  placeholder="Marca, modelo, año, versión…" />
+              </Fld>
+              <Fld label="Uso previsto">
+                <select className="ef-select" style={IS} value={form.uso || "Personal"}
+                  onChange={e => set("uso", e.target.value)}>
+                  {["Personal","Trabajo","Familiar"].map(o => <option key={o}>{o}</option>)}
+                </select>
+              </Fld>
+              <Fld label="Presupuesto estimado ($)">
+                <input type="number" className="ef-input" style={IS}
+                  value={form.presupuesto || ""}
+                  onChange={e => set("presupuesto", Number(e.target.value))}
+                  placeholder="0" />
+              </Fld>
+              {form.vinVinculado && (
+                <Fld label="VIN vinculado (Plan Piso)" full>
+                  <div style={{ padding:"8px 12px", borderRadius:7, border:"1px solid var(--line)",
+                    background:"var(--bg)", fontSize:13, fontWeight:600, fontFamily:"monospace" }}>
+                    {form.vinVinculado}
+                  </div>
+                </Fld>
+              )}
+            </Sec>
+            </>) /* fin tab vehiculo */}
+
+            {/* ══ TAB: PRUEBA DE MANEJO ══ */}
+            {tabActivo === "prueba" && (<>
             <Sec ico="🚗" titulo="Prueba de manejo">
               <Fld label="¿Se realizó prueba?" full>
                 <div style={{ display:"flex", gap:8 }}>
@@ -1581,7 +1833,11 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </>)}
             </Sec>
 
-            {/* § E4 — SELECCIÓN DE UNIDAD + COTIZACIÓN */}
+
+            </>) /* fin tab prueba */}
+
+            {/* ══ TAB: COTIZACIÓN ══ */}
+            {tabActivo === "cot" && (<>
             <Sec ico={ICO_AUTO} titulo="Selección de unidad y cotización">
               <Fld label="Unidad seleccionada" full>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -1731,6 +1987,43 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
             </Sec>
 
+
+            </>) /* fin tab cot */}
+
+            {/* ══ TAB: FORMA DE PAGO ══ */}
+            {tabActivo === "fpago" && (<>
+            <Sec ico="💳" titulo="Forma de pago general">
+              <Fld label="Forma de pago" full>
+                <div style={{ display:"flex", gap:8 }}>
+                  {["No definido","Contado","Crédito"].map(function(op){
+                    return (
+                      <button key={op} type="button" onClick={function(){ set("formaPago", op); }}
+                        style={{
+                          padding:"6px 18px", borderRadius:8, fontSize:13, fontWeight:600,
+                          border:"1px solid var(--line)", cursor:"pointer",
+                          background: form.formaPago === op ? "var(--accent)" : "var(--card)",
+                          color:      form.formaPago === op ? "#fff"           : "var(--muted)",
+                        }}>{op}</button>
+                    );
+                  })}
+                </div>
+              </Fld>
+            </Sec>
+            </>) /* fin tab fpago */}
+
+            {/* ══ TAB: SOLICITUD DE CRÉDITO ══ */}
+            {tabActivo === "credito" && (<>
+            {form.formaPagoCot !== "Crédito" && (
+              <div style={{ padding:"32px", textAlign:"center", color:"var(--muted)", fontSize:14 }}>
+                Este cliente tiene operación de <strong>contado</strong>.<br/>
+                Cambia la forma de pago en la pestaña <em>Cotización</em> para activar crédito.
+              </div>
+            )}
+            </>) /* fin tab credito — el E6 IIFE lo llenará debajo si aplica */}
+
+            {/* ══ TAB: APROBACIONES ══ */}
+            {tabActivo === "aprob" && (<>
+
             {/* § E5 — APROBACIÓN DE GERENTE */}
             {(function() {
               var estado   = form.e5Estado || "Pendiente";
@@ -1840,8 +2133,8 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               );
             })()}
 
-            {/* § E6 — PROCESO DE CRÉDITO */}
-            {form.formaPagoCot === "Crédito" && (function() {
+            {/* El E6 también va al tab credito */}
+            {tabActivo === "credito" && form.formaPagoCot === "Crédito" && (function() {
               var ICO_BANK = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M3 10l9-7 9 7"/><line x1="12" y1="10" x2="12" y2="21"/></svg>);
               var ESTADOS_E6 = ["Pendiente","En revisión","Aprobado","Rechazado","Condicional"];
               var COLOR_E6 = {
@@ -1993,6 +2286,75 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               );
             })()}
 
+
+            </>) /* fin tab aprob */}
+
+            {/* ══ TAB: PAGO ══ */}
+            {tabActivo === "pago" && (<>
+            <Sec ico="💵" titulo="Confirmación de pago">
+              <Fld label="Método de pago">
+                <select className="ef-select" style={IS}
+                  value={form.pagoMetodo || ""}
+                  onChange={e => set("pagoMetodo", e.target.value)}>
+                  <option value="">— Seleccionar —</option>
+                  {["Efectivo","Transferencia","Cheque","Tarjeta débito","Tarjeta crédito","Otro"].map(function(o){
+                    return <option key={o} value={o}>{o}</option>;
+                  })}
+                </select>
+              </Fld>
+              <Fld label="Fecha de pago">
+                <input type="date" className="ef-input" style={IS}
+                  value={form.pagoFecha || ""}
+                  onChange={e => set("pagoFecha", e.target.value)} />
+              </Fld>
+              <Fld label="Referencia / folio">
+                <input className="ef-input" style={IS}
+                  value={form.pagoReferencia || ""}
+                  onChange={e => set("pagoReferencia", e.target.value)}
+                  placeholder="Número de transferencia, cheque, etc." />
+              </Fld>
+              <Fld label="Monto pagado ($)">
+                <input type="number" className="ef-input"
+                  style={{ ...IS, fontWeight:700, color:"var(--accent)" }}
+                  min="0" step="100"
+                  value={form.pagoMonto || ""}
+                  onChange={e => set("pagoMonto", Number(e.target.value) || 0)}
+                  placeholder="0" />
+              </Fld>
+              <Fld label="Notas de pago" full>
+                <textarea className="ef-input"
+                  style={{ ...IS, minHeight:64, resize:"vertical" }}
+                  value={form.pagoNotas || ""}
+                  onChange={e => set("pagoNotas", e.target.value)}
+                  placeholder="Observaciones del pago, condiciones especiales…" />
+              </Fld>
+            </Sec>
+            </>) /* fin tab pago */}
+
+            {/* ══ TAB: ENTREGA ══ */}
+            {tabActivo === "entrega" && (<>
+            <Sec ico="🚚" titulo="Entrega de la unidad">
+              <Fld label="Fecha de entrega">
+                <input type="date" className="ef-input" style={IS}
+                  value={form.entregaFecha || ""}
+                  onChange={e => set("entregaFecha", e.target.value)} />
+              </Fld>
+              <Fld label="Kilometraje al entregar">
+                <input className="ef-input" style={IS}
+                  value={form.entregaKm || ""}
+                  onChange={e => set("entregaKm", e.target.value)}
+                  placeholder="0 km" />
+              </Fld>
+              <Fld label="Notas de entrega" full>
+                <textarea className="ef-input"
+                  style={{ ...IS, minHeight:72, resize:"vertical" }}
+                  value={form.entregaNotas || ""}
+                  onChange={e => set("entregaNotas", e.target.value)}
+                  placeholder="Condición de la unidad, accesorios entregados, observaciones…" />
+              </Fld>
+            </Sec>
+
+            {/* Contrato firmado */}
             {/* § E8 — EXPEDIENTE */}
             {(function() {
               var ICO_EXP = (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>);
@@ -2082,8 +2444,114 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               );
             })()}
 
-            {/* § PROCESO DE VENTA */}
-            <Sec ico={ICO_PROCESO} titulo="Proceso de venta">
+
+            </>) /* fin tab entrega */}
+
+            {/* ══ TAB: HISTORIAL ══ */}
+            {tabActivo === "historial" && (<>
+            <div style={{ padding:"16px 20px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between",
+                alignItems:"center", marginBottom:12 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"var(--ink)" }}>Historial de actividad</div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <select value={filtroHistorial} onChange={e => setFiltroHistorial(e.target.value)}
+                    style={{ padding:"4px 8px", border:"1px solid var(--line)", borderRadius:6,
+                      fontSize:12, background:"var(--card)", color:"var(--ink)",
+                      outline:"none", cursor:"pointer" }}>
+                    <option value="">Todos los eventos</option>
+                    {["etapa","estado","documento","cotizacion","credito","aprobacion","pago","entrega","vendedor","nota"].map(function(t){
+                      return <option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>;
+                    })}
+                  </select>
+                </div>
+              </div>
+              {cargandoHist ? (
+                <div style={{ textAlign:"center", padding:"24px", color:"var(--muted)", fontSize:13 }}>
+                  Cargando historial…
+                </div>
+              ) : historialItems.length === 0 ? (
+                <div style={{ textAlign:"center", padding:"32px", color:"var(--muted)", fontSize:13 }}>
+                  <div style={{ fontSize:32, marginBottom:8, opacity:.4 }}>📋</div>
+                  No hay entradas de historial todavía.<br/>
+                  Los cambios futuros aparecerán aquí.
+                </div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+                  {historialItems.map(function(h, idx){
+                    var TIPO_ICO = {
+                      etapa:"🔄", estado:"🏷", documento:"📄", cotizacion:"💰",
+                      credito:"🏦", aprobacion:"✅", pago:"💵", entrega:"🚚",
+                      vendedor:"👤", nota:"💬",
+                    };
+                    var ico = TIPO_ICO[h.tipo_evento] || "📌";
+                    var dt  = new Date(h.created_at);
+                    var dtStr = dt.toLocaleDateString("es-MX",{ day:"numeric", month:"short", year:"numeric" })
+                      + " · " + dt.toLocaleTimeString("es-MX",{ hour:"2-digit", minute:"2-digit" });
+                    return (
+                      <div key={h.id || idx} style={{
+                        display:"flex", gap:10, padding:"10px 0",
+                        borderBottom: idx < historialItems.length - 1 ? "1px solid var(--line)" : "none",
+                      }}>
+                        <div style={{ flexShrink:0, marginTop:2 }}>
+                          <span style={{ fontSize:16 }}>{ico}</span>
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, color:"var(--ink)", lineHeight:1.4 }}>
+                            {h.descripcion}
+                          </div>
+                          <div style={{ fontSize:11, color:"var(--muted)", marginTop:3 }}>
+                            {dtStr}
+                            {h.usuario_nombre ? " · " + h.usuario_nombre : ""}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Agregar nota manual */}
+              <div style={{ marginTop:16, padding:"12px", background:"var(--bg)",
+                border:"1px solid var(--line)", borderRadius:10 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:"var(--muted)",
+                  marginBottom:6, textTransform:"uppercase", letterSpacing:".05em" }}>
+                  Agregar comentario
+                </div>
+                <textarea
+                  value={notaHistorial}
+                  onChange={e => setNotaHistorial(e.target.value)}
+                  placeholder="Escribe un comentario o nota sobre este cliente…"
+                  style={{
+                    width:"100%", padding:"8px 10px", border:"1px solid var(--line)",
+                    borderRadius:7, fontSize:13, background:"var(--card)", color:"var(--ink)",
+                    outline:"none", fontFamily:"inherit", resize:"vertical", minHeight:60,
+                    boxSizing:"border-box",
+                  }} />
+                <button type="button"
+                  disabled={!notaHistorial.trim()}
+                  onClick={async function(){
+                    if (!notaHistorial.trim() || !selId) return;
+                    var aid = window.AUTOMIND && window.AUTOMIND.agencyId;
+                    await window.DB.addClienteHistorial(selId, aid, "nota", notaHistorial.trim());
+                    setNotaHistorial("");
+                    var updated = await window.DB.getClienteHistorial(selId);
+                    setHistorial(updated);
+                  }}
+                  style={{
+                    marginTop:8, padding:"6px 16px", borderRadius:7, fontSize:12, fontWeight:700,
+                    border:"none", cursor:"pointer",
+                    background:"var(--accent)", color:"#fff",
+                    opacity: notaHistorial.trim() ? 1 : .4,
+                  }}>
+                  Guardar comentario
+                </button>
+              </div>
+            </div>
+            </>) /* fin tab historial */}
+
+            {/* ══ TAB PERFIL: asesor/prox/notas (duplicado al final como "catch-all") ══ */}
+            {tabActivo === "perfil" && (
+            <Sec ico={ICO_PROCESO} titulo="Seguimiento comercial">
               <Fld label="Etapa">
                 <select className="ef-select" style={IS} value={form.etapa || "Prospección"} onChange={e => set("etapa", e.target.value)}>
                   {ETAPAS_CRM.map(e => <option key={e}>{e}</option>)}
@@ -2130,8 +2598,8 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Fld>
             </Sec>
 
-            {/* § UNIDAD VINCULADA (desde Plan Piso) */}
-            {form.vinVinculado && (
+            {/* § UNIDAD VINCULADA — ya mostrado en tab vehiculo, omitir aquí */}
+            {false && form.vinVinculado && (
               <Sec ico={ICO_LINK} titulo="Unidad vinculada (Plan Piso)">
                 <Fld label="VIN" full>
                   <div style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
@@ -2145,7 +2613,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               </Sec>
             )}
 
-          </div>
+            )} {/* fin tabActivo perfil → seguimiento comercial */}
+
+          </div> {/* fin inv-form-scroll */}
         </div>
       ) : (
         <div className="inv-form-panel"
