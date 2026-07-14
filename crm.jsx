@@ -1,4 +1,4 @@
-/* Automind · CRM de Clientes — Pipeline de ventas */
+﻿/* Automind · CRM de Clientes — Pipeline de ventas */
 
 /* ── Configuración de etapas ─────────────────────────────────────────── */
 const ETAPAS_CRM = [
@@ -1575,7 +1575,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             {tabActivo === "datos" && (<>
 
             {/* § DATOS BÁSICOS */}
-            <Sec ico={ICO_PERSONA} titulo="Datos del cliente">
+            <Sec ico={ICO_PERSONA} titulo="Datos del cliente" defaultOpen>
               <Fld label="Nombre completo" req full>
                 <input className="ef-input" style={IS} value={form.nombre || ""} onChange={e => set("nombre", e.target.value)} />
               </Fld>
@@ -1595,7 +1595,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
 
 
-            <Sec ico={ICO_DOC} titulo="Documentos del cliente">
+            <Sec ico={ICO_DOC} titulo="Documentos del cliente" defaultOpen>
               <div style={{ gridColumn:"1/-1" }}>
                 <DocUpload
                   label="Identificación oficial"
@@ -1657,7 +1657,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
             {/* § DATOS OCR DEL EXPEDIENTE */}
-            <Sec ico="🪪" titulo="Datos del expediente">
+            <Sec ico="🪪" titulo="Datos del expediente" defaultOpen>
               <Fld label="CURP" full>
                 <input className="ef-input" style={{...IS, fontFamily:"monospace", letterSpacing:1}} value={form.curp || ""}
                   onChange={e => set("curp", e.target.value.toUpperCase())}
@@ -1711,7 +1711,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             {/* ══ TAB: PERFILAMIENTO ══ */}
             {tabActivo === "perfil" && (<>
 
-            <Sec ico={ICO_PIN} titulo="Origen del prospecto">
+            <Sec ico={ICO_PIN} titulo="Origen del prospecto" defaultOpen>
               <Fld label="Canal">
                 <select className="ef-select" style={IS} value={form.canal || "Digital"} onChange={e => set("canal", e.target.value)}>
                   {["Digital","Piso","Referido","Marketplace","Otro"].map(o => <option key={o}>{o}</option>)}
@@ -1729,7 +1729,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
             {/* § PERFIL COMERCIAL — solo preferencias de contacto */}
-            <Sec ico={ICO_AUTO} titulo="Preferencias de compra">
+            <Sec ico={ICO_AUTO} titulo="Preferencias de compra" defaultOpen>
               <Fld label="Canal de origen">
                 <div style={{ padding:"8px 10px", borderRadius:7, border:"1px solid var(--line)",
                   background:"var(--bg)", fontSize:13, color:"var(--ink)" }}>
@@ -1770,7 +1770,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
             {/* ══ TAB: VEHÍCULO DE INTERÉS ══ */}
             {tabActivo === "vehiculo" && (<>
-            <Sec ico={ICO_AUTO} titulo="Vehículo de interés">
+            <Sec ico={ICO_AUTO} titulo="Vehículo de interés" defaultOpen>
               <Fld label="Vehículo de interés" full>
                 <input className="ef-input" style={IS} value={form.interes || ""}
                   onChange={e => set("interes", e.target.value)}
@@ -1801,7 +1801,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
             {/* ══ TAB: PRUEBA DE MANEJO ══ */}
             {tabActivo === "prueba" && (<>
-            <Sec ico="🚗" titulo="Prueba de manejo">
+            <Sec ico="🚗" titulo="Prueba de manejo" defaultOpen>
               <Fld label="¿Se realizó prueba?" full>
                 <div style={{ display:"flex", gap:8 }}>
                   {["Sí","No"].map(op => (
@@ -2010,7 +2010,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
             {/* ══ TAB: FORMA DE PAGO ══ */}
             {tabActivo === "fpago" && (<>
-            <Sec ico="💳" titulo="Forma de pago general">
+            <Sec ico="💳" titulo="Forma de pago general" defaultOpen>
               <Fld label="Forma de pago" full>
                 <div style={{ display:"flex", gap:8 }}>
                   {["No definido","Contado","Crédito"].map(function(op){
@@ -2061,7 +2061,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               }
               var montoStr = tipoPago === "Crédito" ? "" : "";
               return (
-                <Sec ico={ICO_CHK} titulo="Aprobación de gerente (E5)">
+                <Sec ico={ICO_CHK} titulo="Aprobación de gerente (E5)" defaultOpen>
                   <Fld label="Tipo de pago solicitado" full>
                     <div style={{
                       padding:"8px 12px", borderRadius:7, border:"1px solid var(--line)",
@@ -2165,7 +2165,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               var estad = form.e6Estado || "Pendiente";
               var cfg6  = COLOR_E6[estad] || COLOR_E6["Pendiente"];
               return (
-                <Sec ico={ICO_BANK} titulo="Proceso de crédito (E6)">
+                <Sec ico={ICO_BANK} titulo="Proceso de crédito (E6)" defaultOpen>
                   <Fld label="Estado del crédito" full>
                     <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                       {ESTADOS_E6.map(op => (
@@ -2232,7 +2232,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               var semBg      = hayRojo ? "rgba(239,68,68,.10)" : hayAmarillo ? "rgba(234,179,8,.10)" : "rgba(34,197,94,.10)";
               var semBorder  = hayRojo ? "rgba(239,68,68,.35)" : hayAmarillo ? "rgba(234,179,8,.35)" : "rgba(34,197,94,.35)";
               return (
-                <Sec ico={ICO_CLIP} titulo="Validación de expediente (E7)">
+                <Sec ico={ICO_CLIP} titulo="Validación de expediente (E7)" defaultOpen>
                   <Fld label="Estado del expediente" full>
                     <div style={{
                       padding:"10px 14px", borderRadius:8,
@@ -2309,7 +2309,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
             {/* ══ TAB: PAGO ══ */}
             {tabActivo === "pago" && (<>
-            <Sec ico="💵" titulo="Confirmación de pago">
+            <Sec ico="💵" titulo="Confirmación de pago" defaultOpen>
               <Fld label="Método de pago">
                 <select className="ef-select" style={IS}
                   value={form.pagoMetodo || ""}
@@ -2351,7 +2351,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
             {/* ══ TAB: ENTREGA ══ */}
             {tabActivo === "entrega" && (<>
-            <Sec ico="🚚" titulo="Entrega de la unidad">
+            <Sec ico="🚚" titulo="Entrega de la unidad" defaultOpen>
               <Fld label="Fecha de entrega">
                 <input type="date" className="ef-input" style={IS}
                   value={form.entregaFecha || ""}
@@ -2400,7 +2400,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               }
 
               return (
-                <Sec ico={ICO_EXP} titulo="Expediente">
+                <Sec ico={ICO_EXP} titulo="Expediente" defaultOpen>
                   {/* Contrato firmado */}
                   <Fld label="Contrato firmado" full>
                     {form.e8ContratoUrl ? (
@@ -2569,7 +2569,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
 
             {/* ══ TAB PERFIL: asesor/prox/notas (duplicado al final como "catch-all") ══ */}
             {tabActivo === "perfil" && (
-            <Sec ico={ICO_PROCESO} titulo="Seguimiento comercial">
+            <Sec ico={ICO_PROCESO} titulo="Seguimiento comercial" defaultOpen>
               <Fld label="Etapa">
                 <select className="ef-select" style={IS} value={form.etapa || "Prospección"} onChange={e => set("etapa", e.target.value)}>
                   {ETAPAS_CRM.map(e => <option key={e}>{e}</option>)}
@@ -3524,3 +3524,4 @@ function CRMClientes({ rows, kpis, usuarios }) {
 }
 
 Object.assign(window, { CRMClientes });
+
