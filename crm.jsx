@@ -1480,56 +1480,53 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
           {/* ── Stepper de etapas ── */}
           <EtapaStepper etapaActual={form.etapa || "Prospección"} onCambiar={v => set("etapa", v)} />
 
-          {/* ── Layout: lista lateral + contenido ── */}
+          {/* ── Layout: lista de secciones (izq) + contenido (der) ── */}
           <div style={{ display:"flex", flex:1, overflow:"hidden", minHeight:0 }}>
 
-            {/* Lista vertical de secciones */}
-            {(function(){
-              var TABS = [
-                { id:"datos",    lbl:"Datos",          ico:"👤" },
-                { id:"perfil",   lbl:"Perfilamiento",  ico:"🎯" },
-                { id:"vehiculo", lbl:"Vehículo",        ico:"🚗" },
-                { id:"prueba",   lbl:"Prueba manejo",  ico:"🛣️" },
-                { id:"cot",      lbl:"Cotización",     ico:"💰" },
-                { id:"fpago",    lbl:"Forma de pago",  ico:"💳" },
-                { id:"credito",  lbl:"Crédito",        ico:"🏦" },
-                { id:"docs",     lbl:"Documentación",  ico:"📄" },
-                { id:"aprob",    lbl:"Aprobaciones",   ico:"✅" },
-                { id:"pago",     lbl:"Pago",           ico:"💵" },
-                { id:"entrega",  lbl:"Entrega",        ico:"🚚" },
-                { id:"historial",lbl:"Historial",      ico:"📋" },
-              ];
-              return (
-                <div style={{
-                  width:170, flexShrink:0,
-                  borderRight:"1px solid var(--line)",
-                  background:"var(--bg)",
-                  overflowY:"auto", display:"flex", flexDirection:"column",
-                  padding:"8px 6px", gap:2,
-                }}>
-                  {TABS.map(function(t){
-                    var isAct = tabActivo === t.id;
-                    return (
-                      <button key={t.id} type="button"
-                        onClick={function(){ setTabActivo(t.id); }}
-                        style={{
-                          display:"flex", alignItems:"center", gap:8,
-                          padding:"8px 10px", borderRadius:7, border:"none",
-                          fontSize:12, fontWeight: isAct ? 700 : 400,
-                          cursor:"pointer", textAlign:"left", width:"100%",
-                          transition:"all .12s",
-                          background: isAct ? "var(--accent)" : "transparent",
-                          color:      isAct ? "#fff"           : "var(--ink)",
-                          borderLeft: isAct ? "3px solid var(--accent)" : "3px solid transparent",
-                        }}>
-                        <span style={{ fontSize:14, lineHeight:1, flexShrink:0 }}>{t.ico}</span>
-                        <span style={{ lineHeight:1.3 }}>{t.lbl}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+          {/* ── Lista de secciones ── */}
+          {(function(){
+            var TABS = [
+              { id:"datos",    lbl:"Datos",         ico:"👤" },
+              { id:"perfil",   lbl:"Perfilamiento",  ico:"🎯" },
+              { id:"vehiculo", lbl:"Vehículo",       ico:"🚗" },
+              { id:"prueba",   lbl:"Prueba manejo",  ico:"🛣" },
+              { id:"cot",      lbl:"Cotización",     ico:"💰" },
+              { id:"fpago",    lbl:"Forma de pago",  ico:"💳" },
+              { id:"credito",  lbl:"Crédito",        ico:"🏦" },
+              { id:"docs",     lbl:"Documentación",  ico:"📄" },
+              { id:"aprob",    lbl:"Aprobaciones",   ico:"✅" },
+              { id:"pago",     lbl:"Pago",           ico:"💵" },
+              { id:"entrega",  lbl:"Entrega",        ico:"🚚" },
+              { id:"historial",lbl:"Historial",      ico:"📋" },
+            ];
+            return (
+              <div style={{
+                width:170, flexShrink:0, borderRight:"1px solid var(--line)",
+                background:"var(--bg)", overflowY:"auto", display:"flex",
+                flexDirection:"column", padding:"8px 6px", gap:2,
+              }}>
+                {TABS.map(function(t){
+                  var isAct = tabActivo === t.id;
+                  return (
+                    <button key={t.id} type="button"
+                      onClick={function(){ setTabActivo(t.id); }}
+                      style={{
+                        display:"flex", alignItems:"center", gap:8,
+                        padding:"8px 10px", borderRadius:7, border:"none",
+                        fontSize:12, fontWeight: isAct ? 700 : 400,
+                        cursor:"pointer", textAlign:"left", width:"100%",
+                        background: isAct ? "var(--accent)" : "transparent",
+                        color:      isAct ? "#fff"           : "var(--ink)",
+                        borderLeft: isAct ? "3px solid var(--accent)" : "3px solid transparent",
+                      }}>
+                      <span style={{ fontSize:14, lineHeight:1, flexShrink:0 }}>{t.ico}</span>
+                      <span style={{ lineHeight:1.3 }}>{t.lbl}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* ── Contenido de la sección activa ── */}
           <div className="inv-form-scroll" style={{ flex:1 }}>
@@ -2586,6 +2583,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             )} {/* fin tabActivo perfil → seguimiento comercial */}
 
           </div> {/* fin inv-form-scroll */}
+
           </div> {/* fin layout lista+contenido */}
         </div>
       ) : (
@@ -3080,54 +3078,4 @@ function ProcesoView({ clientes, onOpen }) {
             color: filtDocsPend ? "#dc2626" : "var(--muted)", cursor:"pointer" }}>
             <input type="checkbox" checked={filtDocsPend}
               onChange={function(e){ setFiltDocsPend(e.target.checked); }}
-              style={{ accentColor:"#dc2626" }} />
-            Docs incompletos
-          </label>
-        </div>
-
-        {/* Filtros — fila 2: fechas + contador */}
-        <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-          <span style={{ fontSize:11, color:"var(--muted)" }}>Creado desde:</span>
-          <input type="date" value={filtDesde} onChange={function(e){ setFiltDesde(e.target.value); }}
-            style={{ ...inputSt, fontSize:11 }} />
-          <span style={{ fontSize:11, color:"var(--muted)" }}>hasta:</span>
-          <input type="date" value={filtHasta} onChange={function(e){ setFiltHasta(e.target.value); }}
-            style={{ ...inputSt, fontSize:11 }} />
-          <span style={{ fontSize:11, color:"var(--muted)", marginLeft:8 }}>
-            {sorted.length === clientes.length
-              ? sorted.length + " clientes"
-              : sorted.length + " de " + clientes.length + " clientes"}
-          </span>
-        </div>
-      </div>
-
-      {/* ── Tabla ───────────────────────────────────────── */}
-      <div style={{ flex:1, overflow:"auto" }}>
-        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-          <thead style={{ position:"sticky", top:0, zIndex:2 }}>
-            <tr style={{ background:"var(--card)", borderBottom:"2px solid var(--line)" }}>
-              <th style={{ ...th, width:36, textAlign:"center" }}>#</th>
-              <Hdr col="nombre"   label="Nombre" />
-              <th style={th}>Teléfono / Email</th>
-              <Hdr col="asesor"   label="Vendedor" />
-              <th style={th}>Vehículo</th>
-              <Hdr col="formaPago" label="Operación" center />
-              <Hdr col="etapa"    label="Etapa" />
-              <Hdr col="uc"       label="Últ. contacto" center />
-              <Hdr col="docsPend" label="Docs" center />
-              <th style={th}>Próxima actividad</th>
-              <Hdr col="estatus"  label="Expediente" />
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.length === 0 ? (
-              <tr>
-                <td colSpan={11} style={{ textAlign:"center", padding:"60px 20px",
-                  color:"var(--muted)", fontSize:13 }}>
-                  No hay clientes con los filtros aplicados.
-                </td>
-              </tr>
-            ) : sorted.map(function(c, idx) {
-              var estatus  = calcEstatus(c);
-              var docsPend = calcDocsPend(c);
-              v
+              style={{ accentColor:"#dc2626" }} /
