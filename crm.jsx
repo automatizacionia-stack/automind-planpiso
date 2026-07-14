@@ -1493,7 +1493,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
               { id:"cot",      lbl:"Cotización",     ico:"💰" },
               { id:"fpago",    lbl:"Forma de pago",  ico:"💳" },
               { id:"credito",  lbl:"Crédito",        ico:"🏦" },
-              { id:"docs",     lbl:"Documentación",  ico:"📄" },
               { id:"aprob",    lbl:"Aprobaciones",   ico:"✅" },
               { id:"pago",     lbl:"Pago",           ico:"💵" },
               { id:"entrega",  lbl:"Entrega",        ico:"🚚" },
@@ -1554,10 +1553,6 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>) /* fin tab datos */}
-
-            {/* ══ TAB: DOCUMENTACIÓN ══ */}
-            {tabActivo === "docs" && (<>
 
             <Sec ico={ICO_DOC} titulo="Documentos del cliente">
               <div style={{ gridColumn:"1/-1" }}>
@@ -1670,7 +1665,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
             </Sec>
 
 
-            </>) /* fin tab docs */}
+            </>) /* fin tab datos */}
 
             {/* ══ TAB: PERFILAMIENTO ══ */}
             {tabActivo === "perfil" && (<>
