@@ -573,19 +573,23 @@ function DocUpload({ label, sublabel, docType, value, onChange, onExtract }) {
       var key = await _uploadDocToStorage(file, dataUrl);
       setSubiendoDoc(false);
       if (key) onChange({ ...fileData, storageKey: key });
+      // Auto-extraer con IA al cargar
+      extraer(dataUrl, file.type);
     };
     reader.readAsDataURL(file);
   }
 
-  async function extraer() {
-    if (!value || extrayendo) return;
+  async function extraer(dataUrlIn, typeIn) {
+    var srcUrl  = dataUrlIn || (value && value.dataUrl);
+    var srcType = typeIn    || (value && value.type);
+    if (!srcUrl || extrayendo) return;
     setExtrayendo(true); setCampos(null); setErrExt(null);
     try {
       /* Si es PDF, renderizar pagina 1 a imagen antes de enviar */
-      var rawUrl  = value.dataUrl;
-      var rawMime = value.type;
-      if (value.type === "application/pdf") {
-        rawUrl  = await _pdfToImageDataUrl(value.dataUrl);
+      var rawUrl  = srcUrl;
+      var rawMime = srcType;
+      if (srcType === "application/pdf") {
+        rawUrl  = await _pdfToImageDataUrl(srcUrl);
         rawMime = "image/jpeg";
       }
       var dataUrlEnviar = await _resizeDataUrl(rawUrl, rawMime);
@@ -713,22 +717,7 @@ function DocUpload({ label, sublabel, docType, value, onChange, onExtract }) {
               onChange={e => { handleFile(e.target.files[0]); e.target.value = ""; }} />
           </div>
 
-          {/* ── Botón Extraer con IA ── */}
-          {value && value.dataUrl && !campos && !extrayendo && (
-            <button onClick={extraer}
-              style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-                padding:"9px 14px", border:"1.5px solid #c4b5fd", borderRadius:8,
-                background:"#f5f3ff", color:"#6d28d9", fontSize:12, fontWeight:700,
-                cursor:"pointer", transition:"all .15s" }}
-              onMouseOver={e => { e.currentTarget.style.background="#ede9fe"; }}
-              onMouseOut={e => { e.currentTarget.style.background="#f5f3ff"; }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"
-                strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
-                <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
-              </svg>
-              Extraer información con IA
-            </button>
-          )}
+
 
           {/* ── Cargando ── */}
           {extrayendo && (
@@ -749,8 +738,13 @@ function DocUpload({ label, sublabel, docType, value, onChange, onExtract }) {
               borderRadius:8, fontSize:12, color:"#991b1b",
               display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span>Error: {errExt}</span>
-              <button onClick={() => setErrExt(null)}
-                style={{ border:"none", background:"none", color:"#991b1b", cursor:"pointer", fontSize:13 }}>✕</button>
+              <div style={{ display:"flex", gap:4 }}>
+                <button onClick={() => extraer()}
+                  style={{ border:"none", background:"none", color:"#991b1b",
+                    cursor:"pointer", fontSize:11, fontWeight:700 }}>Reintentar</button>
+                <button onClick={() => setErrExt(null)}
+                  style={{ border:"none", background:"none", color:"#991b1b", cursor:"pointer", fontSize:13 }}>✕</button>
+              </div>
             </div>
           )}
 
