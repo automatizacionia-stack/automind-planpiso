@@ -618,6 +618,11 @@
       docDomicilio:row.doc_dom_key ? { name: row.doc_dom_nombre || "", storageKey: row.doc_dom_key } : null,
       docFactura:     row.doc_factura_key    ? { name: row.doc_factura_nombre    || "", storageKey: row.doc_factura_key    } : null,
       docComprobante: row.doc_comprobante_key? { name: row.doc_comprobante_nombre|| "", storageKey: row.doc_comprobante_key} : null,
+      // Documentos de crédito (E6)
+      docCredCarta:     row.doc_cred_carta_key      ? { name: row.doc_cred_carta_nombre      || "", storageKey: row.doc_cred_carta_key      } : null,
+      docCredSolicitud: row.doc_cred_solicitud_key   ? { name: row.doc_cred_solicitud_nombre  || "", storageKey: row.doc_cred_solicitud_key   } : null,
+      docCredEstadoCta: row.doc_cred_estado_cta_key  ? { name: row.doc_cred_estado_cta_nombre || "", storageKey: row.doc_cred_estado_cta_key  } : null,
+      docCredContrato:  row.doc_cred_contrato_key    ? { name: row.doc_cred_contrato_nombre   || "", storageKey: row.doc_cred_contrato_key    } : null,
       // Estado general del proceso comercial
       estadoGeneral:  row.estado_general    || "Activo",
       // Pago
@@ -713,6 +718,15 @@
       doc_factura_nombre:      c.docFactura    ? (c.docFactura.name          || null) : null,
       doc_comprobante_key:     c.docComprobante? (c.docComprobante.storageKey|| null) : null,
       doc_comprobante_nombre:  c.docComprobante? (c.docComprobante.name      || null) : null,
+      // Documentos de crédito (E6)
+      doc_cred_carta_key:         c.docCredCarta    ? (c.docCredCarta.storageKey    || null) : null,
+      doc_cred_carta_nombre:      c.docCredCarta    ? (c.docCredCarta.name          || null) : null,
+      doc_cred_solicitud_key:     c.docCredSolicitud? (c.docCredSolicitud.storageKey|| null) : null,
+      doc_cred_solicitud_nombre:  c.docCredSolicitud? (c.docCredSolicitud.name      || null) : null,
+      doc_cred_estado_cta_key:    c.docCredEstadoCta? (c.docCredEstadoCta.storageKey|| null) : null,
+      doc_cred_estado_cta_nombre: c.docCredEstadoCta? (c.docCredEstadoCta.name      || null) : null,
+      doc_cred_contrato_key:      c.docCredContrato ? (c.docCredContrato.storageKey || null) : null,
+      doc_cred_contrato_nombre:   c.docCredContrato ? (c.docCredContrato.name       || null) : null,
       // Estado general
       estado_general:   c.estadoGeneral  || "Activo",
       // Pago

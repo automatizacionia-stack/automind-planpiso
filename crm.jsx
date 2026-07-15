@@ -2844,6 +2844,28 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                       onChange={e => set("e6Condiciones", e.target.value)}
                       placeholder="Tasa, seguro de vida, condición de aprobación..." />
                   </Fld>
+
+                  {/* ── Repositorio de documentos de crédito ── */}
+                  <Fld label="Documentos de crédito" full>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                      <DocSimpleUpload
+                        label="Carta de aprobación"
+                        value={form.docCredCarta || null}
+                        onChange={v => set("docCredCarta", v)} />
+                      <DocSimpleUpload
+                        label="Solicitud de crédito"
+                        value={form.docCredSolicitud || null}
+                        onChange={v => set("docCredSolicitud", v)} />
+                      <DocSimpleUpload
+                        label="Estados de cuenta"
+                        value={form.docCredEstadoCta || null}
+                        onChange={v => set("docCredEstadoCta", v)} />
+                      <DocSimpleUpload
+                        label="Contrato de crédito"
+                        value={form.docCredContrato || null}
+                        onChange={v => set("docCredContrato", v)} />
+                    </div>
+                  </Fld>
                 </Sec>
               );
             })()}
@@ -4292,4 +4314,6 @@ function VentasDashboardView({ onGoToCRM }) {
   );
 }
 
-Object.assign(window
+Object.assign(window, { CRMClientes, VentasDashboardView });
+
+
