@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SERVICE_ROLE_KEY")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY") || "",
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
@@ -64,10 +64,13 @@ Deno.serve(async (req) => {
     const esAgencyOwner = !!agencyMem;
 
     if (!esSuperAdmin && !esAgencyOwner) {
+      // Filtrar por workspace específico para evitar fallo con usuarios en múltiples workspaces
       const { data: inviterRow } = await adminClient
         .from("users").select("rol, workspace_id, agency_id")
-        .eq("auth_user_id", invitador.id).maybeSingle();
-      if (!inviterRow) throw new Error("Sin permisos para invitar usuarios");
+        .eq("auth_user_id", invitador.id)
+        .or(`workspace_id.eq.${workspaceId},agency_id.eq.${workspaceId}`)
+        .maybeSingle();
+      if (!inviterRow) throw new Error("Sin permisos para invitar usuarios (workspace no coincide o rol insuficiente)");
       const wsInviter = inviterRow.workspace_id || inviterRow.agency_id;
       if (wsInviter !== workspaceId) throw new Error("No puedes invitar usuarios a otro workspace");
       if (!["director", "gerente"].includes(inviterRow.rol)) {
