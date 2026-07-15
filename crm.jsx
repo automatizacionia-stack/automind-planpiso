@@ -2797,7 +2797,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   <Fld label="Estado del crédito" full>
                     <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                       {ESTADOS_E6.map(op => (
-                        <button key={op} type="button" onClick={() => set("e6Estado", op)}
+                        <button key={op} type="button" onClick={() => { set("e6Estado", op); if (op === "Rechazado") set("prob", 10); }}
                           style={{
                             padding:"5px 12px", borderRadius:7, fontSize:12, fontWeight:600,
                             border:"1px solid var(--line)", cursor:"pointer", transition:"all .15s",
@@ -4292,6 +4292,4 @@ function VentasDashboardView({ onGoToCRM }) {
   );
 }
 
-Object.assign(window, { CRMClientes, VentasDashboardView });
-
-
+Object.assign(window
