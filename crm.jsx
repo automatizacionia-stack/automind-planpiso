@@ -3,7 +3,7 @@
 /* ── Configuración de etapas ─────────────────────────────────────────── */
 const ETAPAS_CRM = [
   "Prospección","Perfilamiento","Presentación","Cotización",
-  "Expediente","Pago","Crédito","Cierre"
+  "Expediente","Crédito","Pago","Cierre"
 ];
 
 const ETAPA_CFG = {
@@ -1828,7 +1828,7 @@ function ExpedienteHeader({ form, onChangeEstado }) {
 /* ── Motor de auto-avance de etapa ──────────────────────────────────────── */
 function calcularEtapaSugerida(f) {
   if (!f) return null;
-  var etapas = ETAPAS_CRM; // ["Prospección","Perfilamiento","Presentación","Cotización","Expediente","Pago","Crédito","Cierre"]
+  var etapas = ETAPAS_CRM; // ["Prospección","Perfilamiento","Presentación","Cotización","Expediente","Crédito","Pago","Cierre"]
   var idxActual = etapas.indexOf(f.etapa || "Prospección");
   var maxIdx = idxActual; // nunca retrocede
 
@@ -1851,21 +1851,21 @@ function calcularEtapaSugerida(f) {
   if (maxIdx >= 3 && f.unidadDesc && Number(f.precioVenta) > 0)
     maxIdx = Math.max(maxIdx, 4);
 
-  /* Expediente → Pago: al menos 1 documento subido */
+  /* Expediente → Crédito: al menos 1 documento subido */
   var docsOk = [f.docId, f.docLicencia, f.docDomicilio].filter(docOk).length;
   if (maxIdx >= 4 && docsOk >= 1)
     maxIdx = Math.max(maxIdx, 5);
 
-  /* Pago → Crédito (si aplica crédito) o directo a Cierre (contado) */
+  /* Crédito → Pago: contado (N/A crédito) o crédito aprobado/condicional */
   if (maxIdx >= 5) {
-    if (f.formaPagoCot === "Contado")
-      maxIdx = Math.max(maxIdx, 7); // Contado → salta Crédito, va a Cierre
-    else if (f.formaPagoCot === "Crédito")
-      maxIdx = Math.max(maxIdx, 6); // Crédito → siguiente paso
+    if (f.formaPagoCot !== "Crédito")
+      maxIdx = Math.max(maxIdx, 6); // Contado/No definido → salta Crédito, va a Pago
+    else if (f.e6Estado === "Aprobado" || f.e6Estado === "Condicional")
+      maxIdx = Math.max(maxIdx, 6); // Crédito aprobado → Pago
   }
 
-  /* Crédito → Cierre: crédito aprobado */
-  if (maxIdx >= 6 && f.e6Estado === "Aprobado")
+  /* Pago → Cierre: pago registrado */
+  if (maxIdx >= 6 && f.pagoMetodo)
     maxIdx = Math.max(maxIdx, 7);
 
   return maxIdx !== idxActual ? etapas[maxIdx] : null; // null = sin cambio
