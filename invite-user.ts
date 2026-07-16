@@ -104,39 +104,23 @@ Deno.serve(async (req) => {
       // Usuario ya existe en Auth → generar magic link (acceso directo sin cambio de contraseña)
       console.log("[invite-user] STEP 1: usuario ya existe en auth:", invErr?.message);
 
-      // Lookup eficiente: buscar auth_user_id en tabla users (evita listUsers que pagina y es lento)
-      const { data: anyUserRow } = await adminClient
-        .from("users")
-        .select("auth_user_id")
-        .eq("email", email)
-        .not("auth_user_id", "is", null)
-        .limit(1)
-        .maybeSingle();
-
-      authUserId = anyUserRow?.auth_user_id || null;
-
-      // Fallback: si no está en users todavía, buscar en auth.users por email
-      if (!authUserId) {
-        const { data: listData } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-        const found = (listData?.users as any[])?.find((u: any) => u.email === email);
-        authUserId = found?.id || null;
-      }
-
-      if (!authUserId) throw new Error("No se pudo localizar el usuario en Auth: " + email);
-
-      // generateLink type=magiclink → el usuario hace clic y queda autenticado directamente.
-      // NO usa el flujo de recovery (que forzaría cambio de contraseña y muestra SetPasswordScreen).
-      // Con flowType:'implicit', Supabase procesa #access_token&type=magiclink en el cliente
-      // y lo enruta al flujo normal de sesión — sin interceptación especial en app.jsx.
+      // generateLink devuelve user.id en su respuesta — no necesitamos lookup adicional.
       const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
         type: "magiclink",
         email,
         options: { redirectTo: siteUrl },
       });
-      actionLink = linkData?.properties?.action_link || null;
-      console.log("[invite-user] STEP 1: magic link generado:", !!actionLink, linkErr?.message);
 
-      if (!actionLink) throw new Error("No se pudo generar el link de acceso para " + email);
+      if (linkErr || !linkData) {
+        throw new Error(
+          "No se pudo generar el link de acceso para " + email +
+          (linkErr ? ": " + linkErr.message : "")
+        );
+      }
+
+      actionLink  = linkData.properties?.action_link || null;
+      authUserId  = (linkData as any).user?.id || null;
+      console.log("[invite-user] STEP 1: magic link generado:", !!actionLink, "authUserId:", authUserId);
 
       // Enviar vía Brevo si está configurado
       const brevoKey = Deno.env.get("BREVO_API_KEY");
