@@ -1009,6 +1009,49 @@
     return data || [];
   }
 
+  /* ── Diagnóstico de permisos super admin (llamar desde browser console) ── */
+  async function testSuperAdminPerms() {
+    console.log("═══ TEST PERMISOS SUPER ADMIN ═══");
+    const { data: authData } = await client.auth.getUser();
+    if (!authData?.user) { console.error("❌ No autenticado"); return; }
+    console.log("✅ Auth uid:", authData.user.id, "| email:", authData.user.email);
+
+    // Test SELECT inventario
+    const { data: selRows, error: selErr } = await client.from("inventario").select("id").limit(1);
+    if (selErr) console.error("❌ SELECT inventario:", selErr.message);
+    else console.log("✅ SELECT inventario OK — filas visibles: (use otro query para contar)");
+
+    // Test INSERT inventario
+    const wsId = window.AUTOMIND?.agencyId;
+    const agId = window.AUTOMIND?.agencyParentId || wsId;
+    console.log("   agencyId (workspace_id):", wsId);
+    console.log("   agencyParentId (agency_id):", agId);
+    if (!wsId || !agId) {
+      console.warn("⚠️ AUTOMIND no inicializado — entra a un workspace primero");
+      return;
+    }
+    const testId = "SA_TEST_" + Date.now();
+    const { data: insData, error: insErr } = await client
+      .from("inventario")
+      .upsert({ id: testId, workspace_id: wsId, agency_id: agId, estatus: "NUEVOS", marca: "TEST_SA" }, { onConflict: "id" })
+      .select().maybeSingle();
+    if (insErr) console.error("❌ INSERT inventario:", insErr.code, insErr.message, insErr.details);
+    else if (!insData) console.error("❌ INSERT inventario BLOQUEADO por RLS (data nulo)");
+    else { console.log("✅ INSERT inventario OK, id:", insData.id); await client.from("inventario").delete().eq("id", testId); console.log("✅ DELETE inventario OK"); }
+
+    // Test INSERT clientes
+    const { data: insC, error: insCErr } = await client
+      .from("clientes")
+      .insert({ nombre_completo: "TEST_SA", workspace_id: wsId, agency_id: agId, etapa_proceso: "Prospección", estado_general: "Activo" })
+      .select().maybeSingle();
+    if (insCErr) console.error("❌ INSERT clientes:", insCErr.code, insCErr.message);
+    else if (!insC) console.error("❌ INSERT clientes BLOQUEADO por RLS");
+    else { console.log("✅ INSERT clientes OK, id:", insC.id); await client.from("clientes").delete().eq("id", insC.id); console.log("✅ DELETE clientes OK"); }
+
+    console.log("═══════════════════════════════");
+    console.log("Para más detalle, corre supabase_test_superadmin_perms.sql en Supabase SQL Editor");
+  }
+
   /* ── Exponer en window ─────────────────────────────────────── */
   window.DB = {
     client,
@@ -1043,6 +1086,7 @@
     loadAuditLog,
     getClienteHistorial,
     addClienteHistorial,
+    testSuperAdminPerms,
     storage: client.storage,
   };
 })();

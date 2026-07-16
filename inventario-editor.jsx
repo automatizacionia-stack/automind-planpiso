@@ -392,7 +392,12 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
             </div>
             <div className="inv-form-actions">
               {saved && <span className="save-ok">✓ Guardado</span>}
-              {saveError && <span className="save-err" title={saveError}>⚠️ Error al guardar</span>}
+              {saveError && (
+                <span className="save-err"
+                  style={{ maxWidth:320, whiteSpace:"normal", fontSize:12, lineHeight:1.4, cursor:"pointer" }}
+                  onClick={() => alert(saveError)}
+                  title="Click para ver detalle">⚠️ Error al guardar (click para detalles)</span>
+              )}
               <button className="btn primary" onClick={handleSave} disabled={!dirty || saving}>
                 {saving ? "Guardando…" : "Guardar cambios"}
               </button>
