@@ -51,20 +51,20 @@ Deno.serve(async (req) => {
     const targetAgencyId = wsRow?.agency_id || agencyId || workspaceId;
     const workspaceName  = wsRow?.nombre || null;
 
-    // ¿Es super admin? → acceso total, sin restricciones de tenant
-    // Check 1: por user_id (auth UUID)
-    const { data: superAdminRow } = await adminClient
-      .from("super_admins").select("user_id, email")
+    // ¿Es super admin? → usar userClient (JWT del invitador) para respetar RLS auth.uid()=user_id
+    // No depende de que adminClient tenga service_role_key configurada
+    const { data: saViaJwt } = await userClient
+      .from("super_admins").select("user_id")
       .eq("user_id", invitador.id).maybeSingle();
-    // Check 2: fallback por email (por si el UUID cambió al recrear la cuenta)
-    let esSuperAdmin = !!superAdminRow;
-    if (!esSuperAdmin && invitador.email) {
-      const { data: saByEmail } = await adminClient
+    // Fallback: adminClient + búsqueda por email
+    let esSuperAdmin = !!saViaJwt;
+    if (!esSuperAdmin) {
+      const { data: saAdmin } = await adminClient
         .from("super_admins").select("user_id")
-        .eq("email", invitador.email).maybeSingle();
-      esSuperAdmin = !!saByEmail;
+        .or(`user_id.eq.${invitador.id},email.eq.${invitador.email ?? ""}`).limit(1);
+      esSuperAdmin = !!(saAdmin && saAdmin.length > 0);
     }
-    console.log("[invite-user] invitador uid:", invitador.id, "email:", invitador.email, "esSuperAdmin:", esSuperAdmin, "workspaceId:", workspaceId);
+    console.log("[invite-user] uid:", invitador.id, "email:", invitador.email, "esSuperAdmin:", esSuperAdmin, "ws:", workspaceId);
 
     const { data: agencyMem } = await adminClient
       .from("agency_memberships").select("role")
