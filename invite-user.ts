@@ -52,10 +52,19 @@ Deno.serve(async (req) => {
     const workspaceName  = wsRow?.nombre || null;
 
     // ¿Es super admin? → acceso total, sin restricciones de tenant
+    // Check 1: por user_id (auth UUID)
     const { data: superAdminRow } = await adminClient
-      .from("super_admins").select("user_id")
+      .from("super_admins").select("user_id, email")
       .eq("user_id", invitador.id).maybeSingle();
-    const esSuperAdmin = !!superAdminRow;
+    // Check 2: fallback por email (por si el UUID cambió al recrear la cuenta)
+    let esSuperAdmin = !!superAdminRow;
+    if (!esSuperAdmin && invitador.email) {
+      const { data: saByEmail } = await adminClient
+        .from("super_admins").select("user_id")
+        .eq("email", invitador.email).maybeSingle();
+      esSuperAdmin = !!saByEmail;
+    }
+    console.log("[invite-user] invitador uid:", invitador.id, "email:", invitador.email, "esSuperAdmin:", esSuperAdmin, "workspaceId:", workspaceId);
 
     const { data: agencyMem } = await adminClient
       .from("agency_memberships").select("role")
