@@ -71,8 +71,8 @@ Deno.serve(async (req) => {
         .or(`workspace_id.eq.${workspaceId},agency_id.eq.${workspaceId}`)
         .maybeSingle();
       if (!inviterRow) throw new Error("Sin permisos para invitar usuarios (workspace no coincide o rol insuficiente)");
-      const wsInviter = inviterRow.workspace_id || inviterRow.agency_id;
-      if (wsInviter !== workspaceId) throw new Error("No puedes invitar usuarios a otro workspace");
+      // La query .or() ya garantiza que el usuario pertenece al workspace (por workspace_id o agency_id).
+      // No hacemos check redundante de wsInviter para evitar falsos positivos con datos legacy.
       if (!["director", "gerente"].includes(inviterRow.rol)) {
         throw new Error("Solo directores o gerentes pueden invitar usuarios");
       }
