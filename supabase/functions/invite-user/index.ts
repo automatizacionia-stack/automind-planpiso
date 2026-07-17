@@ -142,9 +142,9 @@ Deno.serve(async (req) => {
             method: "POST",
             headers: { "Content-Type": "application/json", "api-key": brevoKey },
             body: JSON.stringify({
-              sender: { name: "Automind Plan Piso", email: "no-reply@automind.mx" },
+              sender: { name: "Automind", email: "no-reply@automind.mx" },
               to: [{ email, name: nombre }],
-              subject: `Acceso a ${agencyDisplay} en Automind Plan Piso`,
+              subject: `Acceso a ${agencyDisplay} en Automind`,
               htmlContent: `
                 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
                   max-width:500px;margin:0 auto;padding:32px 20px;background:#f4f6fb">
@@ -153,13 +153,12 @@ Deno.serve(async (req) => {
                     <div style="background:#1b2a57;padding:28px 32px;text-align:center">
                       <div style="font-size:28px;margin-bottom:8px">🚗</div>
                       <div style="color:#fff;font-size:20px;font-weight:800;letter-spacing:-.3px">Automind</div>
-                      <div style="color:rgba(255,255,255,.6);font-size:13px;margin-top:2px">Plan Piso</div>
                     </div>
                     <div style="padding:32px">
                       <h2 style="margin:0 0 8px;font-size:20px;color:#1a1a2e">Hola, ${nombre} 👋</h2>
                       <p style="color:#555;line-height:1.7;margin:0 0 20px;font-size:15px">
                         Has sido agregado a <strong>${agencyDisplay}</strong>
-                        en Automind Plan Piso como
+                        en Automind como
                         <span style="background:${rolColor};color:#fff;font-size:12px;font-weight:700;
                           padding:3px 10px;border-radius:20px;white-space:nowrap">${rolLabel}</span>.
                         Haz clic para entrar directamente.
@@ -179,7 +178,7 @@ Deno.serve(async (req) => {
                     </div>
                     <div style="padding:16px 32px;background:#f9fafb;border-top:1px solid #f0f0f0;
                       text-align:center;font-size:12px;color:#bbb">
-                      Automind · Plataforma de Plan Piso · Coperva
+                      Automind · Coperva
                     </div>
                   </div>
                 </div>`,
