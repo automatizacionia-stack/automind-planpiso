@@ -249,6 +249,12 @@ function LoginScreen({ onLogin }) {
       // 2. Detectar tipo de usuario (agency owner o workspace member)
       const ctx = await window.DB.getUserContext();
 
+      if (ctx.type === "super_admin") {
+        // Super admin → vista global de gestión de agencias
+        onLogin({ __superAdminCtx: ctx });
+        return;
+      }
+
       if (ctx.type === "agency") {
         // Agency owner → mostrar selector de workspaces
         onLogin({ __agencyCtx: ctx });
