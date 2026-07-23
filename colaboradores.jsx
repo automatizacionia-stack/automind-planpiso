@@ -539,8 +539,8 @@ function Colaboradores({ usuarios: usuariosInit, rows, usuarioActual, autoOpenFo
                     {puedeInvitar && !esYo && (
                       <button className="btn btn-sm" onClick={() => setEditando(u)}>Editar</button>
                     )}
-                    {/* Reenviar invitación — solo para usuarios aún pendientes */}
-                    {puedeInvitar && !activo && !esYo && (
+                    {/* Reenviar / Nuevo link — disponible para pendientes Y activos (links pueden expirar) */}
+                    {puedeInvitar && !esYo && (
                       <span style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
                         <button className="btn btn-sm" disabled={rsLoading}
                           style={rsOk  ? { color:"#1f9d57", borderColor:"#bbf7d0", background:"#f0fdf4" }
@@ -549,7 +549,7 @@ function Colaboradores({ usuarios: usuariosInit, rows, usuarioActual, autoOpenFo
                           onClick={() => handleReenviar(u)}>
                           {rsLoading
                             ? <><span className="login-spinner" style={{ width:11, height:11, borderWidth:2, display:"inline-block", verticalAlign:"middle", marginRight:4 }} />Enviando…</>
-                            : "Reenviar"}
+                            : activo ? "Nuevo link" : "Reenviar"}
                         </button>
                         {rsOk && rsLink && (
                           <div style={{ display:"flex", flexDirection:"column", gap:3, alignItems:"flex-end", padding:"5px 7px", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:6, maxWidth:200 }}>
