@@ -989,7 +989,7 @@ function imprimirExpediente(form) {
     + docCheck(form.docId,         "INE / Identificación")
     + docCheck(form.docLicencia,   "Licencia de conducir")
     + docCheck(form.docDomicilio,  "Comprobante domicilio")
-    + docCheck(form.docFactura,    "Factura del vehículo")
+    + docCheck(form.docFactura,    "Factura del vehículo sin valor")
     + docCheck(form.docComprobante,"Comprobante de pago")
     + (form.e8ContratoUrl ? '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46">✓ Contrato firmado</span>' : '')
     + '</div>'
@@ -3257,7 +3257,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
             <Sec ico="📂" titulo="Documentos de caja" defaultOpen>
               <div style={{ gridColumn:"1/-1" }}>
                 <DocSimpleUpload
-                  label="Factura del vehículo"
+                  label="Factura del vehículo sin valor"
                   sublabel="Factura fiscal · PDF o imagen"
                   value={form.docFactura || null}
                   onChange={v => set("docFactura", v)}
