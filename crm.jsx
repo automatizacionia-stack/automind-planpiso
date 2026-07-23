@@ -1494,6 +1494,132 @@ function UnitPickerModal({ onSelect, onClose }) {
   );
 }
 
+/* ── Modal de recompra: copia datos del cliente + elige vehículo nuevo ──────── */
+function RecompraModal({ cliente, onConfirm, onClose }) {
+  var [unidad,        setUnidad]        = React.useState(null);   // { id, desc, precio }
+  var [showPicker,    setShowPicker]    = React.useState(false);
+  var [guardando,     setGuardando]     = React.useState(false);
+
+  async function confirmar() {
+    if (!unidad) return;
+    setGuardando(true);
+    try {
+      await onConfirm(cliente, unidad);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <>
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:1100 }}
+        onClick={onClose} />
+      <div style={{
+        position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
+        background:"var(--card)", borderRadius:16, padding:"28px 28px 24px",
+        width:480, maxWidth:"95vw", zIndex:1101,
+        boxShadow:"0 8px 40px rgba(0,0,0,.18)",
+      }}>
+        {/* Header */}
+        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
+          <div style={{ width:42, height:42, borderRadius:12, background:"#ede9fe",
+            display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>
+            🔄
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontWeight:800, fontSize:16, color:"var(--ink)" }}>Nueva compra</div>
+            <div style={{ fontSize:13, color:"var(--muted)", overflow:"hidden",
+              textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+              {cliente.nombre}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background:"none", border:"none",
+            cursor:"pointer", fontSize:20, color:"var(--muted)", padding:"0 4px" }}>✕</button>
+        </div>
+
+        {/* Datos que se copiarán */}
+        <div style={{ background:"var(--bg)", borderRadius:10, padding:"12px 14px",
+          marginBottom:16, fontSize:12, color:"var(--muted)", lineHeight:1.7 }}>
+          <div style={{ fontWeight:700, color:"var(--ink)", marginBottom:4, fontSize:11,
+            textTransform:"uppercase", letterSpacing:".06em" }}>Datos que se reutilizarán</div>
+          {[
+            cliente.tel && "Tel: " + cliente.tel,
+            cliente.email && "Email: " + cliente.email,
+            cliente.rfc && "RFC: " + cliente.rfc,
+            cliente.curp && "CURP: " + cliente.curp,
+            (cliente.direccion || cliente.ciudad) && ("Domicilio: " + [cliente.direccion, cliente.ciudad, cliente.estado].filter(Boolean).join(", ")),
+            (cliente.docId || cliente.docLicencia || cliente.docDomicilio || cliente.docRfc) &&
+              "Documentos: " + [
+                cliente.docId && "INE",
+                cliente.docLicencia && "Licencia",
+                cliente.docDomicilio && "Comprobante",
+                cliente.docRfc && "RFC",
+              ].filter(Boolean).join(", "),
+          ].filter(Boolean).map(function(txt, i) {
+            return <div key={i}>{txt}</div>;
+          })}
+        </div>
+
+        {/* Selector de vehículo */}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:"var(--ink)", marginBottom:8 }}>
+            Vehículo nuevo *
+          </div>
+          {unidad ? (
+            <div style={{ display:"flex", alignItems:"center", gap:8,
+              border:"1px solid var(--accent)", borderRadius:10, padding:"10px 14px",
+              background:"#eff6ff" }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:600, fontSize:13, color:"var(--ink)",
+                  overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                  {unidad.desc}
+                </div>
+              </div>
+              <button onClick={function(){ setShowPicker(true); }}
+                style={{ fontSize:11, padding:"4px 10px", borderRadius:7, border:"1px solid var(--accent)",
+                  background:"none", color:"var(--accent)", cursor:"pointer", fontWeight:600, flexShrink:0 }}>
+                Cambiar
+              </button>
+            </div>
+          ) : (
+            <button onClick={function(){ setShowPicker(true); }}
+              style={{ width:"100%", padding:"14px", borderRadius:10, fontSize:13, fontWeight:600,
+                border:"2px dashed var(--line)", background:"var(--bg)", color:"var(--muted)",
+                cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+              🚗 Seleccionar vehículo del inventario
+            </button>
+          )}
+        </div>
+
+        {/* Acciones */}
+        <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+          <button onClick={onClose} disabled={guardando}
+            style={{ padding:"9px 18px", borderRadius:9, border:"1px solid var(--line)",
+              background:"var(--bg)", color:"var(--ink)", fontSize:13, cursor:"pointer", fontWeight:600 }}>
+            Cancelar
+          </button>
+          <button onClick={confirmar} disabled={!unidad || guardando}
+            style={{ padding:"9px 20px", borderRadius:9, border:"none",
+              background: unidad && !guardando ? "var(--accent)" : "var(--line)",
+              color: unidad && !guardando ? "#fff" : "var(--muted)",
+              fontSize:13, cursor: unidad ? "pointer" : "not-allowed",
+              fontWeight:700, display:"flex", alignItems:"center", gap:7 }}>
+            {guardando ? "Creando…" : "🔄 Iniciar nueva compra"}
+          </button>
+        </div>
+      </div>
+
+      {/* UnitPickerModal anidado */}
+      {showPicker && (
+        <UnitPickerModal
+          onSelect={function(u){ setUnidad(u); setShowPicker(false); }}
+          onClose={function(){ setShowPicker(false); }}
+        />
+      )}
+    </>
+  );
+}
+
 /* ── Sección colapsable + campo de formulario (nivel módulo para estabilidad de hooks) ── */
 function Sec({ ico, titulo, children, defaultOpen }) {
   var [open, setOpen] = React.useState(defaultOpen ? true : false);
@@ -3714,7 +3840,7 @@ function NuevoClienteModal({ onClose, onCreate, asesores, initialData }) {
 
 /* ── Componente principal CRMClientes ────────────────────────────────── */
 /* ── Vista General del Proceso de Venta ──────────────────────────────────── */
-function ProcesoView({ clientes, onOpen }) {
+function ProcesoView({ clientes, onOpen, onRecompra }) {
   var [q,             setQ]           = React.useState("");
   var [filtEtapa,     setFiltEtapa]   = React.useState("");
   var [filtAsesor,    setFiltAsesor]  = React.useState("");
@@ -3943,6 +4069,7 @@ function ProcesoView({ clientes, onOpen }) {
               <Hdr col="docsPend" label="Docs" center />
               <th style={th}>Próxima actividad</th>
               <Hdr col="estatus"  label="Expediente" />
+              <th style={{ ...th, width:36 }} />
             </tr>
           </thead>
           <tbody>
@@ -4073,6 +4200,21 @@ function ProcesoView({ clientes, onOpen }) {
                       {SEM_LABEL[estatus]}
                     </span>
                   </td>
+
+                  {/* Recompra */}
+                  <td style={{ padding:"10px 8px", textAlign:"center" }}>
+                    {onRecompra && (
+                      <button
+                        title="Nueva compra para este cliente"
+                        onClick={function(e){ e.stopPropagation(); onRecompra(c); }}
+                        style={{ background:"#ede9fe", border:"none", borderRadius:7,
+                          padding:"4px 8px", cursor:"pointer", fontSize:14,
+                          color:"#7c3aed", lineHeight:1, display:"inline-flex",
+                          alignItems:"center", justifyContent:"center" }}>
+                        🔄
+                      </button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
@@ -4094,6 +4236,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
   const [mostrarNuevo, setMostrarNuevo] = React.useState(false);
   const [pendingData, setPendingData]   = React.useState(null);
   const [editorSelId, setEditorSelId]   = React.useState(null);
+  const [recompraCliente, setRecompraCliente] = React.useState(null); // cliente origen para recompra
 
   /* Detectar prefill desde Plan Piso al montar */
   React.useEffect(() => {
@@ -4174,6 +4317,60 @@ function CRMClientes({ rows, kpis, usuarios }) {
     setVista("editor");
   }
 
+  async function crearRecompra(clienteOrigen, unidad) {
+    var hoy = new Date().toISOString().slice(0, 10);
+    // Campos personales + documentos reutilizados; proceso limpio con el vehículo nuevo
+    var nuevo = {
+      id:           "c" + Date.now(),
+      nombre:       clienteOrigen.nombre,
+      tel:          clienteOrigen.tel          || "",
+      email:        clienteOrigen.email        || "",
+      tipo:         clienteOrigen.tipo         || "Persona física",
+      rfc:          clienteOrigen.rfc          || "",
+      curp:         clienteOrigen.curp         || "",
+      fechaNac:     clienteOrigen.fechaNac     || "",
+      sexo:         clienteOrigen.sexo         || "",
+      direccion:    clienteOrigen.direccion    || "",
+      colonia:      clienteOrigen.colonia      || "",
+      ciudad:       clienteOrigen.ciudad       || "",
+      estado:       clienteOrigen.estado       || "",
+      cp:           clienteOrigen.cp           || "",
+      // Documentos: reutilizar refs de storage existentes
+      docId:        clienteOrigen.docId        || null,
+      docLicencia:  clienteOrigen.docLicencia  || null,
+      docDomicilio: clienteOrigen.docDomicilio || null,
+      docRfc:       clienteOrigen.docRfc       || null,
+      // Proceso fresco con el vehículo elegido
+      etapa:        "Prospección",
+      estadoGeneral:"activo",
+      asesor:       clienteOrigen.asesor       || "Sin asignar",
+      canal:        clienteOrigen.canal        || "",
+      unidadId:     unidad.id,
+      unidadDesc:   unidad.desc,
+      precioLista:  unidad.precio             || 0,
+      precioVenta:  unidad.precio             || 0,
+      uc:           hoy,
+      prox:         "Primer contacto",
+      fprox:        hoy,
+      notas:        "",
+    };
+    var agencyId = window.AUTOMIND && window.AUTOMIND.agencyId;
+    if (agencyId && window.DB) {
+      try {
+        var guardado = await window.DB.saveCliente(agencyId, nuevo);
+        nuevo = Object.assign({}, nuevo, guardado);
+      } catch(e) {
+        window.alert("Error al crear la recompra: " + (e.message || e));
+        return;
+      }
+    }
+    setClientesData(function(prev){ return [nuevo, ...prev]; });
+    setRecompraCliente(null);
+    setSeleccionado(nuevo);
+    setEditorSelId(nuevo.id);
+    setVista("editor");
+  }
+
   async function onClienteUpdate(updated) {
     /* Actualizar estado local optimistamente */
     setClientesData(prev => prev.map(c => c.id === updated.id ? updated : c));
@@ -4239,6 +4436,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
           <TabBtn id="editor"   label="Editor" />
           <TabBtn id="kanban"   label="Kanban" />
           <TabBtn id="lista"    label="Lista" />
+          <TabBtn id="proceso"  label="Proceso" />
           <TabBtn id="urgentes" label="Urgentes" badge={urgentesCount} />
         </div>
 
@@ -4277,6 +4475,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
       )}
       {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={function(c){ setEditorSelId(c.id); setVista("editor"); }} />}
       {vista === "lista"    && <ListaGrid    clientes={clientes} onOpen={function(c){ setEditorSelId(c.id); setVista("editor"); }} />}
+      {vista === "proceso"  && <ProcesoView  clientes={clientes} onOpen={function(c){ setEditorSelId(c.id); setVista("editor"); }} onRecompra={function(c){ setRecompraCliente(c); }} />}
       {vista === "urgentes" && <UrgentesView clientes={clientes} onOpen={function(c){ setEditorSelId(c.id); setVista("editor"); }} />}
 
       {/* Estado cargando / vacío / error */}
@@ -4309,6 +4508,14 @@ function CRMClientes({ rows, kpis, usuarios }) {
           onClose={() => { setMostrarNuevo(false); setPendingData(null); }}
           onCreate={crearCliente}
           initialData={pendingData}
+        />
+      )}
+
+      {recompraCliente && (
+        <RecompraModal
+          cliente={recompraCliente}
+          onConfirm={crearRecompra}
+          onClose={function(){ setRecompraCliente(null); }}
         />
       )}
     </div>
