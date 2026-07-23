@@ -3069,6 +3069,58 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
               </Fld>
             </Sec>
 
+            {/* ── Solicitud de crédito (solo cuando forma = Crédito) ── */}
+            {form.formaPagoCot === "Crédito" && (
+            <Sec ico="📋" titulo="Solicitud de crédito" defaultOpen>
+              {/* Upload del formato */}
+              <Fld label="Formato de solicitud" full>
+                <DocSimpleUpload
+                  label="Solicitud de crédito firmada"
+                  value={form.docCredSolicitud || null}
+                  onChange={v => set("docCredSolicitud", v)} />
+              </Fld>
+
+              {/* Monto financiado */}
+              <Fld label="Monto financiado ($)">
+                <input type="number" className="ef-input"
+                  style={{ ...IS, fontWeight:700, color:"var(--accent)" }}
+                  min="0" step="1000"
+                  value={form.montoFinanciado || ""}
+                  placeholder={
+                    (form.precioVenta && form.enganche)
+                      ? String(Math.max(0, Number(form.precioVenta) - Number(form.enganche)))
+                      : "0"
+                  }
+                  onChange={e => set("montoFinanciado", Number(e.target.value) || 0)} />
+              </Fld>
+
+              {/* Resumen: número y monto de mensualidades */}
+              <Fld label="Número de mensualidades">
+                <div style={{
+                  padding:"7px 10px", borderRadius:7, border:"1px solid var(--line)",
+                  background:"var(--bg)", fontSize:13, fontWeight:700, color:"var(--ink)",
+                }}>
+                  {form.plazoMeses
+                    ? form.plazoMeses + " meses"
+                    : <span style={{ fontWeight:400, fontSize:12, color:"var(--muted)" }}>
+                        Definir plazo en cotización
+                      </span>}
+                </div>
+              </Fld>
+              <Fld label="Monto de mensualidad ($)">
+                <div style={{
+                  padding:"7px 10px", borderRadius:7, border:"1px solid var(--line)",
+                  background:"var(--bg)", fontSize:13, fontWeight:700, color:"var(--accent)",
+                }}>
+                  {form.mensualidadEst > 0
+                    ? "$" + Number(form.mensualidadEst).toLocaleString("es-MX")
+                    : <span style={{ fontWeight:400, fontSize:12, color:"var(--muted)" }}>
+                        Se calcula al ingresar enganche y plazo
+                      </span>}
+                </div>
+              </Fld>
+            </Sec>
+            )}
 
             </>) /* fin tab cot */}
 
