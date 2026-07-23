@@ -1409,7 +1409,7 @@ function UnitPickerModal({ onSelect, onClose }) {
   };
   var filtradas = rows.filter(function(r) {
     if (!q) return true;
-    var txt = [r.marca, r.modelo, r.anio, r.vin, r.color].filter(Boolean).join(" ").toLowerCase();
+    var txt = [r.marca, r.modelo, r.anio, r.vin, r.colorExterior].filter(Boolean).join(" ").toLowerCase();
     return txt.includes(q.toLowerCase());
   });
   return (
@@ -1457,6 +1457,7 @@ function UnitPickerModal({ onSelect, onClose }) {
           )}
           {filtradas.map(function(r) {
             var desc = [r.marca, r.modelo, r.anio].filter(Boolean).join(" ");
+            if (r.colorExterior) desc += " · " + r.colorExterior;
             if (r.vin) desc += " · " + r.vin;
             var dotColor = COLOR_SEM[r.semaforo] || "#9ca3af";
             return (
@@ -1471,8 +1472,10 @@ function UnitPickerModal({ onSelect, onClose }) {
               >
                 <span style={{ width:10, height:10, borderRadius:"50%", background:dotColor, flexShrink:0 }} />
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)" }}>{desc}</div>
-                  {r.color && <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>{r.color}</div>}
+                  <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)" }}>{[r.marca, r.modelo, r.anio].filter(Boolean).join(" ")}</div>
+                  <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>
+                    {[r.colorExterior, r.vin].filter(Boolean).join(" · ")}
+                  </div>
                 </div>
                 <span style={{
                   fontSize:10, fontWeight:700, letterSpacing:.5, textTransform:"uppercase", color:dotColor,
