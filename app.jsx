@@ -92,11 +92,13 @@ function VehicleDrawer({ v, onClose, onEdit, onNuevoCliente, usuarioActual }) {
               <b style={{ color: v.interesAcum > 0 ? SEM.intereses.sol : "inherit" }}>{fmtMoney(v.interesAcum, 2)}</b>
             </div>
           )}
-          <div className="dr-stat"><span>% Plan consumido</span>
-            <b style={{ color: v.pctPlanConsumido > 100 ? SEM.intereses.sol : v.pctPlanConsumido > 86 ? SEM.vencer.sol : "inherit" }}>
-              {v.pctPlanConsumido}%
-            </b>
-          </div>
+          {(!usuarioActual || usuarioActual.rol !== "vendedor") && (
+            <div className="dr-stat"><span>% Plan consumido</span>
+              <b style={{ color: v.pctPlanConsumido > 100 ? SEM.intereses.sol : v.pctPlanConsumido > 86 ? SEM.vencer.sol : "inherit" }}>
+                {v.pctPlanConsumido}%
+              </b>
+            </div>
+          )}
         </div>
 
         {/* Ficha completa del vehículo */}
@@ -110,9 +112,11 @@ function VehicleDrawer({ v, onClose, onEdit, onNuevoCliente, usuarioActual }) {
           <div className="dr-stat"><span>Color interior</span><b>{v.colorInterior || "—"}</b></div>
           <div className="dr-stat"><span>Fecha factura</span><b>{v.fechaFacturaTxt || "—"}</b></div>
           <div className="dr-stat"><span>Fecha llegada</span><b>{v.fechaLlegadaTxt || "—"}</b></div>
-          <div className="dr-stat"><span>Monto financiado</span><b>{fmtMoney(v.montoFinanciado, 2)}</b></div>
-          <div className="dr-stat"><span>Tasa anual</span><b>{fmtPct(v.pctInteres, 2)}</b></div>
-          <div className="dr-stat"><span>Días de gracia</span><b>{v.diasGraciaTotal} días</b></div>
+          {(!usuarioActual || usuarioActual.rol !== "vendedor") && (<>
+            <div className="dr-stat"><span>Monto financiado</span><b>{fmtMoney(v.montoFinanciado, 2)}</b></div>
+            <div className="dr-stat"><span>Tasa anual</span><b>{fmtPct(v.pctInteres, 2)}</b></div>
+            <div className="dr-stat"><span>Días de gracia</span><b>{v.diasGraciaTotal} días</b></div>
+          </>)}
           {v.observaciones && (
             <div className="dr-stat" style={{gridColumn:"1/-1"}}><span>Observaciones</span><b>{v.observaciones}</b></div>
           )}
