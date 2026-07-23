@@ -1065,8 +1065,8 @@ function DocUpload({ label, sublabel, docType, value, onChange, onExtract, nombr
       var key = await _uploadDocToStorage(file, dataUrl);
       setSubiendoDoc(false);
       if (key) onChange({ ...fileData, storageKey: key });
-      // Auto-extraer con IA al cargar
-      extraer(dataUrl, file.type);
+      // Auto-extraer con IA solo si hay callback de extracción
+      if (onExtract) extraer(dataUrl, file.type);
     };
     reader.readAsDataURL(file);
   }
@@ -2687,6 +2687,16 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                     onChange={e => set("obsPrueba", e.target.value)}
                     placeholder="Preferencias detectadas, objeciones, próximo paso…" />
                 </Fld>
+                <div style={{ gridColumn:"1/-1", marginTop:4 }}>
+                  <DocUpload
+                    label="Evidencia de prueba de manejo"
+                    sublabel="Foto, acuse firmado o PDF · sin extracción IA"
+                    docType="id"
+                    value={form.docEvidenciaPrueba || null}
+                    onChange={v => set("docEvidenciaPrueba", v)}
+                    nombreReferencia={form.nombre || ""}
+                  />
+                </div>
               </>)}
             </Sec>
 
