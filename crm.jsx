@@ -2275,7 +2275,8 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
         { key:"docLicencia",       label:"Licencia"   },
         { key:"docDomicilio",      label:"Domicilio"  },
         { key:"docRfc",            label:"RFC"        },
-        { key:"docEvidenciaPrueba",label:"Ev.Prueba"  },
+        { key:"docEvidenciaPrueba", label:"Ev.Prueba"  },
+      { key:"docEncuestaPrueba",  label:"Encuesta"   },
       ];
       for (var i = 0; i < docCampos.length; i++) {
         var dc  = docCampos[i];
@@ -2898,6 +2899,16 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
                     docType="id"
                     value={form.docEvidenciaPrueba || null}
                     onChange={v => set("docEvidenciaPrueba", v)}
+                    nombreReferencia={form.nombre || ""}
+                  />
+                </div>
+                <div style={{ gridColumn:"1/-1", marginTop:4 }}>
+                  <DocUpload
+                    label="Encuesta de satisfacción"
+                    sublabel="Formato firmado por el cliente · PDF, foto o imagen escaneada"
+                    docType="id"
+                    value={form.docEncuestaPrueba || null}
+                    onChange={v => set("docEncuestaPrueba", v)}
                     nombreReferencia={form.nombre || ""}
                   />
                 </div>

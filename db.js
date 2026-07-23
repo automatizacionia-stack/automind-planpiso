@@ -617,7 +617,8 @@
       docLicencia: row.doc_lic_key ? { name: row.doc_lic_nombre || "", storageKey: row.doc_lic_key } : null,
       docDomicilio:row.doc_dom_key ? { name: row.doc_dom_nombre || "", storageKey: row.doc_dom_key } : null,
       docRfc:           row.doc_rfc_key      ? { name: row.doc_rfc_nombre      || "", storageKey: row.doc_rfc_key      } : null,
-      docEvidenciaPrueba: row.doc_ev_prueba_key ? { name: row.doc_ev_prueba_nombre || "", storageKey: row.doc_ev_prueba_key } : null,
+      docEvidenciaPrueba:  row.doc_ev_prueba_key        ? { name: row.doc_ev_prueba_nombre        || "", storageKey: row.doc_ev_prueba_key        } : null,
+      docEncuestaPrueba:   row.doc_encuesta_prueba_key  ? { name: row.doc_encuesta_prueba_nombre  || "", storageKey: row.doc_encuesta_prueba_key  } : null,
       docFactura:     row.doc_factura_key    ? { name: row.doc_factura_nombre    || "", storageKey: row.doc_factura_key    } : null,
       docComprobantes: (function() {
         // Nuevo: leer del JSONB array
@@ -733,8 +734,10 @@
       doc_dom_nombre: c.docDomicilio? (c.docDomicilio.name      || null) : null,
       doc_rfc_key:       c.docRfc           ? (c.docRfc.storageKey           || null) : null,
       doc_rfc_nombre:    c.docRfc           ? (c.docRfc.name                || null) : null,
-      doc_ev_prueba_key:    c.docEvidenciaPrueba ? (c.docEvidenciaPrueba.storageKey || null) : null,
-      doc_ev_prueba_nombre: c.docEvidenciaPrueba ? (c.docEvidenciaPrueba.name       || null) : null,
+      doc_ev_prueba_key:           c.docEvidenciaPrueba ? (c.docEvidenciaPrueba.storageKey  || null) : null,
+      doc_ev_prueba_nombre:        c.docEvidenciaPrueba ? (c.docEvidenciaPrueba.name         || null) : null,
+      doc_encuesta_prueba_key:     c.docEncuestaPrueba  ? (c.docEncuestaPrueba.storageKey   || null) : null,
+      doc_encuesta_prueba_nombre:  c.docEncuestaPrueba  ? (c.docEncuestaPrueba.name          || null) : null,
       doc_factura_key:         c.docFactura    ? (c.docFactura.storageKey    || null) : null,
       doc_factura_nombre:      c.docFactura    ? (c.docFactura.name          || null) : null,
       doc_comprobantes: (c.docComprobantes && c.docComprobantes.length > 0)
