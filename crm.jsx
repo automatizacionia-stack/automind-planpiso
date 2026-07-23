@@ -2080,12 +2080,20 @@ function ExpedienteHeader({ form, onChangeEstado }) {
             👤 {form.asesor}
           </span>
         )}
-        {(form.unidadDesc || form.interes) && (
-          <span style={{ fontSize:11, padding:"2px 8px", borderRadius:5,
-            background:"var(--bg)", border:"1px solid var(--line)", color:"var(--ink)", fontWeight:600 }}>
-            🚗 {form.unidadDesc || form.interes}
-          </span>
-        )}
+        {(form.unidadDesc || form.interes) && (function(){
+          var raw    = form.unidadDesc || form.interes || "";
+          var partes = raw.split(" · ");
+          var nombre = partes[0];
+          var detalle= partes.slice(1).join(" · "); // color + VIN
+          return (
+            <span style={{ fontSize:11, padding:"3px 9px", borderRadius:5,
+              background:"var(--bg)", border:"1px solid var(--line)", color:"var(--ink)",
+              display:"flex", flexDirection:"column", alignItems:"flex-start", gap:1 }}>
+              <span style={{ fontWeight:600 }}>🚗 {nombre}</span>
+              {detalle && <span style={{ fontWeight:400, color:"var(--muted)", fontSize:10 }}>{detalle}</span>}
+            </span>
+          );
+        })()}
         {form.formaPagoCot && form.formaPagoCot !== "No definido" ? (
           <span style={{
             fontSize:11, padding:"2px 8px", borderRadius:5, fontWeight:700,
@@ -3062,8 +3070,17 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
                     <div style={{
                       flex:1, padding:"7px 10px", borderRadius:7,
                       border:"1px solid var(--line)", background:"var(--bg)",
-                      fontSize:13, color:"var(--ink)", fontWeight:600,
-                    }}>{form.unidadDesc}</div>
+                    }}>
+                      {(function(){
+                        var partes  = (form.unidadDesc || "").split(" · ");
+                        var nombre  = partes[0];
+                        var detalle = partes.slice(1).join(" · ");
+                        return (<>
+                          <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)" }}>{nombre}</div>
+                          {detalle && <div style={{ fontSize:11, color:"var(--muted)", marginTop:2 }}>{detalle}</div>}
+                        </>);
+                      })()}
+                    </div>
                   ) : (
                     <div style={{
                       flex:1, padding:"7px 10px", borderRadius:7,
