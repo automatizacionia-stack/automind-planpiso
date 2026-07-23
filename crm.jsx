@@ -1969,6 +1969,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
         { key:"docId",        label:"INE"          },
         { key:"docLicencia",  label:"Licencia"     },
         { key:"docDomicilio", label:"Comprobante"  },
+        { key:"docRfc",       label:"RFC"          },
       ];
       for (var i = 0; i < docCampos.length; i++) {
         var dc  = docCampos[i];
@@ -2040,8 +2041,25 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
         if (extractedCampos.tipoLicencia)    upd.tipoLic     = extractedCampos.tipoLicencia;
         if (extractedCampos.vigencia)        upd.vigenciaLic = extractedCampos.vigencia;
       }
+      if (fuente === "rfc") {
+        if (extractedCampos.rfc)               upd.rfc    = extractedCampos.rfc;
+        if (extractedCampos.curp && !prev.curp) upd.curp  = extractedCampos.curp;
+        if (extractedCampos.nombre && !prev.nombre) {
+          var partesRfc = [extractedCampos.nombre, extractedCampos.apellidoPaterno, extractedCampos.apellidoMaterno].filter(Boolean);
+          if (partesRfc.length) upd.nombre = partesRfc.join(" ");
+          else if (extractedCampos.razonSocial && !prev.nombre) upd.nombre = extractedCampos.razonSocial;
+        }
+        if (extractedCampos.cp && !prev.cp)         upd.cp     = extractedCampos.cp;
+        if (extractedCampos.estado && !prev.estado) upd.estado = extractedCampos.estado;
+        if (extractedCampos.ciudad && !prev.ciudad) upd.ciudad = extractedCampos.ciudad;
+        if (extractedCampos.colonia && !prev.colonia) upd.colonia = extractedCampos.colonia;
+        if (extractedCampos.direccion && !prev.direccion) upd.direccion = extractedCampos.direccion;
+      }
       // Guardar todos los datos crudos para referencia
-      var clave = fuente === "id" ? "datosId" : fuente === "licencia" ? "datosLicencia" : "datosDomicilio";
+      var clave = fuente === "id" ? "datosId"
+                : fuente === "licencia" ? "datosLicencia"
+                : fuente === "rfc"      ? "datosRfc"
+                : "datosDomicilio";
       upd[clave] = extractedCampos;
       return Object.assign({}, prev, upd);
     });
@@ -2307,9 +2325,20 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   nombreReferencia={form.nombre || ""}
                 />
               </div>
+              <div style={{ gridColumn:"1/-1", marginTop:4 }}>
+                <DocUpload
+                  label="Constancia de Situación Fiscal (RFC)"
+                  sublabel="Documento del SAT · extrae RFC automáticamente"
+                  docType="rfc"
+                  value={form.docRfc || null}
+                  onChange={v => set("docRfc", v)}
+                  onExtract={campos => aplicarCampos(campos, "rfc")}
+                  nombreReferencia={form.nombre || ""}
+                />
+              </div>
 
               {/* Panel: Datos OCR confirmados */}
-              {(form.datosId || form.datosLicencia || form.datosDomicilio) && (
+              {(form.datosId || form.datosLicencia || form.datosDomicilio || form.datosRfc) && (
                 <div style={{ gridColumn:"1/-1", marginTop:8, padding:"12px 14px",
                   background:"var(--bg)", border:"1px solid var(--line)", borderRadius:10 }}>
                   <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)",

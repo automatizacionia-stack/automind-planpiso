@@ -616,6 +616,7 @@
       docId:       row.doc_id_key  ? { name: row.doc_id_nombre  || "", storageKey: row.doc_id_key  } : null,
       docLicencia: row.doc_lic_key ? { name: row.doc_lic_nombre || "", storageKey: row.doc_lic_key } : null,
       docDomicilio:row.doc_dom_key ? { name: row.doc_dom_nombre || "", storageKey: row.doc_dom_key } : null,
+      docRfc:      row.doc_rfc_key ? { name: row.doc_rfc_nombre || "", storageKey: row.doc_rfc_key } : null,
       docFactura:     row.doc_factura_key    ? { name: row.doc_factura_nombre    || "", storageKey: row.doc_factura_key    } : null,
       docComprobante: row.doc_comprobante_key? { name: row.doc_comprobante_nombre|| "", storageKey: row.doc_comprobante_key} : null,
       // Documentos de crédito (E6)
@@ -714,6 +715,8 @@
       doc_lic_nombre: c.docLicencia ? (c.docLicencia.name       || null) : null,
       doc_dom_key:    c.docDomicilio? (c.docDomicilio.storageKey|| null) : null,
       doc_dom_nombre: c.docDomicilio? (c.docDomicilio.name      || null) : null,
+      doc_rfc_key:    c.docRfc      ? (c.docRfc.storageKey      || null) : null,
+      doc_rfc_nombre: c.docRfc      ? (c.docRfc.name            || null) : null,
       doc_factura_key:         c.docFactura    ? (c.docFactura.storageKey    || null) : null,
       doc_factura_nombre:      c.docFactura    ? (c.docFactura.name          || null) : null,
       doc_comprobante_key:     c.docComprobante? (c.docComprobante.storageKey|| null) : null,

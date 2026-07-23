@@ -64,6 +64,24 @@ Omite cualquier campo que no sea legible o no aplique. Estructura esperada:
 }
 Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de código.`;
 
+const PROMPT_RFC = `Analiza esta Constancia de Situación Fiscal del SAT (México).
+Devuelve ÚNICAMENTE un objeto JSON válido con los campos que puedas leer con certeza.
+Omite cualquier campo que no sea legible o no aplique. Estructura esperada:
+{
+  "rfc":             "RFC exactamente como aparece (persona física: 13 caracteres, moral: 12)",
+  "nombre":          "nombre(s) de pila (si es persona física)",
+  "apellidoPaterno": "primer apellido (si es persona física)",
+  "apellidoMaterno": "segundo apellido (si es persona física)",
+  "razonSocial":     "razón social completa (si es persona moral)",
+  "curp":            "CURP si aparece, exactamente 18 caracteres",
+  "cp":              "código postal del domicilio fiscal (5 dígitos)",
+  "estado":          "estado de la república del domicilio fiscal",
+  "ciudad":          "municipio o alcaldía del domicilio fiscal",
+  "colonia":         "colonia del domicilio fiscal",
+  "direccion":       "calle y número del domicilio fiscal"
+}
+Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de código.`;
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -71,7 +89,7 @@ Deno.serve(async (req: Request) => {
     const { dataUrl, mimeType, docType } = await req.json() as {
       dataUrl: string;
       mimeType: string;
-      docType: "id" | "domicilio" | "licencia";
+      docType: "id" | "domicilio" | "licencia" | "rfc";
     };
 
     if (!dataUrl || !mimeType || !docType) {
@@ -88,7 +106,10 @@ Deno.serve(async (req: Request) => {
 
     // La clave de OpenAI está guardada bajo el nombre ANTHROPIC_API_KEY en Supabase Secrets
     const client = new OpenAI({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
-    const prompt  = docType === "id" ? PROMPT_ID : docType === "licencia" ? PROMPT_LIC : PROMPT_DOM;
+    const prompt  = docType === "id" ? PROMPT_ID
+                  : docType === "licencia" ? PROMPT_LIC
+                  : docType === "rfc"      ? PROMPT_RFC
+                  : PROMPT_DOM;
 
     const completion = await client.chat.completions.create({
       model:      "gpt-4o-mini",
