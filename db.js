@@ -653,6 +653,11 @@
       entregaFecha:   row.entrega_fecha     || "",
       entregaKm:      row.entrega_km        || "",
       entregaNotas:   row.entrega_notas     || "",
+      // Verificación de contacto (#01)
+      telVerificadoAt:     row.tel_verificado_at     || null,
+      telVerificadoMetodo: row.tel_verificado_metodo || null,
+      emailVerificadoAt:     row.email_verificado_at     || null,
+      emailVerificadoMetodo: row.email_verificado_metodo || null,
     };
   }
 
@@ -768,6 +773,11 @@
       entrega_fecha:    c.entregaFecha   || null,
       entrega_km:       c.entregaKm      || null,
       entrega_notas:    c.entregaNotas   || null,
+      // Verificación de contacto (#01)
+      tel_verificado_at:      c.telVerificadoAt     || null,
+      tel_verificado_metodo:  c.telVerificadoMetodo || null,
+      email_verificado_at:    c.emailVerificadoAt   || null,
+      email_verificado_metodo: c.emailVerificadoMetodo || null,
       workspace_id:         agencyId,
       agency_id:            parentId,
     };

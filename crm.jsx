@@ -2198,6 +2198,7 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
   const autoSaveTimerRef = React.useRef(null);
   const [autoGuardando, setAutoGuardando] = React.useState(false);
   const [etapaAvanzada, setEtapaAvanzada] = React.useState(null); /* toast de auto-avance */
+  const [verifyStates, setVerifyStates]   = React.useState({ tel: null, email: null }); /* #01 verificación */
 
   /* Auto-seleccionar cuando llega un cliente recién creado */
   React.useEffect(() => {
@@ -2262,6 +2263,45 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
     setSelId(id);
     setForm(c ? { ...c } : null);
     setDirty(false); setSaved(false);
+  }
+
+  /* #01 — Verificar contacto (WhatsApp / email) vía Edge Function */
+  async function handleVerificar(tipo) {
+    if (!form) return;
+    var valor = tipo === "tel" ? form.tel : form.email;
+    if (!valor || !valor.trim()) return;
+    setVerifyStates(function(s) { return Object.assign({}, s, { [tipo]: "loading" }); });
+    try {
+      var { data: { session } } = await window.DB.client.auth.getSession();
+      var body = tipo === "tel" ? { tel: valor } : { email: valor };
+      var res  = await fetch(window.SUPABASE_URL + "/functions/v1/verify-contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + session.access_token,
+          "apikey": window.SUPABASE_ANON,
+        },
+        body: JSON.stringify(body),
+      });
+      var json = await res.json();
+      var resultado = tipo === "tel" ? json.tel : json.email;
+      if (!resultado) throw new Error("Respuesta inesperada del servidor");
+      // Persistir en form si salió bien
+      if (resultado.ok) {
+        var ahora = new Date().toISOString();
+        if (tipo === "tel") {
+          set("telVerificadoAt",     ahora);
+          set("telVerificadoMetodo", resultado.metodo);
+        } else {
+          set("emailVerificadoAt",     ahora);
+          set("emailVerificadoMetodo", resultado.metodo);
+        }
+        setDirty(true);
+      }
+      setVerifyStates(function(s) { return Object.assign({}, s, { [tipo]: resultado }); });
+    } catch(err) {
+      setVerifyStates(function(s) { return Object.assign({}, s, { [tipo]: { ok:false, detalle: err.message } }); });
+    }
   }
 
   async function handleSave() {
@@ -2615,11 +2655,87 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
                   <option>Persona moral</option>
                 </select>
               </Fld>
-              <Fld label="Teléfono">
-                <input className="ef-input" style={IS} value={form.tel || ""} onChange={e => set("tel", e.target.value)} placeholder="555-000-0000" />
+              {/* #01 — Teléfono con verificación WhatsApp */}
+              <Fld label="Teléfono" full>
+                {(function() {
+                  var vsTel   = verifyStates.tel;
+                  var vsLoad  = vsTel === "loading";
+                  var vsOk    = vsTel && typeof vsTel === "object" && vsTel.ok;
+                  var vsErr   = vsTel && typeof vsTel === "object" && !vsTel.ok;
+                  var yaVerif = !!(form.telVerificadoAt);
+                  return (
+                    <div style={{ display:"flex", flexDirection:"column", gap:5, width:"100%" }}>
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                        <input className="ef-input" style={Object.assign({}, IS, { flex:1 })}
+                          value={form.tel || ""}
+                          onChange={function(e) { set("tel", e.target.value); setVerifyStates(function(s) { return Object.assign({}, s, { tel:null }); }); }}
+                          placeholder="555-000-0000" />
+                        <button className="btn btn-sm"
+                          disabled={vsLoad || !form.tel}
+                          style={vsOk ? { color:"#1f9d57", borderColor:"#bbf7d0", background:"#f0fdf4", whiteSpace:"nowrap" }
+                               : vsErr ? { color:"#e0492f", borderColor:"#fdd",    background:"#fff8f7", whiteSpace:"nowrap" }
+                               : { whiteSpace:"nowrap" }}
+                          onClick={function() { handleVerificar("tel"); }}>
+                          {vsLoad
+                            ? <span className="login-spinner" style={{ width:10, height:10, borderWidth:2, display:"inline-block" }} />
+                            : vsOk ? "✓ WA OK" : "Verificar WA"}
+                        </button>
+                      </div>
+                      {/* Estado de verificación */}
+                      {vsTel && typeof vsTel === "object" && (
+                        <span style={{ fontSize:11, color: vsTel.ok ? "#1f9d57" : "#e0492f", lineHeight:1.4 }}>
+                          {vsTel.ok ? "✓ " : "✗ "}{vsTel.detalle}
+                        </span>
+                      )}
+                      {!vsTel && yaVerif && (
+                        <span style={{ fontSize:11, color:"#1f9d57", lineHeight:1.4 }}>
+                          ✓ Verificado el {new Date(form.telVerificadoAt).toLocaleDateString("es-MX")}
+                          {form.telVerificadoMetodo === "formato_mx" ? " (formato)" : " · WhatsApp"}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
               </Fld>
-              <Fld label="Email">
-                <input className="ef-input" style={IS} value={form.email || ""} onChange={e => set("email", e.target.value)} placeholder="correo@ejemplo.com" />
+              {/* #01 — Email con verificación MX */}
+              <Fld label="Email" full>
+                {(function() {
+                  var vsEmail = verifyStates.email;
+                  var vsLoad  = vsEmail === "loading";
+                  var vsOk    = vsEmail && typeof vsEmail === "object" && vsEmail.ok;
+                  var vsErr   = vsEmail && typeof vsEmail === "object" && !vsEmail.ok;
+                  var yaVerif = !!(form.emailVerificadoAt);
+                  return (
+                    <div style={{ display:"flex", flexDirection:"column", gap:5, width:"100%" }}>
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                        <input className="ef-input" style={Object.assign({}, IS, { flex:1 })}
+                          value={form.email || ""}
+                          onChange={function(e) { set("email", e.target.value); setVerifyStates(function(s) { return Object.assign({}, s, { email:null }); }); }}
+                          placeholder="correo@ejemplo.com" />
+                        <button className="btn btn-sm"
+                          disabled={vsLoad || !form.email}
+                          style={vsOk ? { color:"#1f9d57", borderColor:"#bbf7d0", background:"#f0fdf4", whiteSpace:"nowrap" }
+                               : vsErr ? { color:"#e0492f", borderColor:"#fdd",    background:"#fff8f7", whiteSpace:"nowrap" }
+                               : { whiteSpace:"nowrap" }}
+                          onClick={function() { handleVerificar("email"); }}>
+                          {vsLoad
+                            ? <span className="login-spinner" style={{ width:10, height:10, borderWidth:2, display:"inline-block" }} />
+                            : vsOk ? "✓ Email OK" : "Verificar email"}
+                        </button>
+                      </div>
+                      {vsEmail && typeof vsEmail === "object" && (
+                        <span style={{ fontSize:11, color: vsEmail.ok ? "#1f9d57" : "#e0492f", lineHeight:1.4 }}>
+                          {vsEmail.ok ? "✓ " : "✗ "}{vsEmail.detalle}
+                        </span>
+                      )}
+                      {!vsEmail && yaVerif && (
+                        <span style={{ fontSize:11, color:"#1f9d57", lineHeight:1.4 }}>
+                          ✓ Verificado el {new Date(form.emailVerificadoAt).toLocaleDateString("es-MX")}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
               </Fld>
             </Sec>
 
