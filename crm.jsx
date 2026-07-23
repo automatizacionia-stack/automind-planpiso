@@ -2703,9 +2703,28 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
             {/* § DATOS OCR DEL EXPEDIENTE */}
             <Sec ico="🪪" titulo="Datos del expediente" defaultOpen>
               <Fld label="CURP" full>
-                <input className="ef-input" style={{...IS, fontFamily:"monospace", letterSpacing:1}} value={form.curp || ""}
-                  onChange={e => set("curp", e.target.value.toUpperCase())}
-                  placeholder="18 caracteres" maxLength={18} />
+                {(function() {
+                  var curpVal = form.curp || "";
+                  var curpRegex = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[0-9A-Z]\d$/;
+                  var curpOk = curpVal.length === 0 || curpRegex.test(curpVal);
+                  var curpWarning = curpVal.length > 0 && !curpOk;
+                  return (
+                    <div style={{ display:"flex", flexDirection:"column", gap:4, width:"100%" }}>
+                      <input className="ef-input" style={{...IS, fontFamily:"monospace", letterSpacing:1,
+                        borderColor: curpWarning ? "#f59e0b" : undefined,
+                        background:  curpWarning ? "#fffbeb" : undefined,
+                      }}
+                        value={curpVal}
+                        onChange={e => set("curp", e.target.value.toUpperCase())}
+                        placeholder="18 caracteres" maxLength={18} />
+                      {curpWarning && (
+                        <span style={{ fontSize:11, color:"#92400e", display:"flex", alignItems:"center", gap:4 }}>
+                          ⚠️ El formato no coincide con el patrón oficial (18 car.). Verifica o corrige manualmente.
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
               </Fld>
               <Fld label="RFC">
                 <input className="ef-input" style={{...IS, fontFamily:"monospace"}} value={form.rfc || ""}

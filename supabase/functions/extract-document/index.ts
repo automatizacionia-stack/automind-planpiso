@@ -22,7 +22,7 @@ Omite cualquier campo que no sea legible o no aplique. Estructura esperada:
   "nombre":          "nombre(s) de pila",
   "apellidoPaterno": "primer apellido",
   "apellidoMaterno": "segundo apellido",
-  "curp":            "CURP en mayúsculas, exactamente 18 caracteres",
+  "curp":            "CURP en mayúsculas, exactamente 18 caracteres — LEE el CURP TAL COMO APARECE IMPRESO en el documento; NO lo derives ni calcules a partir del nombre o fecha de nacimiento. Estructura de referencia: 4 letras (iniciales de apellidos y nombre) + 6 dígitos (fecha nacimiento AAMMDD) + H/M (sexo) + 2 letras (estado) + 3 consonantes internas + 1 dígito/letra (homoclave) + 1 dígito verificador. Si el CURP no está visible con claridad, omite este campo.",
   "rfc":             "RFC si aparece en el documento",
   "fechaNacimiento": "DD/MM/AAAA",
   "sexo":            "H o M",
@@ -54,7 +54,7 @@ Omite cualquier campo que no sea legible o no aplique. Estructura esperada:
   "nombre":          "nombre(s) de pila",
   "apellidoPaterno": "primer apellido",
   "apellidoMaterno": "segundo apellido",
-  "curp":            "CURP en mayúsculas, exactamente 18 caracteres",
+  "curp":            "CURP en mayúsculas, exactamente 18 caracteres — LEE el CURP TAL COMO APARECE IMPRESO en el documento; NO lo derives ni calcules a partir del nombre o fecha de nacimiento. Si el CURP no está visible con claridad, omite este campo.",
   "fechaNacimiento": "DD/MM/AAAA",
   "sexo":            "H o M",
   "numeroLicencia":  "número de folio o licencia",
@@ -115,6 +115,15 @@ Deno.serve(async (req: Request) => {
         }
       }
     } catch { /* devuelve objeto vacío si el parse falla */ }
+
+    // Validar CURP: patrón oficial mexicano — si no cumple, omitir antes de devolver
+    // Esto evita que un CURP derivado/incorrecto se guarde en el expediente
+    if (campos.curp) {
+      const curpRegex = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[0-9A-Z]\d$/;
+      if (!curpRegex.test(campos.curp)) {
+        delete campos.curp; // mejor vacío que incorrecto
+      }
+    }
 
     return new Response(
       JSON.stringify({ ok: true, campos }),
