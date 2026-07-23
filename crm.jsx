@@ -2000,7 +2000,7 @@ function calcularEtapaSugerida(f) {
   return maxIdx !== idxActual ? etapas[maxIdx] : null; // null = sin cambio
 }
 
-function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
+function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
   const primer = defaultSelId
     ? (clientes.find(c => c.id === defaultSelId) || clientes[0])
     : clientes[0];
@@ -3198,20 +3198,31 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate }) {
                   )}
                   {estado === "Enviado a aprobación" && (
                     <Fld label="Decisión del gerente" full>
-                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                        <button type="button" onClick={() => accion("Aprobado", "Gerente")}
-                          style={{
-                            padding:"8px 20px", borderRadius:8, border:"1px solid #22c55e",
-                            background:"rgba(34,197,94,.10)", color:"#16a34a",
-                            fontSize:13, fontWeight:600, cursor:"pointer",
-                          }}>Aprobar</button>
-                        <button type="button" onClick={() => accion("Rechazado", "Gerente")}
-                          style={{
-                            padding:"8px 20px", borderRadius:8, border:"1px solid #ef4444",
-                            background:"rgba(239,68,68,.08)", color:"#dc2626",
-                            fontSize:13, fontWeight:600, cursor:"pointer",
-                          }}>Rechazar</button>
-                      </div>
+                      {(usuarioActual && usuarioActual.rol === "vendedor") ? (
+                        <div style={{
+                          padding:"10px 14px", borderRadius:8, fontSize:13,
+                          background:"#fefce8", border:"1px solid #fde047",
+                          color:"#854d0e", display:"flex", alignItems:"center", gap:8,
+                        }}>
+                          <span style={{ fontSize:16 }}>🔒</span>
+                          Solo el gerente o director puede aprobar o rechazar esta solicitud.
+                        </div>
+                      ) : (
+                        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                          <button type="button" onClick={() => accion("Aprobado", usuarioActual ? usuarioActual.nombre : "Gerente")}
+                            style={{
+                              padding:"8px 20px", borderRadius:8, border:"1px solid #22c55e",
+                              background:"rgba(34,197,94,.10)", color:"#16a34a",
+                              fontSize:13, fontWeight:600, cursor:"pointer",
+                            }}>Aprobar</button>
+                          <button type="button" onClick={() => accion("Rechazado", usuarioActual ? usuarioActual.nombre : "Gerente")}
+                            style={{
+                              padding:"8px 20px", borderRadius:8, border:"1px solid #ef4444",
+                              background:"rgba(239,68,68,.08)", color:"#dc2626",
+                              fontSize:13, fontWeight:600, cursor:"pointer",
+                            }}>Rechazar</button>
+                        </div>
+                      )}
                     </Fld>
                   )}
                   {estado === "Aprobado" && (
@@ -4235,7 +4246,7 @@ function ProcesoView({ clientes, onOpen, onRecompra }) {
   );
 }
 
-function CRMClientes({ rows, kpis, usuarios }) {
+function CRMClientes({ rows, kpis, usuarios, usuarioActual }) {
   const [clientesData, setClientesData] = React.useState([]);
   const [cargando,     setCargando]     = React.useState(false);
   const [errorCrm,     setErrorCrm]     = React.useState(null);
@@ -4481,6 +4492,7 @@ function CRMClientes({ rows, kpis, usuarios }) {
           clientes={clientesData}
           defaultSelId={editorSelId}
           onUpdate={onClienteUpdate}
+          usuarioActual={usuarioActual}
         />
       )}
       {vista === "kanban"   && <KanbanView   clientes={clientes} onOpen={function(c){ setEditorSelId(c.id); setVista("editor"); }} />}

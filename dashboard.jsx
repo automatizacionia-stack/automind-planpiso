@@ -65,7 +65,7 @@ function StackedBar({ rows }) {
 }
 
 /* ── Tabla semáforo ─────────────────────────────────────────── */
-function TablaSemaforo({ rows, kpis, filters, setFilters }) {
+function TablaSemaforo({ rows, kpis, filters, setFilters, ocultarInteres }) {
   const total  = rows.length || 1;
   const { sem } = filters;
   const setSem = k => setFilters(f => ({ ...f, sem: f.sem === k ? null : k }));
@@ -77,7 +77,7 @@ function TablaSemaforo({ rows, kpis, filters, setFilters }) {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
-            {["Estado", "Unidades", "% Inventario", "Distribución", "Interés acum."].map((h, i) => (
+            {["Estado", "Unidades", "% Inventario", "Distribución", ...(ocultarInteres ? [] : ["Interés acum."])].map((h, i) => (
               <th key={h} style={{
                 padding: "6px 16px 8px", fontSize: 10, color: "var(--muted)",
                 textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 700,
@@ -114,9 +114,11 @@ function TablaSemaforo({ rows, kpis, filters, setFilters }) {
                     <div style={{ width: pct + "%", height: "100%", background: SEM[k].sol, borderRadius: 4, transition: "width .35s" }} />
                   </div>
                 </td>
-                <td style={{ padding: "10px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, borderBottom: "1px solid var(--line-2)", color: interesK ? "#e0492f" : "var(--muted)" }}>
-                  {interesK ? fmtMoney(interesK, 0) : "—"}
-                </td>
+                {!ocultarInteres && (
+                  <td style={{ padding: "10px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, borderBottom: "1px solid var(--line-2)", color: interesK ? "#e0492f" : "var(--muted)" }}>
+                    {interesK ? fmtMoney(interesK, 0) : "—"}
+                  </td>
+                )}
               </tr>
             );
           })}
@@ -357,7 +359,7 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
           <span>Vehículo</span>
           <span className="r">Días en piso</span>
           <span className="r">Días vencidos</span>
-          <span className="r">Interés acum.</span>
+          {(!usuarioActual || usuarioActual.rol !== "vendedor") && <span className="r">Interés acum.</span>}
           <span className="r">% Plan</span>
           <span className="r">Días libres rest.</span>
           <span>Vendedor</span>
@@ -402,7 +404,7 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
                   </span>
                   <span className="r">{r.diasEnPiso}</span>
                   <span className={"r " + (r.diasVencidos > 0 ? "neg" : "")}>{r.diasVencidos || "—"}</span>
-                  <span className="r">{fmtMoney(r.interesAcum)}</span>
+                  {(!usuarioActual || usuarioActual.rol !== "vendedor") && <span className="r">{fmtMoney(r.interesAcum)}</span>}
                   <span className={"r " + (r.pctPlanConsumido > 100 ? "neg" : r.pctPlanConsumido > 76 ? "warn" : "")}>
                     {r.pctPlanConsumido}%
                   </span>
@@ -564,14 +566,16 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
           icoColor={criticas > 0 ? "#e0492f" : "var(--accent)"}
           icoBg={criticas > 0 ? "#fcebe7" : `color-mix(in srgb, var(--accent) 12%, #fff)`}
         />
-        <TopKpi
-          label="Interés acumulado"
-          value={fmtMoney(kpisActivos.interesTotal || 0, 0)}
-          sub={(kpisActivos.intereses || 0) + " unidades generando interés"}
-          icon={I.coins({ width: 20, height: 20 })}
-          icoColor={kpisActivos.interesTotal > 0 ? "#e07a20" : "var(--accent)"}
-          icoBg={kpisActivos.interesTotal > 0 ? "#fdf0e6" : `color-mix(in srgb, var(--accent) 12%, #fff)`}
-        />
+        {(!usuarioActual || usuarioActual.rol !== "vendedor") && (
+          <TopKpi
+            label="Interés acumulado"
+            value={fmtMoney(kpisActivos.interesTotal || 0, 0)}
+            sub={(kpisActivos.intereses || 0) + " unidades generando interés"}
+            icon={I.coins({ width: 20, height: 20 })}
+            icoColor={kpisActivos.interesTotal > 0 ? "#e07a20" : "var(--accent)"}
+            icoBg={kpisActivos.interesTotal > 0 ? "#fdf0e6" : `color-mix(in srgb, var(--accent) 12%, #fff)`}
+          />
+        )}
         <TopKpi
           label="Vendidos este mes"
           value={rowsVendidosMes.length}
@@ -584,7 +588,7 @@ function Dashboard({ rows, kpis, pivote, filters, setFilters, openVehicle, usuar
 
       {/* ── Semáforo + Días promedio ── */}
       <div className="d-grid-2-1">
-        <TablaSemaforo rows={rowsActivos} kpis={kpisActivos} filters={filters} setFilters={setFilters} />
+        <TablaSemaforo rows={rowsActivos} kpis={kpisActivos} filters={filters} setFilters={setFilters} ocultarInteres={usuarioActual && usuarioActual.rol === "vendedor"} />
         <DiasPorSemaforo rows={rowsActivos} />
       </div>
 

@@ -87,9 +87,11 @@ function VehicleDrawer({ v, onClose, onEdit, onNuevoCliente, usuarioActual }) {
               {v.diasLibresRestantes <= 0 ? "Vencido" : v.diasLibresRestantes + " días"}
             </b>
           </div>
-          <div className="dr-stat"><span>Interés acumulado</span>
-            <b style={{ color: v.interesAcum > 0 ? SEM.intereses.sol : "inherit" }}>{fmtMoney(v.interesAcum, 2)}</b>
-          </div>
+          {(!usuarioActual || usuarioActual.rol !== "vendedor") && (
+            <div className="dr-stat"><span>Interés acumulado</span>
+              <b style={{ color: v.interesAcum > 0 ? SEM.intereses.sol : "inherit" }}>{fmtMoney(v.interesAcum, 2)}</b>
+            </div>
+          )}
           <div className="dr-stat"><span>% Plan consumido</span>
             <b style={{ color: v.pctPlanConsumido > 100 ? SEM.intereses.sol : v.pctPlanConsumido > 86 ? SEM.vencer.sol : "inherit" }}>
               {v.pctPlanConsumido}%
@@ -774,7 +776,7 @@ function App() {
             initialSelId={editVehicleId}
             onRowsChange={() => setRowsVersion(v => v + 1)} />}
           {view === "ventas" && <VentasDashboardView onGoToCRM={() => setView("crm")} />}
-          {view === "crm"    && <CRMClientes  rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} />}
+          {view === "crm"    && <CRMClientes  rows={A.ROWS} kpis={A.KPIS} usuarios={A.USUARIOS || []} usuarioActual={tenant.usuarioActual} />}
           {view === "config" && (
             <div className="page">
               <div className="page-head">
