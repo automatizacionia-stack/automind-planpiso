@@ -312,6 +312,10 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
   function handleAdd() {
     const HOY = new Date();
     const prefix = window.AUTOMIND ? (window.AUTOMIND.ROWS[0]?.id?.[0] || "V") : "V";
+    // Auto-asignar todos los vendedores al crear unidad nueva para que lleguen las alertas
+    const todosVendedores = (window.AUTOMIND && window.AUTOMIND.USUARIOS)
+      ? window.AUTOMIND.USUARIOS.filter(function(u) { return u.rol === "vendedor"; }).map(function(u) { return u.id; })
+      : [];
     const newRow = recomputar({
       id: prefix + "NEW" + Date.now().toString().slice(-5),
       vin:"", estatus:"NUEVOS", inv:"", descripcion:"", marca:"", modelo:"",
@@ -320,7 +324,7 @@ function InventarioEditor({ rows: rowsInit, usuarios, usuarioActual, onRowsChang
       montoFinanciado:0, diasGraciaBase:30, diasGraciaExtra:0,
       pctInteres:0.14,
       observaciones:"",
-      vendedorIds:[], vendedorId:null, fotoUrl:null,
+      vendedorIds: todosVendedores, vendedorId: todosVendedores[0] || null, fotoUrl:null,
     });
     const nextRows = [newRow, ...rows];
     setRows(nextRows);

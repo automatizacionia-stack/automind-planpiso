@@ -474,6 +474,19 @@ function ImportarInventario({ onIrInventario, onImportDone }) {
           if (!nuevas.length) { alert("No hay unidades nuevas que importar."); return; }
         }
 
+        // Auto-asignar todos los vendedores a las unidades importadas para que lleguen las alertas
+        const todosVendedores = (A.USUARIOS || [])
+          .filter(function(u) { return u.rol === "vendedor"; })
+          .map(function(u) { return u.id; });
+        if (todosVendedores.length > 0) {
+          nuevas.forEach(function(v) {
+            if (!v.vendedorIds || !v.vendedorIds.length) {
+              v.vendedorIds = todosVendedores;
+              v.vendedorId  = todosVendedores[0] || null;
+            }
+          });
+        }
+
         // Guardar PRIMERO en Supabase; solo agregar al inventario lo que sí se guardó
         let guardadas = nuevas;
         if (window.DB && A.agencyId) {
