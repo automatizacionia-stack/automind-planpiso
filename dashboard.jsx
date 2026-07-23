@@ -315,8 +315,16 @@ function CargaVendedor({ rows, usuarios }) {
 
 /* ── Lista detallada (al fondo, collapsible) ────────────────── */
 function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual }) {
-  const [collapsed, setCollapsed] = React.useState({});
+  const [collapsed,  setCollapsed]  = React.useState({});
+  const [modoSel,    setModoSel]    = React.useState(false);
+  const [selIds,     setSelIds]     = React.useState(new Set());
+  const [eliminando, setEliminando] = React.useState(false);
+  const [confirmar,  setConfirmar]  = React.useState(false);
+
   const toggle = k => setCollapsed(c => ({ ...c, [k]: !c[k] }));
+
+  // Solo gerente/director/agencyOwner pueden eliminar
+  const puedeEliminar = !usuarioActual || usuarioActual.rol !== "vendedor";
 
   const { sem, fin, gerente, modelo } = filters;
   const filtered = rows.filter(r => {
@@ -331,31 +339,110 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
     .map(k => ({ k, items: filtered.filter(r => r.semaforo === k) }))
     .filter(g => g.items.length);
 
+  const todosIds   = grupos.flatMap(g => g.items.map(r => r.id));
+  const todosSel   = todosIds.length > 0 && selIds.size === todosIds.length;
+  const algunosSel = selIds.size > 0 && selIds.size < todosIds.length;
+
   const activeLabel = sem     ? SEM[sem].emoji + " " + SEM[sem].label
     : fin     ? fin
     : gerente ? "Gerente filtrado"
     : modelo  ? "Modelo · " + modelo
     : null;
 
+  function toggleModoSel() {
+    setModoSel(m => !m);
+    setSelIds(new Set());
+  }
+
+  function toggleSel(id, e) {
+    e.stopPropagation();
+    setSelIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function selTodos(e) {
+    e.stopPropagation();
+    if (todosSel) {
+      setSelIds(new Set());
+    } else {
+      setSelIds(new Set(todosIds));
+    }
+  }
+
+  async function eliminarSeleccionados() {
+    setConfirmar(false);
+    setEliminando(true);
+    const ids = Array.from(selIds);
+    let errores = 0;
+    for (const id of ids) {
+      try {
+        if (window.DB) await window.DB.deleteVehicle(id);
+        if (window.AUTOMIND) {
+          window.AUTOMIND.ROWS = window.AUTOMIND.ROWS.filter(r => r.id !== id);
+          const tab = window.AUTOMIND.TABLAS && window.AUTOMIND.TABLAS.find(t => t.id === "inventario");
+          if (tab) tab.rows = window.AUTOMIND.ROWS;
+        }
+      } catch(e) {
+        errores++;
+        console.error("Error eliminando:", id, e);
+      }
+    }
+    setEliminando(false);
+    setSelIds(new Set());
+    setModoSel(false);
+    // Forzar re-render del padre para que lea el AUTOMIND.ROWS actualizado
+    setFilters(f => ({ ...f }));
+    if (errores > 0) alert(errores + " unidad(es) no se pudieron eliminar. Intenta de nuevo.");
+  }
+
   return (
-    <Card style={{ marginTop: 10 }}>
+    <Card style={{ marginTop: 10, position: "relative" }}>
       <div className="dcard-h">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span className="dcard-title">Lista detallada</span>
-          {activeLabel && (
+          {activeLabel && !modoSel && (
             <button className="chip-clear" onClick={() => setFilters({ sem: null, fin: null, gerente: null, modelo: null, urgente: false })}>
               {I.filter({ width: 12, height: 12 })} {activeLabel} · {filtered.length}
               <span className="cc-x">{I.close({ width: 11, height: 11 })}</span>
             </button>
           )}
+          {modoSel && selIds.size > 0 && (
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#b91c1c",
+              background: "#fee2e2", padding: "2px 10px", borderRadius: 12 }}>
+              {selIds.size} seleccionada{selIds.size !== 1 ? "s" : ""}
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          <button className="btn btn-sm" style={{ fontSize: 11 }} onClick={() => setCollapsed(grupos.reduce((a, g) => ({ ...a, [g.k]: true }), {}))}>Colapsar</button>
-          <button className="btn btn-sm" style={{ fontSize: 11 }} onClick={() => setCollapsed({})}>Expandir</button>
+          {!modoSel && (
+            <>
+              <button className="btn btn-sm" style={{ fontSize: 11 }} onClick={() => setCollapsed(grupos.reduce((a, g) => ({ ...a, [g.k]: true }), {}))}>Colapsar</button>
+              <button className="btn btn-sm" style={{ fontSize: 11 }} onClick={() => setCollapsed({})}>Expandir</button>
+            </>
+          )}
+          {puedeEliminar && (
+            <button className="btn btn-sm" onClick={toggleModoSel}
+              style={{ fontSize: 11, background: modoSel ? "#fee2e2" : "var(--card)",
+                color: modoSel ? "#b91c1c" : "var(--ink-2)",
+                border: modoSel ? "1px solid #fca5a5" : "1px solid var(--line)",
+                fontWeight: modoSel ? 700 : 500 }}>
+              {modoSel ? "✕ Cancelar" : "☑ Seleccionar"}
+            </button>
+          )}
         </div>
       </div>
       <div className="vlist">
         <div className="vrow vhead">
+          {modoSel && (
+            <span style={{ width: 32, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <input type="checkbox" checked={todosSel} ref={el => { if (el) el.indeterminate = algunosSel; }}
+                onChange={selTodos}
+                style={{ width: 15, height: 15, cursor: "pointer", accentColor: "var(--accent)" }} />
+            </span>
+          )}
           <span>Vehículo</span>
           <span className="r">Días en piso</span>
           <span className="r">Días vencidos</span>
@@ -379,6 +466,7 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
               const vids    = r.vendedorIds || (r.vendedorId ? [r.vendedorId] : []);
               const vends   = r.vendedores || vids.map(id => uList.find(u => u.id === id)).filter(Boolean);
               const esYo    = usuarioActual && vids.includes(usuarioActual.id);
+              const esSel   = selIds.has(r.id);
               function toggleAsignar(e) {
                 e.stopPropagation();
                 if (!usuarioActual) return;
@@ -397,7 +485,15 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
                 setFilters(f => ({ ...f }));
               }
               return (
-                <button className="vrow" key={r.id} onClick={() => openVehicle(r)}>
+                <button className={"vrow" + (esSel ? " vrow-sel" : "")} key={r.id}
+                  onClick={modoSel ? (e) => toggleSel(r.id, e) : () => openVehicle(r)}>
+                  {modoSel && (
+                    <span style={{ width: 32, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                      onClick={e => toggleSel(r.id, e)}>
+                      <input type="checkbox" checked={esSel} onChange={() => {}}
+                        style={{ width: 15, height: 15, cursor: "pointer", accentColor: "var(--accent)" }} />
+                    </span>
+                  )}
                   <span className="v-name">
                     <b>{r.descripcion || [r.marca, r.modelo].filter(Boolean).join(" ") || "Sin descripción"}</b>
                     <small>{[r.tipo, r.anio, r.colorExterior, r.inv ? "INV " + r.inv : null].filter(Boolean).join(" · ")}</small>
@@ -421,12 +517,12 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
                             : r.gerenteNombre ? <span className="vend-ger">{r.gerenteNombre.split(" ")[0]}</span> : null
                           }
                         </span>
-                        {esYo && usuarioActual.rol !== "director" && (
+                        {esYo && usuarioActual.rol !== "director" && !modoSel && (
                           <button className="vend-remove" onClick={toggleAsignar} title="Desasignarme">×</button>
                         )}
                       </span>
                     ) : (
-                      usuarioActual && usuarioActual.rol !== "director" ? (
+                      usuarioActual && usuarioActual.rol !== "director" && !modoSel ? (
                         <button className="btn-asignar-sm" onClick={toggleAsignar}>Asignarme</button>
                       ) : <span className="vend-none">—</span>
                     )}
@@ -438,6 +534,62 @@ function ListaDetallada({ rows, filters, setFilters, openVehicle, usuarioActual 
         ))}
         {!filtered.length && <div className="empty">Sin unidades para este filtro.</div>}
       </div>
+
+      {/* ── Barra flotante de eliminación masiva ── */}
+      {modoSel && selIds.size > 0 && (
+        <div style={{ position: "sticky", bottom: 16, left: 0, right: 0,
+          margin: "12px 16px 0", padding: "12px 16px",
+          background: "#1e293b", borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,.25)",
+          display: "flex", alignItems: "center", gap: 12, zIndex: 10 }}>
+          <span style={{ color: "#fff", fontSize: 13, fontWeight: 600, flex: 1 }}>
+            {selIds.size} unidad{selIds.size !== 1 ? "es" : ""} seleccionada{selIds.size !== 1 ? "s" : ""}
+          </span>
+          <button onClick={() => setSelIds(new Set())}
+            style={{ fontSize: 12, fontWeight: 600, padding: "7px 14px", borderRadius: 8,
+              border: "1px solid #475569", background: "transparent", color: "#94a3b8", cursor: "pointer" }}>
+            Deseleccionar todo
+          </button>
+          <button onClick={() => setConfirmar(true)} disabled={eliminando}
+            style={{ fontSize: 13, fontWeight: 700, padding: "8px 18px", borderRadius: 8,
+              border: "none", background: eliminando ? "#7f1d1d" : "#ef4444",
+              color: "#fff", cursor: eliminando ? "wait" : "pointer",
+              display: "flex", alignItems: "center", gap: 6 }}>
+            {eliminando ? "⏳ Eliminando…" : "🗑 Eliminar " + selIds.size}
+          </button>
+        </div>
+      )}
+
+      {/* ── Modal de confirmación ── */}
+      {confirmar && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 1000,
+          display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={() => setConfirmar(false)}>
+          <div style={{ background: "var(--card)", borderRadius: 16, padding: "28px 32px",
+            maxWidth: 400, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 32, marginBottom: 12, textAlign: "center" }}>🗑</div>
+            <h3 style={{ margin: "0 0 8px", textAlign: "center", fontSize: 18, color: "var(--ink)" }}>
+              Eliminar {selIds.size} unidad{selIds.size !== 1 ? "es" : ""}
+            </h3>
+            <p style={{ margin: "0 0 24px", textAlign: "center", fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6 }}>
+              Esta acción es permanente y no se puede deshacer.<br/>
+              ¿Estás seguro de que quieres eliminar las unidades seleccionadas del inventario?
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmar(false)}
+                style={{ flex: 1, padding: "10px", borderRadius: 9, border: "1px solid var(--line)",
+                  background: "var(--bg)", color: "var(--ink-2)", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
+                Cancelar
+              </button>
+              <button onClick={eliminarSeleccionados}
+                style={{ flex: 1, padding: "10px", borderRadius: 9, border: "none",
+                  background: "#ef4444", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

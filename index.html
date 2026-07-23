@@ -275,6 +275,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .vrow{display:grid;grid-template-columns:2.4fr 1.4fr .9fr 1.1fr 1.1fr .8fr .8fr;align-items:center;gap:10px;padding:11px 14px;text-align:left;border-radius:9px;transition:background .12s;font-size:13.5px;color:var(--ink-2);}
 button.vrow:hover{background:var(--line-2);}
 button.vrow:active{background:color-mix(in srgb,var(--accent) 8%,transparent);}
+button.vrow.vrow-sel{background:color-mix(in srgb,var(--accent) 8%,transparent);border-left:3px solid var(--accent);}
+button.vrow.vrow-sel:hover{background:color-mix(in srgb,var(--accent) 12%,transparent);}
 .vrow.vhead{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding-bottom:6px;border-radius:0;}
 .vrow .r{text-align:right;font-variant-numeric:tabular-nums;}
 .v-name{display:flex;flex-direction:column;gap:1px;}
@@ -1102,7 +1104,7 @@ window.addEventListener('unhandledrejection', function(e) {
 
 <script type="text/babel" src="components.jsx?v=20260710b"></script>
 <script type="text/babel" src="charts.jsx?v=20260618h"></script>
-<script type="text/babel" src="dashboard.jsx?v=20260722e"></script>
+<script type="text/babel" src="dashboard.jsx?v=20260722h"></script>
 <script type="text/babel" src="database.jsx?v=20260618h"></script>
 <script type="text/babel" src="import.jsx?v=20260709b"></script>
 <script type="text/babel" src="colaboradores.jsx?v=20260710c"></script>
