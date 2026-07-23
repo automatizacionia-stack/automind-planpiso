@@ -16,65 +16,135 @@ const CORS = {
 };
 
 const PROMPT_ID = `Analiza esta identificación oficial mexicana (INE, pasaporte u otro documento de identidad).
-Devuelve ÚNICAMENTE un objeto JSON válido con los campos que puedas leer con certeza.
-Omite cualquier campo que no sea legible o no aplique. Estructura esperada:
+Devuelve ÚNICAMENTE un objeto JSON válido con los campos que puedas leer con TOTAL certeza.
+Si un campo no es legible o no aparece, omítelo completamente del JSON.
+
+REGLAS ESTRICTAS POR CAMPO:
+
+curp: La CURP mexicana tiene EXACTAMENTE 18 caracteres en mayúsculas, sin espacios ni guiones.
+  Formato: 4 letras + 6 dígitos (fecha YYMMDD) + 1 letra (H o M) + 2 letras (clave estado) + 3 letras + 1 carácter + 1 dígito.
+  Ejemplo válido: GOMC850101HDFNRR09
+  ⚠ Errores OCR frecuentes: confundir O (letra) con 0 (cero), I (letra i mayúscula) con 1 (uno), B con 8.
+  Lee carácter por carácter del documento. Si el resultado no tiene exactamente 18 caracteres, omite el campo.
+  NO incluyas la CURP si tienes dudas en algún carácter.
+
+rfc: El RFC mexicano tiene 13 caracteres (persona física) o 12 (persona moral), sin espacios.
+  Formato PF: 4 letras + 6 dígitos (YYMMDD) + 3 alfanuméricos. Ejemplo: GOMC850101AB3
+  Omite si no aparece explícitamente en el documento.
+
+fechaNacimiento: Formato estricto DD/MM/AAAA. Ejemplo: 01/01/1985. No uses otro formato.
+
+sexo: Solo puede ser "H" (hombre/masculino) o "M" (mujer/femenino). Ningún otro valor.
+
+cp: Exactamente 5 dígitos. Si el código postal empieza con 0, inclúyelo (ej: "06600"). Omite si no son exactamente 5 dígitos.
+
+nombre / apellidoPaterno / apellidoMaterno: Escribe en MAYÚSCULAS tal como aparece en el documento. No normalices ni corrijas.
+
+Estructura esperada:
 {
-  "nombre":          "nombre(s) de pila",
-  "apellidoPaterno": "primer apellido",
-  "apellidoMaterno": "segundo apellido",
-  "curp":            "CURP en mayúsculas, exactamente 18 caracteres",
-  "rfc":             "RFC si aparece en el documento",
+  "nombre":          "nombre(s) de pila en mayúsculas",
+  "apellidoPaterno": "primer apellido en mayúsculas",
+  "apellidoMaterno": "segundo apellido en mayúsculas",
+  "curp":            "18 caracteres exactos, mayúsculas, sin espacios",
+  "rfc":             "RFC si aparece explícitamente",
   "fechaNacimiento": "DD/MM/AAAA",
   "sexo":            "H o M",
   "direccion":       "calle y número exterior/interior",
   "colonia":         "colonia o fraccionamiento",
   "ciudad":          "municipio o alcaldía",
   "estado":          "estado de la república (nombre completo)",
-  "cp":              "código postal de 5 dígitos"
+  "cp":              "exactamente 5 dígitos"
 }
 Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de código.`;
 
-const PROMPT_DOM = `Analiza este comprobante de domicilio (recibo de luz, agua, teléfono, estado de cuenta, etc.).
-Devuelve ÚNICAMENTE un objeto JSON válido con los campos disponibles. Omite los que no puedas leer.
+const PROMPT_DOM = `Analiza este comprobante de domicilio (recibo de luz, agua, teléfono, estado de cuenta bancario, etc.).
+Devuelve ÚNICAMENTE un objeto JSON válido con los campos que puedas leer con certeza. Omite los que no sean legibles.
+
+REGLAS ESTRICTAS POR CAMPO:
+
+cp: Exactamente 5 dígitos. Si empieza con 0, inclúyelo (ej: "06600"). Omite si no son exactamente 5 dígitos.
+
+direccion: Incluye calle y número. No incluyas colonia ni ciudad aquí.
+
+nombre: Nombre del titular tal como aparece en el recibo, en mayúsculas.
+
+Estructura esperada:
 {
-  "nombre":          "nombre del titular del servicio",
-  "direccion":       "calle y número exterior/interior",
+  "nombre":          "nombre del titular en mayúsculas",
+  "direccion":       "calle y número exterior/interior solamente",
   "colonia":         "colonia o fraccionamiento",
   "ciudad":          "municipio o alcaldía",
   "estado":          "estado de la república (nombre completo)",
-  "cp":              "código postal de 5 dígitos",
+  "cp":              "exactamente 5 dígitos",
   "fechaDocumento":  "período o fecha del recibo, ej: mayo 2025"
 }
 Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de código.`;
 
 const PROMPT_LIC = `Analiza esta licencia de conducir mexicana.
-Devuelve ÚNICAMENTE un objeto JSON válido con los campos que puedas leer con certeza.
-Omite cualquier campo que no sea legible o no aplique. Estructura esperada:
+Devuelve ÚNICAMENTE un objeto JSON válido con los campos que puedas leer con TOTAL certeza.
+Si un campo no es legible o no aparece, omítelo completamente del JSON.
+
+REGLAS ESTRICTAS POR CAMPO:
+
+curp: La CURP mexicana tiene EXACTAMENTE 18 caracteres en mayúsculas, sin espacios ni guiones.
+  Formato: 4 letras + 6 dígitos (fecha YYMMDD) + 1 letra (H o M) + 2 letras (clave estado) + 3 letras + 1 carácter + 1 dígito.
+  Ejemplo válido: GOMC850101HDFNRR09
+  ⚠ Errores OCR frecuentes: confundir O (letra) con 0 (cero), I (letra i mayúscula) con 1 (uno), B con 8.
+  Lee carácter por carácter del documento. Si el resultado no tiene exactamente 18 caracteres, omite el campo.
+  NO incluyas la CURP si tienes dudas en algún carácter.
+
+fechaNacimiento / vigencia: Formato estricto DD/MM/AAAA. Ejemplo: 01/01/1985. No uses otro formato.
+
+sexo: Solo puede ser "H" (hombre) o "M" (mujer). Ningún otro valor.
+
+nombre / apellidoPaterno / apellidoMaterno: En MAYÚSCULAS tal como aparece en el documento.
+
+Estructura esperada:
 {
-  "nombre":          "nombre(s) de pila",
-  "apellidoPaterno": "primer apellido",
-  "apellidoMaterno": "segundo apellido",
-  "curp":            "CURP en mayúsculas, exactamente 18 caracteres",
+  "nombre":          "nombre(s) de pila en mayúsculas",
+  "apellidoPaterno": "primer apellido en mayúsculas",
+  "apellidoMaterno": "segundo apellido en mayúsculas",
+  "curp":            "18 caracteres exactos, mayúsculas, sin espacios",
   "fechaNacimiento": "DD/MM/AAAA",
   "sexo":            "H o M",
   "numeroLicencia":  "número de folio o licencia",
   "tipoLicencia":    "tipo: A, B, C, D, E, etc.",
-  "vigencia":        "fecha de vencimiento DD/MM/AAAA",
-  "estado":          "estado emisor de la licencia"
+  "vigencia":        "DD/MM/AAAA",
+  "estado":          "estado emisor de la licencia (nombre completo)"
 }
 Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de código.`;
 
 const PROMPT_RFC = `Analiza esta Constancia de Situación Fiscal del SAT (México).
-Devuelve ÚNICAMENTE un objeto JSON válido con los campos que puedas leer con certeza.
-Omite cualquier campo que no sea legible o no aplique. Estructura esperada:
+Devuelve ÚNICAMENTE un objeto JSON válido con los campos que puedas leer con TOTAL certeza.
+Si un campo no es legible o no aparece, omítelo completamente del JSON.
+
+REGLAS ESTRICTAS POR CAMPO:
+
+rfc: El RFC mexicano NO tiene espacios ni guiones.
+  Persona física: EXACTAMENTE 13 caracteres. Formato: 4 letras + 6 dígitos (YYMMDD) + 3 alfanuméricos. Ejemplo: GOMC850101AB3
+  Persona moral:  EXACTAMENTE 12 caracteres. Formato: 3 letras + 6 dígitos + 3 alfanuméricos. Ejemplo: GOM850101AB3
+  ⚠ Errores OCR frecuentes: confundir O (letra) con 0 (cero), I con 1, B con 8.
+  Cuenta los caracteres. Si no son exactamente 12 o 13, omite el campo.
+
+curp: EXACTAMENTE 18 caracteres en mayúsculas, sin espacios.
+  Formato: 4 letras + 6 dígitos (YYMMDD) + 1 letra (H/M) + 2 letras + 3 letras + 1 carácter + 1 dígito.
+  ⚠ Mismos errores OCR que el RFC. Si no son exactamente 18 caracteres, omite el campo.
+
+cp: Exactamente 5 dígitos del domicilio fiscal. Si empieza con 0, inclúyelo (ej: "06600").
+
+nombre / apellidoPaterno / apellidoMaterno: Solo para persona física, en MAYÚSCULAS tal como aparece.
+
+razonSocial: Solo para persona moral.
+
+Estructura esperada:
 {
-  "rfc":             "RFC exactamente como aparece (persona física: 13 caracteres, moral: 12)",
-  "nombre":          "nombre(s) de pila (si es persona física)",
-  "apellidoPaterno": "primer apellido (si es persona física)",
-  "apellidoMaterno": "segundo apellido (si es persona física)",
-  "razonSocial":     "razón social completa (si es persona moral)",
-  "curp":            "CURP si aparece, exactamente 18 caracteres",
-  "cp":              "código postal del domicilio fiscal (5 dígitos)",
+  "rfc":             "12 o 13 caracteres exactos sin espacios",
+  "nombre":          "nombre(s) de pila en mayúsculas (persona física)",
+  "apellidoPaterno": "primer apellido en mayúsculas (persona física)",
+  "apellidoMaterno": "segundo apellido en mayúsculas (persona física)",
+  "razonSocial":     "razón social completa (persona moral)",
+  "curp":            "18 caracteres exactos, mayúsculas, sin espacios",
+  "cp":              "exactamente 5 dígitos del domicilio fiscal",
   "estado":          "estado de la república del domicilio fiscal",
   "ciudad":          "municipio o alcaldía del domicilio fiscal",
   "colonia":         "colonia del domicilio fiscal",
@@ -123,4 +193,56 @@ Deno.serve(async (req: Request) => {
       }],
     });
 
-    const raw = completion.choices
+    const raw = completion.choices[0]?.message?.content ?? "";
+
+    // Parsear JSON de la respuesta (tolerante a texto extra)
+    let campos: Record<string, string> = {};
+    try {
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        // Filtrar campos vacíos y convertir a string
+        for (const [k, v] of Object.entries(parsed)) {
+          if (v && String(v).trim()) campos[k] = String(v).trim();
+        }
+      }
+    } catch { /* devuelve objeto vacío si el JSON falla */ }
+
+    // ── Sanitización post-extracción ──────────────────────────────────────
+    // CURP: exactamente 18 caracteres alfanuméricos en mayúsculas, sin espacios
+    if (campos.curp) {
+      const c = campos.curp.toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9]/g, "");
+      campos.curp = c.length === 18 ? c : "";
+      if (!campos.curp) delete campos.curp;
+    }
+    // RFC: 12 (moral) o 13 (física) caracteres alfanuméricos, sin espacios
+    if (campos.rfc) {
+      const r = campos.rfc.toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9Ñ&]/g, "");
+      campos.rfc = (r.length === 12 || r.length === 13) ? r : "";
+      if (!campos.rfc) delete campos.rfc;
+    }
+    // CP: exactamente 5 dígitos
+    if (campos.cp) {
+      const cp = campos.cp.replace(/\D/g, "");
+      campos.cp = cp.length === 5 ? cp : "";
+      if (!campos.cp) delete campos.cp;
+    }
+    // Sexo: solo H o M
+    if (campos.sexo && !["H", "M"].includes(campos.sexo.toUpperCase())) {
+      delete campos.sexo;
+    } else if (campos.sexo) {
+      campos.sexo = campos.sexo.toUpperCase();
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, campos }),
+      { headers: { ...CORS, "Content-Type": "application/json" } },
+    );
+
+  } catch (err: any) {
+    return new Response(
+      JSON.stringify({ ok: false, error: err?.message ?? "Error desconocido" }),
+      { status: 500, headers: { ...CORS, "Content-Type": "application/json" } },
+    );
+  }
+});
