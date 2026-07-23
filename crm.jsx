@@ -1618,12 +1618,35 @@ function RecompraModal({ cliente, onConfirm, onClose }) {
   var [unidad,        setUnidad]        = React.useState(null);   // { id, desc, precio }
   var [showPicker,    setShowPicker]    = React.useState(false);
   var [guardando,     setGuardando]     = React.useState(false);
+  // Keys de documentos que el usuario quiere actualizar (no reutilizar)
+  var [docsActualizar, setDocsActualizar] = React.useState(new Set());
+
+  // Documentos presentes en el cliente origen
+  var DOCS_POSIBLES = [
+    { key:"docId",        label:"INE / Identificación oficial" },
+    { key:"docLicencia",  label:"Licencia de manejo" },
+    { key:"docDomicilio", label:"Comprobante de domicilio" },
+    { key:"docRfc",       label:"RFC / Constancia fiscal" },
+  ];
+  var docsPresentes = DOCS_POSIBLES.filter(function(d) { return !!cliente[d.key]; });
+
+  function toggleDoc(key) {
+    setDocsActualizar(function(prev) {
+      var next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   async function confirmar() {
     if (!unidad) return;
     setGuardando(true);
     try {
-      await onConfirm(cliente, unidad);
+      // Construir copia del cliente con los documentos marcados como "Actualizar" → null
+      var clienteModificado = Object.assign({}, cliente);
+      docsActualizar.forEach(function(k) { clienteModificado[k] = null; });
+      await onConfirm(clienteModificado, unidad);
     } finally {
       setGuardando(false);
     }
@@ -1636,7 +1659,7 @@ function RecompraModal({ cliente, onConfirm, onClose }) {
       <div style={{
         position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
         background:"var(--card)", borderRadius:16, padding:"28px 28px 24px",
-        width:480, maxWidth:"95vw", zIndex:1101,
+        width:500, maxWidth:"95vw", maxHeight:"88vh", overflowY:"auto", zIndex:1101,
         boxShadow:"0 8px 40px rgba(0,0,0,.18)",
       }}>
         {/* Header */}
@@ -1656,28 +1679,63 @@ function RecompraModal({ cliente, onConfirm, onClose }) {
             cursor:"pointer", fontSize:20, color:"var(--muted)", padding:"0 4px" }}>✕</button>
         </div>
 
-        {/* Datos que se copiarán */}
+        {/* Datos personales que se copian siempre */}
         <div style={{ background:"var(--bg)", borderRadius:10, padding:"12px 14px",
           marginBottom:16, fontSize:12, color:"var(--muted)", lineHeight:1.7 }}>
           <div style={{ fontWeight:700, color:"var(--ink)", marginBottom:4, fontSize:11,
             textTransform:"uppercase", letterSpacing:".06em" }}>Datos que se reutilizarán</div>
           {[
-            cliente.tel && "Tel: " + cliente.tel,
+            cliente.tel   && "Tel: " + cliente.tel,
             cliente.email && "Email: " + cliente.email,
-            cliente.rfc && "RFC: " + cliente.rfc,
-            cliente.curp && "CURP: " + cliente.curp,
+            cliente.rfc   && "RFC: " + cliente.rfc,
+            cliente.curp  && "CURP: " + cliente.curp,
             (cliente.direccion || cliente.ciudad) && ("Domicilio: " + [cliente.direccion, cliente.ciudad, cliente.estado].filter(Boolean).join(", ")),
-            (cliente.docId || cliente.docLicencia || cliente.docDomicilio || cliente.docRfc) &&
-              "Documentos: " + [
-                cliente.docId && "INE",
-                cliente.docLicencia && "Licencia",
-                cliente.docDomicilio && "Comprobante",
-                cliente.docRfc && "RFC",
-              ].filter(Boolean).join(", "),
-          ].filter(Boolean).map(function(txt, i) {
-            return <div key={i}>{txt}</div>;
-          })}
+          ].filter(Boolean).map(function(txt, i) { return <div key={i}>{txt}</div>; })}
         </div>
+
+        {/* Selección de documentos */}
+        {docsPresentes.length > 0 && (
+          <div style={{ marginBottom:18 }}>
+            <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase",
+              letterSpacing:".06em", color:"var(--muted)", marginBottom:10 }}>
+              Documentos — ¿usar existente o actualizar?
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {docsPresentes.map(function(d) {
+                var actualizar = docsActualizar.has(d.key);
+                return (
+                  <div key={d.key}
+                    style={{ display:"flex", alignItems:"center", gap:10,
+                      padding:"10px 14px", borderRadius:10,
+                      border:"1px solid " + (actualizar ? "#f59e0b" : "#22c55e"),
+                      background: actualizar ? "#fffbeb" : "#f0fdf4",
+                      transition:"all .15s" }}>
+                    <span style={{ fontSize:15 }}>{actualizar ? "🔄" : "✅"}</span>
+                    <span style={{ flex:1, fontSize:13, fontWeight:600,
+                      color: actualizar ? "#92400e" : "#166534" }}>
+                      {d.label}
+                    </span>
+                    <button
+                      onClick={function(){ toggleDoc(d.key); }}
+                      style={{ fontSize:11, padding:"4px 12px", borderRadius:16, border:"none",
+                        cursor:"pointer", fontWeight:700, transition:"all .12s",
+                        background: actualizar ? "#f59e0b" : "#bbf7d0",
+                        color:       actualizar ? "#fff"    : "#166534" }}>
+                      {actualizar ? "Actualizar" : "Usar existente"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            {docsActualizar.size > 0 && (
+              <div style={{ fontSize:11, color:"#b45309", marginTop:8, padding:"6px 10px",
+                background:"#fef3c7", borderRadius:8, lineHeight:1.5 }}>
+                Los documentos marcados como <strong>Actualizar</strong> quedarán vacíos
+                y podrás cargar nuevas versiones en el expediente.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Selector de vehículo */}
         <div style={{ marginBottom:20 }}>
@@ -3876,7 +3934,7 @@ function _NuevoCampo({ label, full, children }) {
    Crea un registro local con los campos del pipeline. Con datos reales
    esto haría un INSERT contra la tabla `clientes` de Supabase.
    initialData: objeto opcional con prefill desde Plan Piso (vin, interes…) */
-function NuevoClienteModal({ onClose, onCreate, asesores, initialData }) {
+function NuevoClienteModal({ onClose, onCreate, onRecompra, clientes, asesores, initialData }) {
   const asesorOpciones = asesores.filter(a => a !== "Todos");
   const ini = initialData || {};
   const [f, setF] = React.useState({
@@ -3890,12 +3948,26 @@ function NuevoClienteModal({ onClose, onCreate, asesores, initialData }) {
     vinVinculado:  ini.vinVinculado  || "",
     inventarioId:  ini.inventarioId  || null,
   });
+  const [buscarRec, setBuscarRec] = React.useState(false);
+  const [queryRec,  setQueryRec]  = React.useState("");
+
   const set = (k) => (e) => setF(prev => ({ ...prev, [k]: e.target.value }));
   const puedeCrear = f.nombre.trim().length > 0;
 
   const inputStyle = { width:"100%", padding:"7px 10px", border:"1px solid var(--line)",
     borderRadius:7, fontSize:13, background:"var(--card)", color:"var(--ink)",
     outline:"none", fontFamily:"inherit" };
+
+  // Búsqueda de clientes recurrentes (por nombre, RFC o teléfono)
+  const q = queryRec.trim().toLowerCase();
+  const resultadosRec = (!buscarRec || q.length < 2 || !clientes)
+    ? []
+    : clientes.filter(function(c) {
+        return (c.nombre  && c.nombre.toLowerCase().includes(q))
+            || (c.rfc     && c.rfc.toLowerCase().includes(q))
+            || (c.tel     && c.tel.replace(/\D/g,"").includes(q.replace(/\D/g,"")))
+            || (c.curp    && c.curp.toLowerCase().includes(q));
+      }).slice(0, 6);
 
   const Campo = _NuevoCampo;
 
@@ -3910,6 +3982,79 @@ function NuevoClienteModal({ onClose, onCreate, asesores, initialData }) {
           display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <h2 style={{ margin:0, fontSize:17 }}>Nuevo cliente</h2>
           <button className="icon-btn ghost" onClick={onClose}>{I.close({ width:18, height:18 })}</button>
+        </div>
+
+        {/* ── Sección cliente recurrente ── */}
+        <div style={{ margin:"14px 22px 0", borderRadius:10,
+          border: buscarRec ? "1px solid #a78bfa" : "1px solid var(--line)",
+          background: buscarRec ? "#faf5ff" : "var(--bg)",
+          overflow:"hidden", transition:"border-color .15s, background .15s" }}>
+          <button onClick={function(){ setBuscarRec(function(v){ return !v; }); setQueryRec(""); }}
+            style={{ width:"100%", padding:"10px 14px", background:"none", border:"none",
+              cursor:"pointer", display:"flex", alignItems:"center", gap:10, textAlign:"left" }}>
+            <span style={{ fontSize:18 }}>🔄</span>
+            <span style={{ flex:1 }}>
+              <span style={{ fontWeight:700, fontSize:13, color: buscarRec ? "#7c3aed" : "var(--ink)" }}>
+                ¿Es cliente recurrente?
+              </span>
+              <span style={{ fontSize:11, color:"var(--muted)", display:"block", marginTop:1 }}>
+                Busca su expediente para reutilizar datos y documentos existentes
+              </span>
+            </span>
+            <span style={{ fontSize:13, color: buscarRec ? "#7c3aed" : "var(--muted)",
+              fontWeight:700, padding:"3px 10px", borderRadius:20,
+              background: buscarRec ? "#ede9fe" : "var(--line-2)", transition:"all .15s" }}>
+              {buscarRec ? "▲ Cerrar" : "Buscar"}
+            </span>
+          </button>
+
+          {buscarRec && (
+            <div style={{ padding:"0 14px 14px" }}>
+              <input
+                autoFocus
+                value={queryRec}
+                onChange={function(e){ setQueryRec(e.target.value); }}
+                placeholder="Busca por nombre, RFC, teléfono o CURP…"
+                style={{ ...inputStyle, marginBottom: resultadosRec.length ? 10 : 0,
+                  borderColor:"#a78bfa", outline:"2px solid #ede9fe" }}
+              />
+              {q.length >= 2 && resultadosRec.length === 0 && (
+                <div style={{ fontSize:12, color:"var(--muted)", padding:"6px 0", textAlign:"center" }}>
+                  Sin coincidencias — puedes crear el cliente como nuevo abajo
+                </div>
+              )}
+              {resultadosRec.map(function(c) {
+                return (
+                  <div key={c.id} style={{ display:"flex", alignItems:"center", gap:10,
+                    padding:"9px 12px", borderRadius:9, marginBottom:6,
+                    border:"1px solid var(--line)", background:"var(--card)",
+                    cursor:"pointer", transition:"border-color .12s, background .12s" }}
+                    onMouseOver={function(e){ e.currentTarget.style.borderColor="#7c3aed"; e.currentTarget.style.background="#faf5ff"; }}
+                    onMouseOut={function(e){ e.currentTarget.style.borderColor="var(--line)"; e.currentTarget.style.background="var(--card)"; }}
+                    onClick={function(){ onRecompra && onRecompra(c); onClose(); }}>
+                    <div style={{ width:36, height:36, borderRadius:9, background:"#ede9fe",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:16, flexShrink:0, fontWeight:700, color:"#7c3aed" }}>
+                      {(c.nombre || "?").charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:700, fontSize:13, color:"var(--ink)",
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {c.nombre}
+                      </div>
+                      <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>
+                        {[c.tel && "Tel: " + c.tel, c.rfc && "RFC: " + c.rfc].filter(Boolean).join("  ·  ") || "Sin datos de contacto"}
+                      </div>
+                    </div>
+                    <span style={{ fontSize:11, fontWeight:700, color:"#7c3aed",
+                      background:"#ede9fe", padding:"4px 10px", borderRadius:12, flexShrink:0 }}>
+                      Usar datos →
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Banner de contexto cuando llega desde Plan Piso */}
@@ -4671,9 +4816,15 @@ function CRMClientes({ rows, kpis, usuarios, usuarioActual }) {
       {mostrarNuevo && (
         <NuevoClienteModal
           asesores={asesores}
+          clientes={clientesData}
           onClose={() => { setMostrarNuevo(false); setPendingData(null); }}
           onCreate={crearCliente}
           initialData={pendingData}
+          onRecompra={function(c){
+            setMostrarNuevo(false);
+            setPendingData(null);
+            setRecompraCliente(c);
+          }}
         />
       )}
 
