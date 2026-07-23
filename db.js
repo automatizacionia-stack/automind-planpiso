@@ -619,7 +619,22 @@
       docRfc:           row.doc_rfc_key      ? { name: row.doc_rfc_nombre      || "", storageKey: row.doc_rfc_key      } : null,
       docEvidenciaPrueba: row.doc_ev_prueba_key ? { name: row.doc_ev_prueba_nombre || "", storageKey: row.doc_ev_prueba_key } : null,
       docFactura:     row.doc_factura_key    ? { name: row.doc_factura_nombre    || "", storageKey: row.doc_factura_key    } : null,
-      docComprobante: row.doc_comprobante_key? { name: row.doc_comprobante_nombre|| "", storageKey: row.doc_comprobante_key} : null,
+      docComprobantes: (function() {
+        // Nuevo: leer del JSONB array
+        if (row.doc_comprobantes) {
+          try {
+            var arr = typeof row.doc_comprobantes === "string"
+              ? JSON.parse(row.doc_comprobantes)
+              : row.doc_comprobantes;
+            if (Array.isArray(arr)) return arr;
+          } catch(e) {}
+        }
+        // Compat: migrar columnas antiguas
+        if (row.doc_comprobante_key) {
+          return [{ name: row.doc_comprobante_nombre || "", storageKey: row.doc_comprobante_key, monto: null }];
+        }
+        return [];
+      })(),
       // Documentos de crédito (E6)
       docCredCarta:     row.doc_cred_carta_key      ? { name: row.doc_cred_carta_nombre      || "", storageKey: row.doc_cred_carta_key      } : null,
       docCredSolicitud: row.doc_cred_solicitud_key   ? { name: row.doc_cred_solicitud_nombre  || "", storageKey: row.doc_cred_solicitud_key   } : null,
@@ -722,8 +737,13 @@
       doc_ev_prueba_nombre: c.docEvidenciaPrueba ? (c.docEvidenciaPrueba.name       || null) : null,
       doc_factura_key:         c.docFactura    ? (c.docFactura.storageKey    || null) : null,
       doc_factura_nombre:      c.docFactura    ? (c.docFactura.name          || null) : null,
-      doc_comprobante_key:     c.docComprobante? (c.docComprobante.storageKey|| null) : null,
-      doc_comprobante_nombre:  c.docComprobante? (c.docComprobante.name      || null) : null,
+      doc_comprobantes: (c.docComprobantes && c.docComprobantes.length > 0)
+        ? JSON.stringify(c.docComprobantes.map(function(it) {
+            return { name: it.name || "", storageKey: it.storageKey || null, monto: it.monto != null ? it.monto : null };
+          }))
+        : null,
+      doc_comprobante_key:     null,
+      doc_comprobante_nombre:  null,
       // Documentos de crédito (E6)
       doc_cred_carta_key:         c.docCredCarta    ? (c.docCredCarta.storageKey    || null) : null,
       doc_cred_carta_nombre:      c.docCredCarta    ? (c.docCredCarta.name          || null) : null,

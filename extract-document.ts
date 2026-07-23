@@ -152,6 +152,30 @@ Estructura esperada:
 }
 Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de código.`;
 
+const PROMPT_COMPROBANTE = `Analiza este comprobante de pago (transferencia bancaria, cheque, recibo de pago, estado de cuenta o voucher).
+Devuelve ÚNICAMENTE un objeto JSON válido con el campo que puedas leer con certeza. Omite los que no sean legibles.
+
+OBJETIVO PRINCIPAL: Encontrar el monto o importe total del pago.
+
+REGLAS ESTRICTAS:
+
+monto: El importe total pagado, SOLO el número sin símbolo de moneda ni comas.
+  Ejemplos válidos: "15000", "250000.50", "8500"
+  ⚠ Si hay varios importes, toma el TOTAL o el importe más prominente (el principal del comprobante).
+  ⚠ Omite si no puedes leerlo con certeza.
+
+fecha: Fecha del pago en formato DD/MM/AAAA. Omite si no aparece.
+
+referencia: Número de referencia, folio, o número de operación. Omite si no aparece claramente.
+
+Estructura esperada:
+{
+  "monto":      "importe numérico sin símbolo ni comas, ej: 15000.00",
+  "fecha":      "DD/MM/AAAA",
+  "referencia": "número de operación o folio"
+}
+Responde SOLO con el JSON. Sin explicaciones, sin markdown, sin bloques de código.`;
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -159,7 +183,7 @@ Deno.serve(async (req: Request) => {
     const { dataUrl, mimeType, docType } = await req.json() as {
       dataUrl: string;
       mimeType: string;
-      docType: "id" | "domicilio" | "licencia" | "rfc";
+      docType: "id" | "domicilio" | "licencia" | "rfc" | "comprobante";
     };
 
     if (!dataUrl || !mimeType || !docType) {
@@ -176,9 +200,10 @@ Deno.serve(async (req: Request) => {
 
     // La clave de OpenAI está guardada bajo el nombre ANTHROPIC_API_KEY en Supabase Secrets
     const client = new OpenAI({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "" });
-    const prompt  = docType === "id" ? PROMPT_ID
-                  : docType === "licencia" ? PROMPT_LIC
-                  : docType === "rfc"      ? PROMPT_RFC
+    const prompt  = docType === "id"          ? PROMPT_ID
+                  : docType === "licencia"    ? PROMPT_LIC
+                  : docType === "rfc"         ? PROMPT_RFC
+                  : docType === "comprobante" ? PROMPT_COMPROBANTE
                   : PROMPT_DOM;
 
     const completion = await client.chat.completions.create({

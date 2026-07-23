@@ -891,6 +891,123 @@ function DocSimpleUpload({ label, sublabel, value, onChange }) {
   );
 }
 
+/* ── Multi-upload de comprobantes de pago con extracción IA de monto ──────── */
+function MultiComprobantesUpload({ value, onChange }) {
+  var items = value || [];
+  var [cargando, setCargando] = React.useState(false);
+  var inputRef = React.useRef(null);
+
+  var total = items.reduce(function(sum, it) {
+    return sum + (Number(it.monto) || 0);
+  }, 0);
+
+  function handleFile(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    e.target.value = "";
+    var ok = ["image/jpeg","image/jpg","image/png","application/pdf"];
+    if (!ok.includes(file.type)) { alert("Formato no permitido. Usa JPG, PNG o PDF."); return; }
+    setCargando(true);
+    var reader = new FileReader();
+    reader.onload = async function(ev) {
+      var dataUrl = ev.target.result;
+      var item = { name: file.name, type: file.type, dataUrl: dataUrl,
+                   cargadoEn: new Date().toISOString(), monto: null };
+      // Llamar Edge Function para extraer monto con IA
+      try {
+        var fnUrl = (window.SUPABASE_URL || "").replace(/\/$/, "") + "/functions/v1/extract-document";
+        var res = await fetch(fnUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + (window.SUPABASE_ANON || ""),
+          },
+          body: JSON.stringify({ dataUrl: dataUrl, mimeType: file.type, docType: "comprobante" }),
+        });
+        var data = await res.json();
+        if (data.ok && data.campos && data.campos.monto) {
+          var m = parseFloat(String(data.campos.monto).replace(/[^0-9.]/g, ""));
+          if (!isNaN(m) && m > 0) item.monto = m;
+        }
+      } catch(eAI) {
+        console.warn("[CRM] IA comprobante error:", eAI.message);
+      }
+      onChange(items.concat([item]));
+      setCargando(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function quitar(idx) {
+    onChange(items.filter(function(_, i) { return i !== idx; }));
+  }
+
+  var fmt = window.fmtMoney || function(n) {
+    return "$" + Number(n).toLocaleString("es-MX", { minimumFractionDigits:2, maximumFractionDigits:2 });
+  };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline" }}>
+        <span style={{ fontSize:12, fontWeight:700, color:"var(--ink-2)" }}>Comprobantes de pago</span>
+        <span style={{ fontSize:10, color:"var(--muted)" }}>Transferencia · cheque · recibo · IA extrae el monto</span>
+      </div>
+      {items.map(function(it, i) {
+        var isSaved = !!(it.storageKey && !it.dataUrl);
+        return (
+          <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px",
+            border:"1px solid var(--line)", borderRadius:9, background:"var(--bg)" }}>
+            <div style={{ width:32, height:32, borderRadius:6, flexShrink:0, fontSize:18,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              background: isSaved ? "#d1fae5" : "#eff6ff", color: isSaved ? "#059669" : "#2f6fed" }}>
+              {it.type === "application/pdf" ? "📄" : "🖼"}
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"var(--ink)",
+                overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{it.name}</div>
+              <div style={{ fontSize:10, color: isSaved ? "#059669" : "var(--muted)", marginTop:1 }}>
+                {isSaved ? "Guardado en expediente" : "Pendiente de guardar"}
+              </div>
+            </div>
+            {it.monto != null
+              ? <span style={{ fontSize:12, fontWeight:700, color:"#065f46", background:"#d1fae5",
+                  padding:"2px 9px", borderRadius:12, whiteSpace:"nowrap", flexShrink:0 }}>
+                  {fmt(it.monto)}
+                </span>
+              : <span style={{ fontSize:11, color:"#94a3b8", whiteSpace:"nowrap", flexShrink:0 }}>
+                  sin monto IA
+                </span>
+            }
+            <button type="button" onClick={() => quitar(i)}
+              style={{ border:"none", background:"#fee2e2", cursor:"pointer", color:"#b91c1c",
+                fontSize:13, padding:"3px 7px", borderRadius:6, lineHeight:1, flexShrink:0 }}>✕</button>
+          </div>
+        );
+      })}
+      {total > 0 && (
+        <div style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 12px",
+          background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:9 }}>
+          <span style={{ fontSize:12, color:"#1e40af", flex:1, fontWeight:600 }}>Total comprobado</span>
+          <span style={{ fontSize:14, fontWeight:800, color:"#1e40af" }}>
+            {fmt(total)}
+          </span>
+        </div>
+      )}
+      <label style={{ display:"inline-flex", alignItems:"center", gap:6,
+        cursor: cargando ? "wait" : "pointer", alignSelf:"flex-start",
+        padding:"7px 14px", border:"1px dashed var(--line)", borderRadius:9,
+        fontSize:12, color:"var(--ink-2)", background:"var(--bg)",
+        opacity: cargando ? 0.6 : 1, transition:"opacity .15s" }}>
+        {cargando
+          ? <><span>⏳</span> Analizando comprobante…</>
+          : <><span>➕</span> Agregar comprobante</>}
+        <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png"
+          style={{ display:"none" }} disabled={cargando} onChange={handleFile} />
+      </label>
+    </div>
+  );
+}
+
 /* ── Imprimir expediente completo del cliente ────────────────────────────── */
 function imprimirExpediente(form) {
   if (!form) return;
@@ -990,7 +1107,9 @@ function imprimirExpediente(form) {
     + docCheck(form.docLicencia,   "Licencia de conducir")
     + docCheck(form.docDomicilio,  "Comprobante domicilio")
     + docCheck(form.docFactura,    "Factura del vehículo sin valor")
-    + docCheck(form.docComprobante,"Comprobante de pago")
+    + (form.docComprobantes && form.docComprobantes.length > 0
+        ? '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46">✓ Comprobantes (' + form.docComprobantes.length + ')</span>'
+        : '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b">✗ Comprobante de pago</span>')
     + (form.e8ContratoUrl ? '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46">✓ Contrato firmado</span>' : '')
     + '</div>'
 
@@ -2093,12 +2212,12 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
       /* ── Subir documentos pendientes a Storage antes de guardar ── */
       var formToSave = Object.assign({}, form, { _prev: { etapa: form.etapa, estadoGeneral: form.estadoGeneral, asesor: form.asesor } });
       var docCampos = [
-        { key:"docFactura",    label:"Factura"      },
-        { key:"docComprobante", label:"Comprobante"  },
-        { key:"docId",        label:"INE"          },
-        { key:"docLicencia",  label:"Licencia"     },
-        { key:"docDomicilio", label:"Comprobante"  },
-        { key:"docRfc",       label:"RFC"          },
+        { key:"docFactura",        label:"Factura"    },
+        { key:"docId",             label:"INE"        },
+        { key:"docLicencia",       label:"Licencia"   },
+        { key:"docDomicilio",      label:"Domicilio"  },
+        { key:"docRfc",            label:"RFC"        },
+        { key:"docEvidenciaPrueba",label:"Ev.Prueba"  },
       ];
       for (var i = 0; i < docCampos.length; i++) {
         var dc  = docCampos[i];
@@ -2125,6 +2244,33 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
           } catch(eDoc) {
             console.warn("[CRM] Upload " + dc.label + " error:", eDoc.message);
           }
+        }
+      }
+      /* ── Subir comprobantes de pago pendientes ── */
+      if (formToSave.docComprobantes && formToSave.docComprobantes.length > 0 && window.DB && window.DB.storage) {
+        var comprobantesActualizados = formToSave.docComprobantes.slice();
+        var algoCambio = false;
+        for (var ci = 0; ci < comprobantesActualizados.length; ci++) {
+          var comp = comprobantesActualizados[ci];
+          if (comp.dataUrl && !comp.storageKey) {
+            try {
+              var cExt = comp.type === "application/pdf" ? "pdf" : comp.type === "image/png" ? "png" : "jpg";
+              var cKey = "clientes/pago/" + Date.now() + "-" + Math.random().toString(36).slice(2,8) + "." + cExt;
+              var cBlob = _dataUrlToBlob(comp.dataUrl);
+              var cUp = await window.DB.storage.from("expedientes").upload(cKey, cBlob, { contentType: comp.type, upsert: false });
+              if (!cUp.error) {
+                comprobantesActualizados[ci] = { name: comp.name, type: comp.type, storageKey: cKey,
+                                                  cargadoEn: comp.cargadoEn, monto: comp.monto };
+                algoCambio = true;
+              }
+            } catch(eCmp) {
+              console.warn("[CRM] Upload comprobante error:", eCmp.message);
+            }
+          }
+        }
+        if (algoCambio) {
+          formToSave.docComprobantes = comprobantesActualizados;
+          setForm(function(p) { return Object.assign({}, p, { docComprobantes: comprobantesActualizados }); });
         }
       }
       await (onUpdate && onUpdate(formToSave));
@@ -3264,11 +3410,9 @@ function ClienteEditor({ clientes, defaultSelId, onUpdate, usuarioActual }) {
                 />
               </div>
               <div style={{ gridColumn:"1/-1", marginTop:4 }}>
-                <DocSimpleUpload
-                  label="Comprobante de pago"
-                  sublabel="Transferencia · cheque · recibo"
-                  value={form.docComprobante || null}
-                  onChange={v => set("docComprobante", v)}
+                <MultiComprobantesUpload
+                  value={form.docComprobantes || []}
+                  onChange={v => set("docComprobantes", v)}
                 />
               </div>
             </Sec>
