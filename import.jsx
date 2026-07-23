@@ -149,7 +149,7 @@ function parsearPct(s) {
 function aplicarMapeo(rows, mapeo) {
   const HOY = new Date();
   const MS_DIA = 86400000;
-  const base = window.AUTOMIND.ROWS.length;
+  const base = (window.AUTOMIND && Array.isArray(window.AUTOMIND.ROWS)) ? window.AUTOMIND.ROWS.length : 0;
 
   return rows.map((row, i) => {
     const get = (key) => {
@@ -453,8 +453,10 @@ function ImportarInventario({ onIrInventario, onImportDone }) {
     setImportando(true);
     setTimeout(async () => {
       try {
-        let nuevas = aplicarMapeo(rows, mapeo);
         const A = window.AUTOMIND;
+        if (!A) throw new Error("La sesión aún no está lista. Recarga la página e intenta de nuevo.");
+
+        let nuevas = aplicarMapeo(rows, mapeo);
 
         // Detectar VINs que ya existen en el inventario para no duplicar unidades
         const vinsExistentes = new Set(
